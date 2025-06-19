@@ -44,7 +44,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      console.log('Fetching user profile for:', userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -56,7 +55,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      console.log('User profile fetched:', data);
       setProfile(data as UserProfile);
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -65,7 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchAdminUser = async (userId: string) => {
     try {
-      console.log('Fetching admin user for:', userId);
       const { data, error } = await supabase
         .from('admin_users')
         .select('*')
@@ -77,7 +74,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      console.log('Admin user fetched:', data);
       setAdminUser(data as AdminUser | null);
     } catch (error) {
       console.error('Error fetching admin user:', error);
@@ -107,13 +103,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, 'User:', session?.user?.email);
+        console.log('Auth state changed:', event);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
 
         if (session?.user) {
-          console.log('User authenticated, fetching profile and admin status...');
           // Fetch user profile and admin status after authentication
           setTimeout(() => {
             fetchUserProfile(session.user.id);
@@ -127,7 +122,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }, 0);
           }
         } else {
-          console.log('User signed out, clearing profile and admin status');
           setProfile(null);
           setAdminUser(null);
           if (event === 'SIGNED_OUT') {
@@ -141,7 +135,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -205,33 +198,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const hasRole = (role: string) => {
-    if (!profile) {
-      console.log('hasRole check: no profile available');
-      return false;
-    }
+    if (!profile) return false;
     const roleHierarchy = { speler: 1, organisator: 2, beheerder: 3 };
     const userLevel = roleHierarchy[profile.role] || 0;
     const requiredLevel = roleHierarchy[role as keyof typeof roleHierarchy] || 0;
-    const hasPermission = userLevel >= requiredLevel;
-    console.log(`hasRole check: user role=${profile.role} (level ${userLevel}), required role=${role} (level ${requiredLevel}), has permission=${hasPermission}`);
-    return hasPermission;
+    return userLevel >= requiredLevel;
   };
 
   const isSuperAdmin = () => {
-    const isSuper = adminUser?.is_super_admin === true;
-    console.log('isSuperAdmin check:', isSuper, 'adminUser:', adminUser);
-    return isSuper;
+    return adminUser?.is_super_admin === true;
   };
-
-  // Debug logging effect
-  useEffect(() => {
-    console.log('Auth state update:', {
-      user: user?.email,
-      profile: profile?.role,
-      adminUser: adminUser?.is_super_admin,
-      loading
-    });
-  }, [user, profile, adminUser, loading]);
 
   return (
     <AuthContext.Provider value={{

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { sanitizeEmail } from '@/utils/inputSanitization';
 
 export default function Login() {
   const { user, signIn, signUp } = useAuth();
@@ -28,7 +28,18 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const { error } = await signIn(email, password);
+      const sanitizedEmail = sanitizeEmail(email);
+      if (!sanitizedEmail) {
+        toast({
+          title: "Ongeldig email adres",
+          description: "Voer een geldig email adres in.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      const { error } = await signIn(sanitizedEmail, password);
       
       if (error) {
         console.error('Sign in error:', error);
@@ -60,7 +71,18 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const { error } = await signUp(email, password);
+      const sanitizedEmail = sanitizeEmail(email);
+      if (!sanitizedEmail) {
+        toast({
+          title: "Ongeldig email adres",
+          description: "Voer een geldig email adres in.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      const { error } = await signUp(sanitizedEmail, password);
       
       if (error) {
         console.error('Sign up error:', error);
@@ -97,10 +119,12 @@ export default function Login() {
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) {
+    
+    const sanitizedEmail = sanitizeEmail(email);
+    if (!sanitizedEmail) {
       toast({
         title: "Email vereist",
-        description: "Voer je email adres in om je wachtwoord te resetten.",
+        description: "Voer een geldig email adres in om je wachtwoord te resetten.",
         variant: "destructive",
       });
       return;
@@ -109,8 +133,7 @@ export default function Login() {
     setResetLoading(true);
 
     try {
-      // Use the correct redirect URL structure for Supabase
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(sanitizedEmail, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
 
@@ -124,7 +147,7 @@ export default function Login() {
       } else {
         toast({
           title: "Reset link verzonden!",
-          description: "Controleer je email voor een link om je wachtwoord te resetten.",
+          description: "Controleer je email voor een link om je wachtwoord te resetten. Let op: de link is 1 uur geldig.",
         });
         setShowResetForm(false);
       }

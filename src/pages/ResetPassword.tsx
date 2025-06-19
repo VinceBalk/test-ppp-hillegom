@@ -7,15 +7,18 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { usePasswordSecurity } from '@/hooks/usePasswordSecurity';
+import { sanitizeInput } from '@/utils/inputSanitization';
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const [isValidLink, setIsValidLink] = useState(false);
+  const [linkValidated, setLinkValidated] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { updatePassword, loading, validatePassword } = usePasswordSecurity();
 
   // Get parameters from URL
   const accessToken = searchParams.get('access_token');
@@ -27,48 +30,57 @@ export default function ResetPassword() {
       accessToken: accessToken ? 'present' : 'missing',
       refreshToken: refreshToken ? 'present' : 'missing',
       type: type,
-      fullUrl: window.location.href
+      accessTokenLength: accessToken?.length || 0
     });
 
-    // Validate the link parameters
-    if (type !== 'recovery') {
-      console.error('Invalid type parameter:', type);
-      toast({
-        title: "Ongeldige reset link",
-        description: "Deze link is niet bedoeld voor wachtwoord reset. Vraag een nieuwe reset link aan.",
-        variant: "destructive",
-      });
-      setTimeout(() => navigate('/login'), 3000);
-      return;
-    }
+    const validateResetLink = async () => {
+      // Validate the link parameters
+      if (type !== 'recovery') {
+        console.error('Invalid type parameter:', type);
+        toast({
+          title: "Ongeldige reset link",
+          description: "Deze link is niet bedoeld voor wachtwoord reset. Vraag een nieuwe reset link aan.",
+          variant: "destructive",
+        });
+        setTimeout(() => navigate('/login'), 3000);
+        return;
+      }
 
-    if (!accessToken) {
-      console.error('Missing access_token parameter');
-      toast({
-        title: "Ongeldige reset link",
-        description: "De reset link is onvolledig (access token ontbreekt). Vraag een nieuwe reset link aan.",
-        variant: "destructive",
-      });
-      setTimeout(() => navigate('/login'), 3000);
-      return;
-    }
+      if (!accessToken) {
+        console.error('Missing access_token parameter');
+        toast({
+          title: "Ongeldige reset link",
+          description: "De reset link is onvolledig (access token ontbreekt). Vraag een nieuwe reset link aan.",
+          variant: "destructive",
+        });
+        setTimeout(() => navigate('/login'), 3000);
+        return;
+      }
 
-    if (!refreshToken) {
-      console.error('Missing refresh_token parameter');
-      toast({
-        title: "Ongeldige reset link",  
-        description: "De reset link is onvolledig (refresh token ontbreekt). Dit kan komen door een verkeerd geconfigureerde email template in Supabase.",
-        variant: "destructive",
-      });
-      setTimeout(() => navigate('/login'), 3000);
-      return;
-    }
+      // Check if access token looks valid (should be much longer than a few digits)
+      if (accessToken.length < 20) {
+        console.error('Invalid access_token format - too short:', accessToken.length);
+        toast({
+          title: "Ongeldige reset link",
+          description: "De reset link is beschadigd. Vraag een nieuwe reset link aan.",
+          variant: "destructive",
+        });
+        setTimeout(() => navigate('/login'), 3000);
+        return;
+      }
 
-    // If we get here, the link has all required parameters
-    setIsValidLink(true);
-    
-    // Set the session with the tokens from the URL
-    const setSession = async () => {
+      if (!refreshToken) {
+        console.error('Missing refresh_token parameter');
+        toast({
+          title: "Ongeldige reset link",  
+          description: "De reset link is onvolledig (refresh token ontbreekt). Dit kan komen door een verkeerd geconfigureerde email template in Supabase. Vraag een nieuwe reset link aan.",
+          variant: "destructive",
+        });
+        setTimeout(() => navigate('/login'), 3000);
+        return;
+      }
+
+      // If we get here, the link has all required parameters
       try {
         console.log('Setting session with tokens...');
         const { data, error } = await supabase.auth.setSession({
@@ -85,7 +97,8 @@ export default function ResetPassword() {
           });
           setTimeout(() => navigate('/login'), 3000);
         } else {
-          console.log('Session set successfully:', data);
+          console.log('Session set successfully');
+          setIsValidLink(true);
           toast({
             title: "Reset link geldig",
             description: "Je kunt nu een nieuw wachtwoord instellen.",
@@ -99,10 +112,12 @@ export default function ResetPassword() {
           variant: "destructive",
         });
         setTimeout(() => navigate('/login'), 3000);
+      } finally {
+        setLinkValidated(true);
       }
     };
 
-    setSession();
+    validateResetLink();
   }, [accessToken, refreshToken, type, navigate, toast]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -117,7 +132,10 @@ export default function ResetPassword() {
       return;
     }
 
-    if (password !== confirmPassword) {
+    const sanitizedPassword = sanitizeInput(password);
+    const sanitizedConfirmPassword = sanitizeInput(confirmPassword);
+
+    if (sanitizedPassword !== sanitizedConfirmPassword) {
       toast({
         title: "Wachtwoorden komen niet overeen",
         description: "Controleer of beide wachtwoorden identiek zijn.",
@@ -126,55 +144,27 @@ export default function ResetPassword() {
       return;
     }
 
-    if (password.length < 6) {
+    const validation = validatePassword(sanitizedPassword);
+    if (!validation.isValid) {
       toast({
-        title: "Wachtwoord te kort",
-        description: "Het wachtwoord moet minimaal 6 karakters lang zijn.",
+        title: "Wachtwoord voldoet niet aan eisen",
+        description: validation.errors.join(', '),
         variant: "destructive",
       });
       return;
     }
 
-    setLoading(true);
-
-    try {
-      console.log('Updating password...');
-      const { error } = await supabase.auth.updateUser({
-        password: password
-      });
-
-      if (error) {
-        console.error('Password update error:', error);
-        toast({
-          title: "Wachtwoord update mislukt",
-          description: error.message || "Er is een fout opgetreden bij het updaten van je wachtwoord.",
-          variant: "destructive",
-        });
-      } else {
-        console.log('Password updated successfully');
-        toast({
-          title: "Wachtwoord succesvol gewijzigd!",
-          description: "Je kunt nu inloggen met je nieuwe wachtwoord.",
-        });
-        
-        // Sign out to force re-login with new password
-        await supabase.auth.signOut();
-        navigate('/login');
-      }
-    } catch (error) {
-      console.error('Password update error:', error);
-      toast({
-        title: "Wachtwoord update mislukt",
-        description: "Er is een onverwachte fout opgetreden.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+    const { error } = await updatePassword(sanitizedPassword, false);
+    
+    if (!error) {
+      // Sign out to force re-login with new password
+      await supabase.auth.signOut();
+      navigate('/login');
     }
   };
 
   // Show loading state while validating the link
-  if (!isValidLink && type === 'recovery' && accessToken) {
+  if (!linkValidated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5 px-4">
         <Card className="w-full max-w-md gradient-card border-0 shadow-xl">
@@ -218,6 +208,14 @@ export default function ResetPassword() {
                 minLength={6}
                 className="h-12"
               />
+              <div className="text-sm text-muted-foreground">
+                <p>Wachtwoord vereisten:</p>
+                <ul className="list-disc list-inside space-y-1 mt-1">
+                  <li>Minimaal 6 karakters</li>
+                  <li>Minimaal één hoofdletter</li>
+                  <li>Minimaal één cijfer</li>
+                </ul>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirm-password">Bevestig wachtwoord</Label>

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,18 +7,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { User, Lock, Mail } from 'lucide-react';
+import { usePasswordSecurity } from '@/hooks/usePasswordSecurity';
+import { sanitizeEmail } from '@/utils/inputSanitization';
 
 export default function Profile() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [passwordLoading, setPasswordLoading] = useState(false);
+  const { updatePassword, loading: passwordLoading } = usePasswordSecurity();
   
   // Profile form state
   const [email, setEmail] = useState(user?.email || '');
   
   // Password form state
-  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -28,8 +28,19 @@ export default function Profile() {
     setLoading(true);
 
     try {
+      const sanitizedEmail = sanitizeEmail(email);
+      if (!sanitizedEmail) {
+        toast({
+          title: 'Fout',
+          description: 'Voer een geldig email adres in',
+          variant: 'destructive'
+        });
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase.auth.updateUser({
-        email: email
+        email: sanitizedEmail
       });
 
       if (error) {
@@ -67,46 +78,12 @@ export default function Profile() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      toast({
-        title: 'Fout',
-        description: 'Wachtwoord moet minimaal 6 karakters lang zijn',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    setPasswordLoading(true);
-
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-
-      if (error) {
-        toast({
-          title: 'Fout',
-          description: error.message,
-          variant: 'destructive'
-        });
-      } else {
-        toast({
-          title: 'Succes',
-          description: 'Wachtwoord succesvol gewijzigd'
-        });
-        // Reset form
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-      }
-    } catch (error) {
-      toast({
-        title: 'Fout',
-        description: 'Er is een fout opgetreden bij het wijzigen van je wachtwoord',
-        variant: 'destructive'
-      });
-    } finally {
-      setPasswordLoading(false);
+    const { error } = await updatePassword(newPassword, false);
+    
+    if (!error) {
+      // Reset form
+      setNewPassword('');
+      setConfirmPassword('');
     }
   };
 
@@ -207,7 +184,8 @@ export default function Profile() {
                 <p>Wachtwoord vereisten:</p>
                 <ul className="list-disc list-inside space-y-1 mt-2">
                   <li>Minimaal 6 karakters lang</li>
-                  <li>Wordt automatisch opgeslagen in Supabase</li>
+                  <li>Minimaal één hoofdletter</li>
+                  <li>Minimaal één cijfer</li>
                 </ul>
               </div>
 
