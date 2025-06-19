@@ -12,6 +12,7 @@ export const useResetPassword = () => {
   const [isValidLink, setIsValidLink] = useState(false);
   const [linkValidated, setLinkValidated] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [resetCompleted, setResetCompleted] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -117,35 +118,28 @@ export const useResetPassword = () => {
     validateResetLink();
   }, [accessToken, refreshToken, type, navigate, toast]);
 
-  // Prevent auth state changes from redirecting during password reset
+  // Only set up auth listener after successful password reset to handle sign out
   useEffect(() => {
-    if (!isValidLink || !linkValidated) return;
+    if (!resetCompleted) return;
 
-    let authSubscription: any = null;
+    console.log('Setting up auth listener for post-reset cleanup');
     
-    // Only set up auth listener after link is validated and we're in reset mode
-    const setupAuthListener = () => {
-      authSubscription = supabase.auth.onAuthStateChange((event, session) => {
-        console.log('Auth state change during reset:', event);
-        
-        // Only handle sign out events, ignore other events during reset
-        if (event === 'SIGNED_OUT' && !isResetting) {
-          console.log('User signed out during reset, redirecting to login');
-          navigate('/login');
-        }
-        
-        // Ignore other auth events while we're in the reset process
-      });
-    };
-
-    setupAuthListener();
+    const authSubscription = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state change after reset:', event);
+      
+      // Only redirect on sign out after password reset is completed
+      if (event === 'SIGNED_OUT') {
+        console.log('User signed out after password reset, redirecting to login');
+        navigate('/login');
+      }
+    });
 
     return () => {
       if (authSubscription && authSubscription.subscription) {
         authSubscription.subscription.unsubscribe();
       }
     };
-  }, [isValidLink, linkValidated, navigate, isResetting]);
+  }, [resetCompleted, navigate]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -188,9 +182,12 @@ export const useResetPassword = () => {
     const { error } = await updatePassword(sanitizedPassword, false);
     
     if (!error) {
-      // Sign out to force re-login with new password
-      await supabase.auth.signOut();
-      navigate('/login');
+      setResetCompleted(true);
+      // Give user time to see success message before signing out
+      setTimeout(async () => {
+        console.log('Password reset successful, signing out user');
+        await supabase.auth.signOut();
+      }, 2000);
     }
     
     setIsResetting(false);
