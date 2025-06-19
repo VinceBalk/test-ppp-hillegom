@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -279,13 +278,6 @@ export default function Login() {
               </TabsContent>
             </Tabs>
           )}
-          
-          <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-            <p className="text-sm text-muted-foreground text-center">
-              Voor admin toegang gebruik:<br />
-              <span className="font-medium">vincebalk@gmail.com</span>
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
