@@ -15,6 +15,7 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isValidLink, setIsValidLink] = useState(false);
   const [linkValidated, setLinkValidated] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -120,8 +121,39 @@ export default function ResetPassword() {
     validateResetLink();
   }, [accessToken, refreshToken, type, navigate, toast]);
 
+  // Prevent auth state changes from redirecting during password reset
+  useEffect(() => {
+    if (!isValidLink || !linkValidated) return;
+
+    let authSubscription: any = null;
+    
+    // Only set up auth listener after link is validated and we're in reset mode
+    const setupAuthListener = () => {
+      authSubscription = supabase.auth.onAuthStateChange((event, session) => {
+        console.log('Auth state change during reset:', event);
+        
+        // Only handle sign out events, ignore other events during reset
+        if (event === 'SIGNED_OUT' && !isResetting) {
+          console.log('User signed out during reset, redirecting to login');
+          navigate('/login');
+        }
+        
+        // Ignore other auth events while we're in the reset process
+      });
+    };
+
+    setupAuthListener();
+
+    return () => {
+      if (authSubscription && authSubscription.subscription) {
+        authSubscription.subscription.unsubscribe();
+      }
+    };
+  }, [isValidLink, linkValidated, navigate, isResetting]);
+
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsResetting(true);
 
     if (!isValidLink) {
       toast({
@@ -129,6 +161,7 @@ export default function ResetPassword() {
         description: "De reset link is niet geldig. Vraag een nieuwe aan.",
         variant: "destructive",
       });
+      setIsResetting(false);
       return;
     }
 
@@ -141,6 +174,7 @@ export default function ResetPassword() {
         description: "Controleer of beide wachtwoorden identiek zijn.",
         variant: "destructive",
       });
+      setIsResetting(false);
       return;
     }
 
@@ -151,6 +185,7 @@ export default function ResetPassword() {
         description: validation.errors.join(', '),
         variant: "destructive",
       });
+      setIsResetting(false);
       return;
     }
 
@@ -161,6 +196,8 @@ export default function ResetPassword() {
       await supabase.auth.signOut();
       navigate('/login');
     }
+    
+    setIsResetting(false);
   };
 
   // Show loading state while validating the link
@@ -207,6 +244,7 @@ export default function ResetPassword() {
                 required
                 minLength={6}
                 className="h-12"
+                autoComplete="new-password"
               />
               <div className="text-sm text-muted-foreground">
                 <p>Wachtwoord vereisten:</p>
@@ -228,20 +266,22 @@ export default function ResetPassword() {
                 required
                 minLength={6}
                 className="h-12"
+                autoComplete="new-password"
               />
             </div>
             <Button
               type="submit"
               className="w-full h-12 text-base font-medium gradient-primary"
-              disabled={loading || !isValidLink}
+              disabled={loading || !isValidLink || isResetting}
             >
-              {loading ? 'Bezig met opslaan...' : 'Wachtwoord opslaan'}
+              {loading || isResetting ? 'Bezig met opslaan...' : 'Wachtwoord opslaan'}
             </Button>
             <Button
               type="button"
               variant="ghost"
               className="w-full"
               onClick={() => navigate('/login')}
+              disabled={isResetting}
             >
               Terug naar inloggen
             </Button>
