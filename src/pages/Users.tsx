@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,7 +39,8 @@ export default function Users() {
         return;
       }
 
-      setUsers(data || []);
+      // Type assertion to ensure role is one of our expected values
+      setUsers((data || []) as UserProfile[]);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
