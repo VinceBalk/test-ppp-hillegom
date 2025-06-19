@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -124,7 +123,7 @@ export const useResetPassword = () => {
 
     console.log('Setting up auth listener for post-reset cleanup');
     
-    const authSubscription = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth state change after reset:', event);
       
       // Only redirect on sign out after password reset is completed
@@ -135,9 +134,7 @@ export const useResetPassword = () => {
     });
 
     return () => {
-      if (authSubscription && authSubscription.subscription) {
-        authSubscription.subscription.unsubscribe();
-      }
+      subscription.unsubscribe();
     };
   }, [resetCompleted, navigate]);
 
