@@ -4,9 +4,13 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { MobileMenu } from './MobileMenu';
 import { Header } from './Header';
+import { useSecurityMonitoring } from '../hooks/useSecurityMonitoring';
 
 export default function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Initialize security monitoring
+  useSecurityMonitoring();
 
   return (
     <div className="min-h-screen bg-background">

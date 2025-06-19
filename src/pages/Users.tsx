@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shield, Activity, AlertTriangle } from 'lucide-react';
+import { Shield, Activity, AlertTriangle, UserCheck, Clock } from 'lucide-react';
 
 interface UserProfile {
   id: string;
@@ -37,7 +37,7 @@ interface AuditLog {
 }
 
 export default function Users() {
-  const { isSuperAdmin, logSecurityEvent } = useAuth();
+  const { isSuperAdmin, logSecurityEvent, hasRole } = useAuth();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
@@ -63,6 +63,11 @@ export default function Users() {
       }
 
       setUsers((data || []) as UserProfile[]);
+      
+      // Log user management access for security monitoring
+      await logSecurityEvent('user_management_accessed', 'admin', null, {
+        total_users: data?.length || 0
+      });
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -101,7 +106,7 @@ export default function Users() {
         .from('security_audit_log')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(100);
 
       if (error) {
         console.error('Error fetching audit logs:', error);
@@ -116,6 +121,8 @@ export default function Users() {
 
   const updateUserRole = async (userId: string, newRole: 'speler' | 'organisator' | 'beheerder') => {
     try {
+      const oldUser = users.find(u => u.id === userId);
+      
       const { error } = await supabase
         .from('profiles')
         .update({ role: newRole, updated_at: new Date().toISOString() })
@@ -131,14 +138,16 @@ export default function Users() {
         return;
       }
 
-      // Log the role change
+      // Log the role change with detailed information
       await logSecurityEvent('user_role_updated', 'profile', userId, { 
-        new_role: newRole 
+        old_role: oldUser?.role,
+        new_role: newRole,
+        target_user_email: oldUser?.email
       });
 
       toast({
         title: "Rol bijgewerkt",
-        description: "De gebruikersrol is succesvol bijgewerkt.",
+        description: `Gebruikersrol is succesvol bijgewerkt naar ${newRole}.`,
       });
 
       // Refresh the users list
@@ -181,13 +190,20 @@ export default function Users() {
   };
 
   const getActionBadgeVariant = (action: string) => {
-    if (action.includes('failed') || action.includes('error')) {
+    if (action.includes('failed') || action.includes('error') || action.includes('suspicious')) {
       return 'destructive';
     }
-    if (action.includes('sign_in') || action.includes('sign_up')) {
+    if (action.includes('sign_in') || action.includes('sign_up') || action.includes('access')) {
       return 'default';
     }
-    return 'secondary';
+    if (action.includes('role_updated') || action.includes('admin')) {
+      return 'secondary';
+    }
+    return 'outline';
+  };
+
+  const formatActionName = (action: string) => {
+    return action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   if (loading) {
@@ -201,9 +217,12 @@ export default function Users() {
         </div>
         
         <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-          <p className="text-muted-foreground">
-            Gegevens worden geladen...
-          </p>
+          <div className="flex items-center space-x-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+            <p className="text-muted-foreground">
+              Gegevens worden geladen...
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -256,9 +275,12 @@ export default function Users() {
       {activeTab === 'users' && (
         <Card>
           <CardHeader>
-            <CardTitle>Geregistreerde Gebruikers</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <UserCheck className="h-5 w-5" />
+              Geregistreerde Gebruikers
+            </CardTitle>
             <CardDescription>
-              Overzicht van alle gebruikers en hun rollen in het systeem
+              Overzicht van alle gebruikers en hun rollen in het systeem. Alleen beheerders kunnen gebruikersrollen wijzigen.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -274,7 +296,7 @@ export default function Users() {
                     <TableHead>Rol</TableHead>
                     <TableHead>Aangemaakt</TableHead>
                     <TableHead>Laatst bijgewerkt</TableHead>
-                    {isSuperAdmin() && <TableHead>Acties</TableHead>}
+                    {hasRole('beheerder') && <TableHead>Acties</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -298,12 +320,26 @@ export default function Users() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {new Date(user.created_at).toLocaleDateString('nl-NL')}
+                          <div className="flex items-center gap-2 text-sm">
+                            <Clock className="h-3 w-3 text-muted-foreground" />
+                            {new Date(user.created_at).toLocaleDateString('nl-NL', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric'
+                            })}
+                          </div>
                         </TableCell>
                         <TableCell>
-                          {new Date(user.updated_at).toLocaleDateString('nl-NL')}
+                          <div className="flex items-center gap-2 text-sm">
+                            <Clock className="h-3 w-3 text-muted-foreground" />
+                            {new Date(user.updated_at).toLocaleDateString('nl-NL', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric'
+                            })}
+                          </div>
                         </TableCell>
-                        {isSuperAdmin() && (
+                        {hasRole('beheerder') && (
                           <TableCell>
                             <Select
                               value={user.role}
@@ -342,7 +378,7 @@ export default function Users() {
                 Beveiligingslogboek
               </CardTitle>
               <CardDescription>
-                Recente beveiligingsgebeurtenissen en gebruikersactiviteiten
+                Recente beveiligingsgebeurtenissen en gebruikersactiviteiten. Alleen super admins kunnen deze informatie bekijken.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -365,21 +401,53 @@ export default function Users() {
                     {auditLogs.map((log) => (
                       <TableRow key={log.id}>
                         <TableCell className="text-sm">
-                          {new Date(log.created_at).toLocaleString('nl-NL')}
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-3 w-3 text-muted-foreground" />
+                            {new Date(log.created_at).toLocaleString('nl-NL', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant={getActionBadgeVariant(log.action)}>
-                            {log.action.replace(/_/g, ' ')}
+                            {formatActionName(log.action)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm">
-                          {log.user_id ? log.user_id.substring(0, 8) + '...' : 'Systeem'}
+                          {log.user_id ? (
+                            <code className="bg-muted px-1 py-0.5 rounded text-xs">
+                              {log.user_id.substring(0, 8)}...
+                            </code>
+                          ) : (
+                            <span className="text-muted-foreground">Systeem</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-sm">
-                          {log.resource_type || '-'}
+                          {log.resource_type ? (
+                            <Badge variant="outline" className="text-xs">
+                              {log.resource_type}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </TableCell>
-                        <TableCell className="text-sm max-w-xs truncate">
-                          {log.details ? JSON.stringify(log.details) : '-'}
+                        <TableCell className="text-sm max-w-xs">
+                          {log.details ? (
+                            <details className="cursor-pointer">
+                              <summary className="text-blue-600 hover:text-blue-800">
+                                Details bekijken
+                              </summary>
+                              <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto">
+                                {JSON.stringify(log.details, null, 2)}
+                              </pre>
+                            </details>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

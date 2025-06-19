@@ -117,13 +117,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           // Log authentication events
           if (event === 'SIGNED_IN') {
-            logSecurityEvent('user_signed_in');
+            setTimeout(() => {
+              logSecurityEvent('user_signed_in');
+            }, 0);
           }
         } else {
           setProfile(null);
           setAdminUser(null);
           if (event === 'SIGNED_OUT') {
-            logSecurityEvent('user_signed_out');
+            setTimeout(() => {
+              logSecurityEvent('user_signed_out');
+            }, 0);
           }
         }
       }
