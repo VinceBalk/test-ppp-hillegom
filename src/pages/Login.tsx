@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Login() {
-  const { user, signIn } = useAuth();
+  const { user, signIn, signUp } = useAuth();
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,20 +20,71 @@ export default function Login() {
     return <Navigate to="/" replace />;
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      await signIn(email, password);
-      toast({
-        title: "Welkom terug!",
-        description: "Je bent succesvol ingelogd.",
-      });
+      const { error } = await signIn(email, password);
+      
+      if (error) {
+        console.error('Sign in error:', error);
+        toast({
+          title: "Login mislukt",
+          description: error.message || "Controleer je email en wachtwoord.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Welkom terug!",
+          description: "Je bent succesvol ingelogd.",
+        });
+      }
     } catch (error) {
+      console.error('Sign in error:', error);
       toast({
         title: "Login mislukt",
-        description: "Controleer je email en wachtwoord.",
+        description: "Er is een onverwachte fout opgetreden.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await signUp(email, password);
+      
+      if (error) {
+        console.error('Sign up error:', error);
+        if (error.message?.includes('already registered')) {
+          toast({
+            title: "Account bestaat al",
+            description: "Dit email adres is al geregistreerd. Probeer in te loggen.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Registratie mislukt",
+            description: error.message || "Er is een fout opgetreden bij het registreren.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Registratie succesvol!",
+          description: "Controleer je email voor een bevestigingslink.",
+        });
+      }
+    } catch (error) {
+      console.error('Sign up error:', error);
+      toast({
+        title: "Registratie mislukt",
+        description: "Er is een onverwachte fout opgetreden.",
         variant: "destructive",
       });
     } finally {
@@ -53,44 +105,90 @@ export default function Login() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="je@email.com"
-                required
-                className="h-12"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Wachtwoord</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                className="h-12"
-              />
-            </div>
-            <Button
-              type="submit"
-              className="w-full h-12 text-base font-medium gradient-primary"
-              disabled={loading}
-            >
-              {loading ? 'Bezig met inloggen...' : 'Inloggen'}
-            </Button>
-          </form>
+          <Tabs defaultValue="signin" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="signin">Inloggen</TabsTrigger>
+              <TabsTrigger value="signup">Registreren</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="signin">
+              <form onSubmit={handleSignIn} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="signin-email">Email</Label>
+                  <Input
+                    id="signin-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="je@email.com"
+                    required
+                    className="h-12"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signin-password">Wachtwoord</Label>
+                  <Input
+                    id="signin-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    className="h-12"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full h-12 text-base font-medium gradient-primary"
+                  disabled={loading}
+                >
+                  {loading ? 'Bezig met inloggen...' : 'Inloggen'}
+                </Button>
+              </form>
+            </TabsContent>
+            
+            <TabsContent value="signup">
+              <form onSubmit={handleSignUp} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email</Label>
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="je@email.com"
+                    required
+                    className="h-12"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Wachtwoord</Label>
+                  <Input
+                    id="signup-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    minLength={6}
+                    className="h-12"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full h-12 text-base font-medium gradient-primary"
+                  disabled={loading}
+                >
+                  {loading ? 'Bezig met registreren...' : 'Registreren'}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
           
           <div className="mt-6 p-4 bg-muted/50 rounded-lg">
             <p className="text-sm text-muted-foreground text-center">
-              Demo login: gebruik elk email adres<br />
-              <span className="font-medium">vincebalk@gmail.com</span> voor admin toegang
+              Voor admin toegang gebruik:<br />
+              <span className="font-medium">vincebalk@gmail.com</span>
             </p>
           </div>
         </CardContent>
