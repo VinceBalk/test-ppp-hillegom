@@ -36,11 +36,125 @@ export type Database = {
         }
         Relationships: []
       }
+      matches: {
+        Row: {
+          court_number: string | null
+          created_at: string | null
+          id: string
+          match_date: string | null
+          notes: string | null
+          player1_id: string | null
+          player1_score: number | null
+          player2_id: string | null
+          player2_score: number | null
+          round_number: number | null
+          status: string | null
+          tournament_id: string | null
+          updated_at: string | null
+          winner_id: string | null
+        }
+        Insert: {
+          court_number?: string | null
+          created_at?: string | null
+          id?: string
+          match_date?: string | null
+          notes?: string | null
+          player1_id?: string | null
+          player1_score?: number | null
+          player2_id?: string | null
+          player2_score?: number | null
+          round_number?: number | null
+          status?: string | null
+          tournament_id?: string | null
+          updated_at?: string | null
+          winner_id?: string | null
+        }
+        Update: {
+          court_number?: string | null
+          created_at?: string | null
+          id?: string
+          match_date?: string | null
+          notes?: string | null
+          player1_id?: string | null
+          player1_score?: number | null
+          player2_id?: string | null
+          player2_score?: number | null
+          round_number?: number | null
+          status?: string | null
+          tournament_id?: string | null
+          updated_at?: string | null
+          winner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matches_player1_id_fkey"
+            columns: ["player1_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matches_player2_id_fkey"
+            columns: ["player2_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matches_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matches_winner_id_fkey"
+            columns: ["winner_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      players: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          skill_level: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          skill_level?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          skill_level?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
           email: string
           id: string
+          is_admin: boolean | null
           role: string
           updated_at: string | null
         }
@@ -48,6 +162,7 @@ export type Database = {
           created_at?: string | null
           email: string
           id: string
+          is_admin?: boolean | null
           role?: string
           updated_at?: string | null
         }
@@ -55,6 +170,7 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          is_admin?: boolean | null
           role?: string
           updated_at?: string | null
         }
@@ -93,6 +209,87 @@ export type Database = {
           resource_type?: string | null
           user_agent?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      tournament_players: {
+        Row: {
+          id: string
+          player_id: string | null
+          registration_date: string | null
+          tournament_id: string | null
+        }
+        Insert: {
+          id?: string
+          player_id?: string | null
+          registration_date?: string | null
+          tournament_id?: string | null
+        }
+        Update: {
+          id?: string
+          player_id?: string | null
+          registration_date?: string | null
+          tournament_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_players_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_players_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournaments: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          end_date: string
+          entry_fee: number | null
+          id: string
+          max_players: number | null
+          name: string
+          start_date: string
+          status: string | null
+          tournament_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_date: string
+          entry_fee?: number | null
+          id?: string
+          max_players?: number | null
+          name: string
+          start_date: string
+          status?: string | null
+          tournament_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_date?: string
+          entry_fee?: number | null
+          id?: string
+          max_players?: number | null
+          name?: string
+          start_date?: string
+          status?: string | null
+          tournament_type?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }

@@ -6,20 +6,21 @@ export const useSecurityMonitoring = () => {
   const { logSecurityEvent, user } = useAuth();
 
   useEffect(() => {
+    // Only set up monitoring if user is authenticated
+    if (!user) return;
+
     // Monitor for suspicious navigation patterns
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && user) {
+      if (document.visibilityState === 'visible') {
         logSecurityEvent('page_focus_gained');
-      } else if (document.visibilityState === 'hidden' && user) {
+      } else if (document.visibilityState === 'hidden') {
         logSecurityEvent('page_focus_lost');
       }
     };
 
     // Monitor for potential security-related browser events
     const handleBeforeUnload = () => {
-      if (user) {
-        logSecurityEvent('session_ended_unexpectedly');
-      }
+      logSecurityEvent('session_ended_unexpectedly');
     };
 
     // Monitor for suspicious keyboard combinations
@@ -36,6 +37,9 @@ export const useSecurityMonitoring = () => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('beforeunload', handleBeforeUnload);
     document.addEventListener('keydown', handleKeyDown);
+
+    // Log initial page access
+    logSecurityEvent('page_access', 'page', window.location.pathname);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
