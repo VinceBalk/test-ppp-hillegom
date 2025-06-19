@@ -26,11 +26,26 @@ const navigationItems = [
 ];
 
 export function Sidebar() {
-  const { user, hasRole, isSuperAdmin } = useAuth();
+  const { user, hasRole, isSuperAdmin, profile, adminUser } = useAuth();
 
-  const filteredItems = navigationItems.filter(item => 
-    isSuperAdmin() || item.roles.some(role => hasRole(role))
-  );
+  console.log('Sidebar render - Auth state:', {
+    user: user?.email,
+    profile: profile?.role,
+    adminUser: adminUser?.is_super_admin,
+    isSuperAdmin: isSuperAdmin()
+  });
+
+  const filteredItems = navigationItems.filter(item => {
+    const isSuper = isSuperAdmin();
+    const hasRequiredRole = item.roles.some(role => hasRole(role));
+    const shouldShow = isSuper || hasRequiredRole;
+    
+    console.log(`Navigation item "${item.name}": required roles=[${item.roles.join(', ')}], hasRequiredRole=${hasRequiredRole}, isSuper=${isSuper}, shouldShow=${shouldShow}`);
+    
+    return shouldShow;
+  });
+
+  console.log('Filtered navigation items:', filteredItems.map(item => item.name));
 
   return (
     <div className="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-border">
@@ -76,7 +91,8 @@ export function Sidebar() {
                 {user?.email}
               </p>
               <p className="text-xs text-muted-foreground capitalize">
-                {user?.role}
+                {profile?.role || 'Geen rol'}
+                {adminUser?.is_super_admin && ' (Super Admin)'}
               </p>
             </div>
           </div>
