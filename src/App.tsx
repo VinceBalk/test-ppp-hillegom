@@ -17,6 +17,7 @@ import Scores from "./pages/Scores";
 import Specials from "./pages/Specials";
 import Settings from "./pages/Settings";
 import Users from "./pages/Users";
+import Profile from "./pages/Profile";
 import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
 
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="scores" element={<Scores />} />
               <Route path="specials" element={<Specials />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="profile" element={<Profile />} />
               <Route path="users" element={
                 <ProtectedRoute requiredRole="beheerder">
                   <Users />

@@ -1,4 +1,3 @@
-
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,7 +9,8 @@ import {
   Target, 
   Award, 
   Settings, 
-  UserCog 
+  UserCog,
+  User
 } from 'lucide-react';
 
 const navigationItems = [
@@ -21,6 +21,7 @@ const navigationItems = [
   { name: 'Schema', href: '/schedule', icon: Calendar, roles: ['speler', 'organisator', 'beheerder'] },
   { name: 'Scores', href: '/scores', icon: Award, roles: ['speler', 'organisator', 'beheerder'] },
   { name: 'Specials', href: '/specials', icon: Award, roles: ['organisator', 'beheerder'] },
+  { name: 'Profiel', href: '/profile', icon: User, roles: ['speler', 'organisator', 'beheerder'] },
   { name: 'Instellingen', href: '/settings', icon: Settings, roles: ['organisator', 'beheerder'] },
   { name: 'Gebruikers', href: '/users', icon: UserCog, roles: ['beheerder'] },
 ];
