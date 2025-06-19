@@ -16,11 +16,29 @@ export default function ResetPassword() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Get the access_token and refresh_token from URL parameters
   const accessToken = searchParams.get('access_token');
   const refreshToken = searchParams.get('refresh_token');
+  const type = searchParams.get('type');
 
   useEffect(() => {
-    // Check if we have the required tokens
+    console.log('Reset password page loaded with params:', {
+      accessToken: accessToken ? 'present' : 'missing',
+      refreshToken: refreshToken ? 'present' : 'missing',
+      type: type
+    });
+
+    // Check if we have the required parameters for password reset
+    if (type !== 'recovery') {
+      toast({
+        title: "Ongeldige reset link",
+        description: "Deze link is niet geldig voor wachtwoord reset.",
+        variant: "destructive",
+      });
+      navigate('/login');
+      return;
+    }
+
     if (!accessToken || !refreshToken) {
       toast({
         title: "Ongeldige reset link",
@@ -32,11 +50,35 @@ export default function ResetPassword() {
     }
 
     // Set the session with the tokens from the URL
-    supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    });
-  }, [accessToken, refreshToken, navigate, toast]);
+    const setSession = async () => {
+      try {
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (error) {
+          console.error('Session error:', error);
+          toast({
+            title: "Sessie fout",
+            description: "Er is een probleem met de reset link. Vraag een nieuwe aan.",
+            variant: "destructive",
+          });
+          navigate('/login');
+        }
+      } catch (error) {
+        console.error('Session setup error:', error);
+        toast({
+          title: "Sessie fout",
+          description: "Er is een probleem opgetreden. Vraag een nieuwe reset link aan.",
+          variant: "destructive",
+        });
+        navigate('/login');
+      }
+    };
+
+    setSession();
+  }, [accessToken, refreshToken, type, navigate, toast]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
