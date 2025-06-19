@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,9 +11,18 @@ interface UserProfile {
   updated_at?: string;
 }
 
+interface AdminUser {
+  id: string;
+  user_id: string;
+  email: string;
+  is_super_admin: boolean;
+  created_at: string;
+}
+
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
+  adminUser: AdminUser | null;
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -20,6 +30,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   hasRole: (role: string) => boolean;
   isSuperAdmin: () => boolean;
+  logSecurityEvent: (action: string, resourceType?: string, resourceId?: string, details?: any) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,6 +38,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -43,10 +55,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Type assertion to ensure role is one of our expected values
       setProfile(data as UserProfile);
     } catch (error) {
       console.error('Error fetching user profile:', error);
+    }
+  };
+
+  const fetchAdminUser = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching admin user:', error);
+        return;
+      }
+
+      setAdminUser(data as AdminUser | null);
+    } catch (error) {
+      console.error('Error fetching admin user:', error);
+    }
+  };
+
+  const logSecurityEvent = async (
+    action: string, 
+    resourceType?: string, 
+    resourceId?: string, 
+    details?: any
+  ) => {
+    try {
+      await supabase.rpc('log_security_event', {
+        p_user_id: user?.id,
+        p_action: action,
+        p_resource_type: resourceType,
+        p_resource_id: resourceId,
+        p_details: details ? JSON.stringify(details) : null
+      });
+    } catch (error) {
+      console.error('Error logging security event:', error);
     }
   };
 
@@ -60,12 +109,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
 
         if (session?.user) {
-          // Fetch user profile after authentication
+          // Fetch user profile and admin status after authentication
           setTimeout(() => {
             fetchUserProfile(session.user.id);
+            fetchAdminUser(session.user.id);
           }, 0);
+
+          // Log authentication events
+          if (event === 'SIGNED_IN') {
+            logSecurityEvent('user_signed_in');
+          }
         } else {
           setProfile(null);
+          setAdminUser(null);
+          if (event === 'SIGNED_OUT') {
+            logSecurityEvent('user_signed_out');
+          }
         }
       }
     );
@@ -76,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchUserProfile(session.user.id);
+        fetchAdminUser(session.user.id);
       }
       setLoading(false);
     });
@@ -89,8 +149,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email,
         password,
       });
+      
+      if (error) {
+        await logSecurityEvent('failed_sign_in_attempt', 'auth', null, { email, error: error.message });
+      }
+      
       return { error };
     } catch (error) {
+      await logSecurityEvent('failed_sign_in_attempt', 'auth', null, { email, error: 'Unknown error' });
       return { error };
     }
   };
@@ -106,15 +172,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           emailRedirectTo: redirectUrl
         }
       });
+      
+      if (error) {
+        await logSecurityEvent('failed_sign_up_attempt', 'auth', null, { email, error: error.message });
+      } else {
+        await logSecurityEvent('successful_sign_up', 'auth', null, { email });
+      }
+      
       return { error };
     } catch (error) {
+      await logSecurityEvent('failed_sign_up_attempt', 'auth', null, { email, error: 'Unknown error' });
       return { error };
     }
   };
 
   const signOut = async () => {
+    await logSecurityEvent('user_sign_out_initiated');
     await supabase.auth.signOut();
     setProfile(null);
+    setAdminUser(null);
   };
 
   const hasRole = (role: string) => {
@@ -126,20 +202,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isSuperAdmin = () => {
-    return user?.email === 'vincebalk@gmail.com';
+    return adminUser?.is_super_admin === true;
   };
 
   return (
     <AuthContext.Provider value={{
       user,
       profile,
+      adminUser,
       session,
       loading,
       signIn,
       signUp,
       signOut,
       hasRole,
-      isSuperAdmin
+      isSuperAdmin,
+      logSecurityEvent
     }}>
       {children}
     </AuthContext.Provider>
