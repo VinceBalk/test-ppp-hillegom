@@ -34,7 +34,21 @@ export default function Settings() {
       if (error) throw error;
 
       const settingsMap = data.reduce((acc, setting) => {
-        acc[setting.key] = JSON.parse(setting.value);
+        // Properly handle Json type conversion to string
+        let stringValue: string;
+        if (typeof setting.value === 'string') {
+          // If it's already a string, try to parse it as JSON first
+          try {
+            stringValue = JSON.parse(setting.value);
+          } catch {
+            // If parsing fails, use the string as-is
+            stringValue = setting.value;
+          }
+        } else {
+          // If it's not a string, convert it to string
+          stringValue = String(setting.value);
+        }
+        acc[setting.key] = stringValue;
         return acc;
       }, {} as Record<string, string>);
 
