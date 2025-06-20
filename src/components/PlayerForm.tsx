@@ -19,7 +19,8 @@ export function PlayerForm({ player, onSubmit, onCancel, isSubmitting }: PlayerF
     name: player?.name || '',
     email: player?.email || '',
     phone: player?.phone || '',
-    skill_level: player?.skill_level || 'beginner' as const,
+    group_side: player?.group_side || 'left' as const,
+    ranking_score: player?.ranking_score || 0,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -64,17 +65,27 @@ export function PlayerForm({ player, onSubmit, onCancel, isSubmitting }: PlayerF
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="skill_level">Niveau</Label>
-            <Select value={formData.skill_level} onValueChange={(value) => setFormData({ ...formData, skill_level: value as any })}>
+            <Label htmlFor="group_side">Speelgroep</Label>
+            <Select value={formData.group_side} onValueChange={(value) => setFormData({ ...formData, group_side: value as any })}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="beginner">Beginner</SelectItem>
-                <SelectItem value="intermediate">Gemiddeld</SelectItem>
-                <SelectItem value="advanced">Gevorderd</SelectItem>
+                <SelectItem value="left">Links</SelectItem>
+                <SelectItem value="right">Rechts</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="ranking_score">Ranking Score</Label>
+            <Input
+              id="ranking_score"
+              type="number"
+              min="0"
+              value={formData.ranking_score}
+              onChange={(e) => setFormData({ ...formData, ranking_score: parseInt(e.target.value) || 0 })}
+            />
           </div>
 
           <div className="flex gap-2 pt-4">

@@ -38,22 +38,20 @@ export default function Players() {
     deletePlayer(id);
   };
 
-  const getSkillLevelBadge = (level?: string) => {
+  const getGroupSideBadge = (side?: string) => {
     const variants = {
-      beginner: 'secondary',
-      intermediate: 'default',
-      advanced: 'destructive'
+      left: 'default',
+      right: 'secondary'
     } as const;
     
     const labels = {
-      beginner: 'Beginner',
-      intermediate: 'Gemiddeld',
-      advanced: 'Gevorderd'
+      left: 'Links',
+      right: 'Rechts'
     };
 
     return (
-      <Badge variant={variants[level as keyof typeof variants] || 'secondary'}>
-        {labels[level as keyof typeof labels] || level}
+      <Badge variant={variants[side as keyof typeof variants] || 'default'}>
+        {labels[side as keyof typeof labels] || side}
       </Badge>
     );
   };
@@ -119,14 +117,15 @@ export default function Players() {
                 <TableHead>Naam</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Telefoon</TableHead>
-                <TableHead>Niveau</TableHead>
+                <TableHead>Speelgroep</TableHead>
+                <TableHead>Ranking</TableHead>
                 <TableHead>Acties</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredPlayers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     {searchTerm ? 'Geen spelers gevonden die voldoen aan de zoekterm.' : 'Nog geen spelers toegevoegd.'}
                   </TableCell>
                 </TableRow>
@@ -136,7 +135,8 @@ export default function Players() {
                     <TableCell className="font-medium">{player.name}</TableCell>
                     <TableCell>{player.email || '-'}</TableCell>
                     <TableCell>{player.phone || '-'}</TableCell>
-                    <TableCell>{getSkillLevelBadge(player.skill_level)}</TableCell>
+                    <TableCell>{getGroupSideBadge(player.group_side)}</TableCell>
+                    <TableCell>{player.ranking_score || 0}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Dialog open={editingPlayer?.id === player.id} onOpenChange={(open) => !open && setEditingPlayer(null)}>

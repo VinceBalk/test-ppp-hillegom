@@ -12,7 +12,6 @@ export interface Tournament {
   max_players?: number;
   entry_fee?: number;
   status?: 'draft' | 'open' | 'in_progress' | 'completed' | 'cancelled';
-  tournament_type?: 'single_elimination' | 'double_elimination' | 'round_robin';
   created_at?: string;
   updated_at?: string;
   created_by?: string;

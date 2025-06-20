@@ -121,30 +121,33 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           email: string | null
+          group_side: string | null
           id: string
           name: string
           phone: string | null
-          skill_level: string | null
+          ranking_score: number | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           created_by?: string | null
           email?: string | null
+          group_side?: string | null
           id?: string
           name: string
           phone?: string | null
-          skill_level?: string | null
+          ranking_score?: number | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           created_by?: string | null
           email?: string | null
+          group_side?: string | null
           id?: string
           name?: string
           phone?: string | null
-          skill_level?: string | null
+          ranking_score?: number | null
           updated_at?: string | null
         }
         Relationships: []
@@ -329,7 +332,6 @@ export type Database = {
           name: string
           start_date: string
           status: string | null
-          tournament_type: string | null
           updated_at: string | null
         }
         Insert: {
@@ -343,7 +345,6 @@ export type Database = {
           name: string
           start_date: string
           status?: string | null
-          tournament_type?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -357,7 +358,6 @@ export type Database = {
           name?: string
           start_date?: string
           status?: string | null
-          tournament_type?: string | null
           updated_at?: string | null
         }
         Relationships: []

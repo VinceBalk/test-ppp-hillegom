@@ -8,7 +8,8 @@ export interface Player {
   name: string;
   email?: string;
   phone?: string;
-  skill_level?: 'beginner' | 'intermediate' | 'advanced';
+  group_side?: 'left' | 'right';
+  ranking_score?: number;
   created_at?: string;
   updated_at?: string;
   created_by?: string;

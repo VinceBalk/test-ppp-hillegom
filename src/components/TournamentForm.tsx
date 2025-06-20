@@ -24,7 +24,6 @@ export function TournamentForm({ tournament, onSubmit, onCancel, isSubmitting }:
     max_players: tournament?.max_players || 16,
     entry_fee: tournament?.entry_fee || 0,
     status: tournament?.status || 'draft' as const,
-    tournament_type: tournament?.tournament_type || 'single_elimination' as const,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -106,20 +105,6 @@ export function TournamentForm({ tournament, onSubmit, onCancel, isSubmitting }:
                 onChange={(e) => setFormData({ ...formData, entry_fee: parseFloat(e.target.value) || 0 })}
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tournament_type">Type Toernooi</Label>
-            <Select value={formData.tournament_type} onValueChange={(value) => setFormData({ ...formData, tournament_type: value as any })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="single_elimination">Enkele Eliminatie</SelectItem>
-                <SelectItem value="double_elimination">Dubbele Eliminatie</SelectItem>
-                <SelectItem value="round_robin">Round Robin</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="space-y-2">
