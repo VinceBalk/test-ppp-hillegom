@@ -212,6 +212,75 @@ export type Database = {
         }
         Relationships: []
       }
+      settings: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          key: string
+          updated_at: string | null
+          value: Json
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string | null
+          value: Json
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
+      specials: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          entry_fee: number | null
+          event_date: string
+          id: string
+          location: string | null
+          max_participants: number | null
+          name: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          entry_fee?: number | null
+          event_date: string
+          id?: string
+          location?: string | null
+          max_participants?: number | null
+          name: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          entry_fee?: number | null
+          event_date?: string
+          id?: string
+          location?: string | null
+          max_participants?: number | null
+          name?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       tournament_players: {
         Row: {
           id: string
