@@ -11,6 +11,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Players from "./pages/Players";
 import Tournaments from "./pages/Tournaments";
+import AssignPlayers from "./pages/AssignPlayers";
 import Matches from "./pages/Matches";
 import Schedule from "./pages/Schedule";
 import Scores from "./pages/Scores";
@@ -41,6 +42,7 @@ const App = () => (
               <Route index element={<Dashboard />} />
               <Route path="players" element={<Players />} />
               <Route path="tournaments" element={<Tournaments />} />
+              <Route path="tournaments/:id/assign-players" element={<AssignPlayers />} />
               <Route path="matches" element={<Matches />} />
               <Route path="schedule" element={<Schedule />} />
               <Route path="scores" element={<Scores />} />

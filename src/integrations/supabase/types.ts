@@ -286,18 +286,24 @@ export type Database = {
       }
       tournament_players: {
         Row: {
+          active: boolean | null
+          group: string
           id: string
           player_id: string | null
           registration_date: string | null
           tournament_id: string | null
         }
         Insert: {
+          active?: boolean | null
+          group: string
           id?: string
           player_id?: string | null
           registration_date?: string | null
           tournament_id?: string | null
         }
         Update: {
+          active?: boolean | null
+          group?: string
           id?: string
           player_id?: string | null
           registration_date?: string | null

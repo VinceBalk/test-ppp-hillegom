@@ -1,11 +1,12 @@
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit, Trash2, Calendar } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Calendar, Users } from 'lucide-react';
 import { useTournaments, Tournament } from '@/hooks/useTournaments';
 import { TournamentForm } from '@/components/TournamentForm';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
@@ -14,6 +15,7 @@ import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
 export default function Tournaments() {
+  const navigate = useNavigate();
   const { tournaments, isLoading, createTournament, updateTournament, deleteTournament, isCreating, isUpdating, isDeleting } = useTournaments();
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
@@ -38,6 +40,10 @@ export default function Tournaments() {
 
   const handleDeleteTournament = (id: string) => {
     deleteTournament(id);
+  };
+
+  const handleAssignPlayers = (tournamentId: string) => {
+    navigate(`/tournaments/${tournamentId}/assign-players`);
   };
 
   const getStatusBadge = (status?: string) => {
@@ -169,6 +175,15 @@ export default function Tournaments() {
                     <TableCell>{getStatusBadge(tournament.status)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAssignPlayers(tournament.id)}
+                          title="Spelers toewijzen"
+                        >
+                          <Users className="h-4 w-4" />
+                        </Button>
+
                         <Dialog open={editingTournament?.id === tournament.id} onOpenChange={(open) => !open && setEditingTournament(null)}>
                           <DialogTrigger asChild>
                             <Button
