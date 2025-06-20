@@ -23,7 +23,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             <Menu className="h-6 w-6" />
           </Button>
           <div className="lg:hidden">
-            <h1 className="text-xl font-bold gradient-primary bg-clip-text text-transparent">
+            <h1 className="text-xl font-bold gradient-primary bg-clip-text">
               PPP Hillegom
             </h1>
           </div>
