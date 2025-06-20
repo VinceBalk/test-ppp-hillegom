@@ -34,13 +34,35 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
         return;
       }
 
+      // Input validation
+      if (password.length < 6) {
+        toast({
+          title: "Ongeldig wachtwoord",
+          description: "Wachtwoord moet minimaal 6 karakters lang zijn.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       const { error } = await signIn(sanitizedEmail, password);
       
       if (error) {
         console.error('Sign in error:', error);
+        // Enhanced error handling with specific messages
+        let errorMessage = "Controleer je email en wachtwoord.";
+        
+        if (error.message?.includes('Invalid login credentials')) {
+          errorMessage = "Onjuiste email of wachtwoord.";
+        } else if (error.message?.includes('Email not confirmed')) {
+          errorMessage = "Email nog niet bevestigd. Controleer je inbox.";
+        } else if (error.message?.includes('Too many requests')) {
+          errorMessage = "Te veel inlogpogingen. Probeer het later opnieuw.";
+        }
+        
         toast({
           title: "Login mislukt",
-          description: error.message || "Controleer je email en wachtwoord.",
+          description: errorMessage,
           variant: "destructive",
         });
       } else {
@@ -73,6 +95,7 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
           placeholder="je@email.com"
           required
           className="h-12"
+          maxLength={254}
         />
       </div>
       <div className="space-y-2">
@@ -85,6 +108,7 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
           placeholder="••••••••"
           required
           className="h-12"
+          maxLength={128}
         />
       </div>
       <Button

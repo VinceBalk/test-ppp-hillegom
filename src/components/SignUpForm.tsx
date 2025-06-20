@@ -12,6 +12,7 @@ export function SignUpForm() {
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -30,23 +31,61 @@ export function SignUpForm() {
         return;
       }
 
+      // Enhanced password validation
+      if (password.length < 6) {
+        toast({
+          title: "Zwak wachtwoord",
+          description: "Wachtwoord moet minimaal 6 karakters lang zijn.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        toast({
+          title: "Wachtwoorden komen niet overeen",
+          description: "Controleer of beide wachtwoorden hetzelfde zijn.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Additional password strength validation
+      const hasUpperCase = /[A-Z]/.test(password);
+      const hasLowerCase = /[a-z]/.test(password);
+      const hasNumbers = /[0-9]/.test(password);
+      
+      if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
+        toast({
+          title: "Zwak wachtwoord",
+          description: "Wachtwoord moet een hoofdletter, kleine letter en cijfer bevatten.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       const { error } = await signUp(sanitizedEmail, password);
       
       if (error) {
         console.error('Sign up error:', error);
+        let errorMessage = "Er is een fout opgetreden bij het registreren.";
+        
         if (error.message?.includes('already registered')) {
-          toast({
-            title: "Account bestaat al",
-            description: "Dit email adres is al geregistreerd. Probeer in te loggen.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Registratie mislukt",
-            description: error.message || "Er is een fout opgetreden bij het registreren.",
-            variant: "destructive",
-          });
+          errorMessage = "Dit email adres is al geregistreerd. Probeer in te loggen.";
+        } else if (error.message?.includes('invalid email')) {
+          errorMessage = "Ongeldig email adres.";
+        } else if (error.message?.includes('weak password')) {
+          errorMessage = "Wachtwoord is te zwak. Gebruik een sterker wachtwoord.";
         }
+        
+        toast({
+          title: "Registratie mislukt",
+          description: errorMessage,
+          variant: "destructive",
+        });
       } else {
         toast({
           title: "Registratie succesvol!",
@@ -77,6 +116,7 @@ export function SignUpForm() {
           placeholder="je@email.com"
           required
           className="h-12"
+          maxLength={254}
         />
       </div>
       <div className="space-y-2">
@@ -90,6 +130,24 @@ export function SignUpForm() {
           required
           minLength={6}
           className="h-12"
+          maxLength={128}
+        />
+        <div className="text-xs text-muted-foreground">
+          Minimaal 6 karakters met hoofdletter, kleine letter en cijfer
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="confirm-password">Bevestig wachtwoord</Label>
+        <Input
+          id="confirm-password"
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          placeholder="••••••••"
+          required
+          minLength={6}
+          className="h-12"
+          maxLength={128}
         />
       </div>
       <Button

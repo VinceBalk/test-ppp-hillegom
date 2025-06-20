@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Shield, Activity, AlertTriangle, UserCheck, Clock } from 'lucide-react';
+import { useSecurityValidation } from '@/hooks/useSecurityValidation';
 
 interface UserProfile {
   id: string;
@@ -38,6 +39,7 @@ interface AuditLog {
 
 export default function Users() {
   const { isSuperAdmin, logSecurityEvent, hasRole } = useAuth();
+  const { validateRoleChange } = useSecurityValidation();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
@@ -122,7 +124,25 @@ export default function Users() {
   const updateUserRole = async (userId: string, newRole: 'speler' | 'organisator' | 'beheerder') => {
     try {
       const oldUser = users.find(u => u.id === userId);
-      
+      if (!oldUser) {
+        toast({
+          title: "Fout bij bijwerken rol",
+          description: "Gebruiker niet gevonden.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Security validation before attempting role change
+      if (!validateRoleChange(userId, oldUser.role, newRole)) {
+        toast({
+          title: "Niet geautoriseerd",
+          description: "Je hebt geen toestemming om deze rolwijziging uit te voeren.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({ role: newRole, updated_at: new Date().toISOString() })
@@ -130,9 +150,18 @@ export default function Users() {
 
       if (error) {
         console.error('Error updating user role:', error);
+        
+        // Enhanced error handling
+        let errorMessage = error.message;
+        if (error.message?.includes('row-level security')) {
+          errorMessage = "Geen toestemming om deze gebruiker te wijzigen.";
+        } else if (error.message?.includes('foreign key')) {
+          errorMessage = "Ongeldige rolwijziging.";
+        }
+        
         toast({
           title: "Fout bij bijwerken rol",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive",
         });
         return;
@@ -302,6 +331,8 @@ export default function Users() {
                 <TableBody>
                   {users.map((user) => {
                     const isAdmin = adminUsers.find(admin => admin.user_id === user.id);
+                    const canModifyUser = hasRole('beheerder') && (!isAdmin?.is_super_admin || isSuperAdmin());
+                    
                     return (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">
@@ -346,7 +377,7 @@ export default function Users() {
                               onValueChange={(newRole: 'speler' | 'organisator' | 'beheerder') => 
                                 updateUserRole(user.id, newRole)
                               }
-                              disabled={isAdmin?.is_super_admin}
+                              disabled={!canModifyUser}
                             >
                               <SelectTrigger className="w-32">
                                 <SelectValue />
@@ -357,6 +388,11 @@ export default function Users() {
                                 <SelectItem value="beheerder">Beheerder</SelectItem>
                               </SelectContent>
                             </Select>
+                            {!canModifyUser && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                Geen toestemming
+                              </div>
+                            )}
                           </TableCell>
                         )}
                       </TableRow>
