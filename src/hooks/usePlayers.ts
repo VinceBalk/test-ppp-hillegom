@@ -10,6 +10,13 @@ export interface Player {
   phone?: string;
   group_side?: 'left' | 'right';
   ranking_score?: number;
+  total_tournaments?: number;
+  total_games_won?: number;
+  avg_games_per_tournament?: number;
+  specials?: any;
+  row_side?: 'left' | 'right';
+  position?: number;
+  rank_change?: number;
   created_at?: string;
   updated_at?: string;
   created_by?: string;
@@ -36,7 +43,15 @@ export const usePlayers = () => {
     mutationFn: async (player: Omit<Player, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => {
       const { data, error } = await supabase
         .from('players')
-        .insert([player])
+        .insert([{
+          ...player,
+          total_tournaments: 0,
+          total_games_won: 0,
+          avg_games_per_tournament: 0,
+          specials: {},
+          position: 0,
+          rank_change: 0
+        }])
         .select()
         .single();
       

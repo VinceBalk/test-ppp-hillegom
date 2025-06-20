@@ -19,11 +19,15 @@ interface Player {
   id: string;
   name: string;
   ranking_score: number;
-  group_side: string;
+  row_side: string;
+  position: number;
+  rank_change: number;
+  total_tournaments: number;
+  total_games_won: number;
+  avg_games_per_tournament: number;
 }
 
 interface PlayerWithRanking extends Player {
-  position: number;
   trend: 'up' | 'down' | 'same';
 }
 
@@ -106,21 +110,23 @@ export default function Dashboard() {
 
     if (players) {
       const leftGroup = players
-        .filter(player => player.group_side === 'left')
+        .filter(player => player.row_side === 'left')
         .slice(0, 10)
         .map((player, index) => ({
           ...player,
           position: index + 1,
-          trend: 'same' as const // For now, we'll show same - in a real app this would be calculated
+          trend: player.rank_change > 0 ? 'up' as const : 
+                 player.rank_change < 0 ? 'down' as const : 'same' as const
         }));
 
       const rightGroup = players
-        .filter(player => player.group_side === 'right')
+        .filter(player => player.row_side === 'right')
         .slice(0, 10)
         .map((player, index) => ({
           ...player,
           position: index + 1,
-          trend: 'same' as const
+          trend: player.rank_change > 0 ? 'up' as const : 
+                 player.rank_change < 0 ? 'down' as const : 'same' as const
         }));
 
       setLeftGroupRankings(leftGroup);
@@ -323,7 +329,7 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle>Rankings - Links</CardTitle>
             <CardDescription>
-              Top spelers linker groep
+              Top spelers linker rij
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -345,7 +351,7 @@ export default function Dashboard() {
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Geen spelers in linker groep
+                  Geen spelers in linker rij
                 </p>
               )}
             </div>
@@ -358,7 +364,7 @@ export default function Dashboard() {
         <CardHeader>
           <CardTitle>Rankings - Rechts</CardTitle>
           <CardDescription>
-            Top spelers rechter groep
+            Top spelers rechter rij
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -380,7 +386,7 @@ export default function Dashboard() {
               ))
             ) : (
               <p className="text-sm text-muted-foreground col-span-2">
-                Geen spelers in rechter groep
+                Geen spelers in rechter rij
               </p>
             )}
           </div>

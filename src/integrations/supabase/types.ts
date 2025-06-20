@@ -116,8 +116,54 @@ export type Database = {
           },
         ]
       }
+      player_movements: {
+        Row: {
+          created_at: string | null
+          from_row: string | null
+          id: string
+          player_id: string | null
+          status: string | null
+          to_row: string | null
+          tournament_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          from_row?: string | null
+          id?: string
+          player_id?: string | null
+          status?: string | null
+          to_row?: string | null
+          tournament_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          from_row?: string | null
+          id?: string
+          player_id?: string | null
+          status?: string | null
+          to_row?: string | null
+          tournament_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_movements_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_movements_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       players: {
         Row: {
+          avg_games_per_tournament: number | null
           created_at: string | null
           created_by: string | null
           email: string | null
@@ -125,10 +171,17 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          position: number | null
+          rank_change: number | null
           ranking_score: number | null
+          row_side: string | null
+          specials: Json | null
+          total_games_won: number | null
+          total_tournaments: number | null
           updated_at: string | null
         }
         Insert: {
+          avg_games_per_tournament?: number | null
           created_at?: string | null
           created_by?: string | null
           email?: string | null
@@ -136,10 +189,17 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          position?: number | null
+          rank_change?: number | null
           ranking_score?: number | null
+          row_side?: string | null
+          specials?: Json | null
+          total_games_won?: number | null
+          total_tournaments?: number | null
           updated_at?: string | null
         }
         Update: {
+          avg_games_per_tournament?: number | null
           created_at?: string | null
           created_by?: string | null
           email?: string | null
@@ -147,7 +207,13 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          position?: number | null
+          rank_change?: number | null
           ranking_score?: number | null
+          row_side?: string | null
+          specials?: Json | null
+          total_games_won?: number | null
+          total_tournaments?: number | null
           updated_at?: string | null
         }
         Relationships: []

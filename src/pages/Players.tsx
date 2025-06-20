@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { usePlayers, Player } from '@/hooks/usePlayers';
 import { PlayerForm } from '@/components/PlayerForm';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
@@ -38,7 +38,7 @@ export default function Players() {
     deletePlayer(id);
   };
 
-  const getGroupSideBadge = (side?: string) => {
+  const getRowSideBadge = (side?: string) => {
     const variants = {
       left: 'default',
       right: 'secondary'
@@ -54,6 +54,19 @@ export default function Players() {
         {labels[side as keyof typeof labels] || side}
       </Badge>
     );
+  };
+
+  const getRankChangeIcon = (change?: number) => {
+    if (!change || change === 0) return <Minus className="h-3 w-3 text-gray-400" />;
+    if (change > 0) return <TrendingUp className="h-3 w-3 text-green-500" />;
+    return <TrendingDown className="h-3 w-3 text-red-500" />;
+  };
+
+  const formatSpecials = (specials?: any) => {
+    if (!specials || typeof specials !== 'object') return '-';
+    const specialsObj = typeof specials === 'string' ? JSON.parse(specials) : specials;
+    const specialsArray = Object.keys(specialsObj).filter(key => specialsObj[key]);
+    return specialsArray.length > 0 ? specialsArray.join(', ') : '-';
   };
 
   if (isLoading) {
@@ -117,15 +130,20 @@ export default function Players() {
                 <TableHead>Naam</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Telefoon</TableHead>
-                <TableHead>Speelgroep</TableHead>
+                <TableHead>Rij</TableHead>
+                <TableHead>Positie</TableHead>
                 <TableHead>Ranking</TableHead>
+                <TableHead>Toernooien</TableHead>
+                <TableHead>Gem. Winst</TableHead>
+                <TableHead>Trend</TableHead>
+                <TableHead>Specials</TableHead>
                 <TableHead>Acties</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredPlayers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                     {searchTerm ? 'Geen spelers gevonden die voldoen aan de zoekterm.' : 'Nog geen spelers toegevoegd.'}
                   </TableCell>
                 </TableRow>
@@ -135,8 +153,18 @@ export default function Players() {
                     <TableCell className="font-medium">{player.name}</TableCell>
                     <TableCell>{player.email || '-'}</TableCell>
                     <TableCell>{player.phone || '-'}</TableCell>
-                    <TableCell>{getGroupSideBadge(player.group_side)}</TableCell>
+                    <TableCell>{getRowSideBadge(player.group_side)}</TableCell>
+                    <TableCell>{player.position || 0}</TableCell>
                     <TableCell>{player.ranking_score || 0}</TableCell>
+                    <TableCell>{player.total_tournaments || 0}</TableCell>
+                    <TableCell>{player.avg_games_per_tournament?.toFixed(1) || '0.0'}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-1">
+                        {getRankChangeIcon(player.rank_change)}
+                        <span className="text-xs">{Math.abs(player.rank_change || 0)}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs">{formatSpecials(player.specials)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Dialog open={editingPlayer?.id === player.id} onOpenChange={(open) => !open && setEditingPlayer(null)}>

@@ -34,19 +34,19 @@ export default function Settings() {
       if (error) throw error;
 
       const settingsMap = data.reduce((acc, setting) => {
-        // Properly handle Json type conversion to string
+        // Safely handle JSON value parsing
         let stringValue: string;
         if (typeof setting.value === 'string') {
-          // If it's already a string, try to parse it as JSON first
           try {
-            stringValue = JSON.parse(setting.value);
+            const parsed = JSON.parse(setting.value);
+            stringValue = typeof parsed === 'string' ? parsed : String(parsed);
           } catch {
-            // If parsing fails, use the string as-is
             stringValue = setting.value;
           }
-        } else {
-          // If it's not a string, convert it to string
+        } else if (setting.value && typeof setting.value === 'object') {
           stringValue = String(setting.value);
+        } else {
+          stringValue = setting.value ? String(setting.value) : '';
         }
         acc[setting.key] = stringValue;
         return acc;
