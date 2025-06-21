@@ -9,6 +9,13 @@ import { useRateLimiting } from '@/hooks/useRateLimiting';
 import { useEnhancedInputValidation } from '@/hooks/useEnhancedInputValidation';
 import { useComprehensiveSecurityMonitoring } from '@/hooks/useComprehensiveSecurityMonitoring';
 
+interface SuspiciousPatterns {
+  recent_failures: number;
+  different_ips: number;
+  rapid_attempts: number;
+  is_suspicious: boolean;
+}
+
 export function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
   const { signIn } = useAuth();
   const { toast } = useToast();
@@ -52,8 +59,10 @@ export function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }
 
       const sanitizedEmail = emailValidation.sanitized;
 
-      // Check for suspicious login patterns
-      const suspiciousPatterns = await detectSuspiciousPatterns(sanitizedEmail);
+      // Check for suspicious login patterns with proper typing
+      const suspiciousData = await detectSuspiciousPatterns(sanitizedEmail);
+      const suspiciousPatterns = suspiciousData as SuspiciousPatterns | null;
+      
       if (suspiciousPatterns?.is_suspicious) {
         await logSecurityEvent('suspicious_activity', 'suspicious_login_pattern_detected', 'authentication', null, {
           email: sanitizedEmail,
