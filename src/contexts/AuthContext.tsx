@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log('Fetching user profile for:', userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -52,17 +53,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error('Error fetching user profile:', error);
-        return;
+        // Don't throw here, just log the error
+        return null;
       }
 
+      console.log('User profile fetched:', data);
       setProfile(data as UserProfile);
+      return data;
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('Exception fetching user profile:', error);
+      return null;
     }
   };
 
   const fetchAdminUser = async (userId: string) => {
     try {
+      console.log('Fetching admin user for:', userId);
       const { data, error } = await supabase
         .from('admin_users')
         .select('*')
@@ -71,12 +77,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching admin user:', error);
-        return;
+        return null;
       }
 
+      console.log('Admin user fetched:', data);
       setAdminUser(data as AdminUser | null);
+      return data;
     } catch (error) {
-      console.error('Error fetching admin user:', error);
+      console.error('Exception fetching admin user:', error);
+      return null;
     }
   };
 
@@ -89,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (!user?.id) return;
       
+      console.log('Logging security event:', action);
       await supabase.rpc('log_security_event', {
         p_user_id: user.id,
         p_action: action,
@@ -101,25 +111,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Force logout on initialization to clear any corrupted state
   useEffect(() => {
-    console.log('Setting up auth state listener...');
+    console.log('AuthProvider initializing - forcing logout first...');
     
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session:', session ? 'found' : 'none');
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        // Use setTimeout to prevent blocking
-        setTimeout(() => {
-          fetchUserProfile(session.user.id);
-          fetchAdminUser(session.user.id);
-        }, 0);
+    const initializeAuth = async () => {
+      try {
+        // Force logout first to clear any corrupted state
+        await supabase.auth.signOut();
+        console.log('Forced logout completed');
+        
+        // Small delay to ensure logout is processed
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Now get the session (should be null after logout)
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Session fetch error:', error);
+        }
+        
+        console.log('Session after forced logout:', session ? 'still exists' : 'cleared');
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        setProfile(null);
+        setAdminUser(null);
+        
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
-    });
+    };
+
+    initializeAuth();
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -130,23 +156,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Use setTimeout to prevent infinite loops
-          setTimeout(() => {
-            fetchUserProfile(session.user.id);
-            fetchAdminUser(session.user.id);
-            
-            if (event === 'SIGNED_IN') {
-              logSecurityEvent('user_signed_in');
-            }
-          }, 0);
+          // Fetch additional user data
+          Promise.all([
+            fetchUserProfile(session.user.id),
+            fetchAdminUser(session.user.id)
+          ]).catch(error => {
+            console.error('Error fetching user data:', error);
+          });
+          
+          if (event === 'SIGNED_IN') {
+            logSecurityEvent('user_signed_in').catch(console.error);
+          }
         } else {
           setProfile(null);
           setAdminUser(null);
           
           if (event === 'SIGNED_OUT') {
-            setTimeout(() => {
-              logSecurityEvent('user_signed_out');
-            }, 0);
+            logSecurityEvent('user_signed_out').catch(console.error);
           }
         }
       }
@@ -161,35 +187,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => {
     try {
       console.log('Attempting sign in for:', email);
-      const { error } = await supabase.auth.signInWithPassword({
+      setLoading(true);
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
       if (error) {
         console.error('Sign in error:', error.message);
-        setTimeout(() => {
-          logSecurityEvent('failed_sign_in_attempt', 'auth', null, { email, error: error.message });
-        }, 0);
+        logSecurityEvent('failed_sign_in_attempt', 'auth', null, { email, error: error.message }).catch(console.error);
       } else {
-        console.log('Sign in successful');
+        console.log('Sign in successful for user:', data.user?.id);
       }
       
       return { error };
     } catch (error: any) {
       console.error('Sign in exception:', error);
-      setTimeout(() => {
-        logSecurityEvent('failed_sign_in_attempt', 'auth', null, { email, error: 'Unknown error' });
-      }, 0);
+      logSecurityEvent('failed_sign_in_attempt', 'auth', null, { email, error: 'Unknown error' }).catch(console.error);
       return { error };
+    } finally {
+      setLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string) => {
     try {
+      setLoading(true);
       const redirectUrl = `${window.location.origin}/`;
       
-      const { error } = await supabase.auth.signUp({
+      console.log('Attempting sign up for:', email, 'with redirect:', redirectUrl);
+      
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -198,65 +227,88 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       
       if (error) {
-        setTimeout(() => {
-          logSecurityEvent('failed_sign_up_attempt', 'auth', null, { email, error: error.message });
-        }, 0);
+        console.error('Sign up error:', error.message);
+        logSecurityEvent('failed_sign_up_attempt', 'auth', null, { email, error: error.message }).catch(console.error);
       } else {
-        setTimeout(() => {
-          logSecurityEvent('successful_sign_up', 'auth', null, { email });
-        }, 0);
+        console.log('Sign up successful for:', email);
+        logSecurityEvent('successful_sign_up', 'auth', null, { email }).catch(console.error);
       }
       
       return { error };
     } catch (error: any) {
-      setTimeout(() => {
-        logSecurityEvent('failed_sign_up_attempt', 'auth', null, { email, error: 'Unknown error' });
-      }, 0);
+      console.error('Sign up exception:', error);
+      logSecurityEvent('failed_sign_up_attempt', 'auth', null, { email, error: 'Unknown error' }).catch(console.error);
       return { error };
+    } finally {
+      setLoading(false);
     }
   };
 
   const signOut = async () => {
     try {
       console.log('Signing out...');
-      setTimeout(() => {
-        logSecurityEvent('user_sign_out_initiated');
-      }, 0);
+      setLoading(true);
       
-      await supabase.auth.signOut();
+      logSecurityEvent('user_sign_out_initiated').catch(console.error);
+      
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Sign out error:', error);
+      } else {
+        console.log('Sign out successful');
+      }
+      
+      // Clear state immediately
+      setUser(null);
+      setSession(null);
       setProfile(null);
       setAdminUser(null);
+      
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error('Sign out exception:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const hasRole = (role: string) => {
-    if (!profile) return false;
+    if (!profile) {
+      console.log('No profile available for role check');
+      return false;
+    }
     const roleHierarchy = { speler: 1, organisator: 2, beheerder: 3 };
     const userLevel = roleHierarchy[profile.role] || 0;
     const requiredLevel = roleHierarchy[role as keyof typeof roleHierarchy] || 0;
-    return userLevel >= requiredLevel;
+    const hasAccess = userLevel >= requiredLevel;
+    console.log(`Role check: user=${profile.role} (${userLevel}), required=${role} (${requiredLevel}), access=${hasAccess}`);
+    return hasAccess;
   };
 
   const isSuperAdmin = () => {
-    return adminUser?.is_super_admin === true;
+    const isSuper = adminUser?.is_super_admin === true;
+    console.log('Super admin check:', isSuper);
+    return isSuper;
   };
 
+  const contextValue = {
+    user,
+    profile,
+    adminUser,
+    session,
+    loading,
+    signIn,
+    signUp,
+    signOut,
+    hasRole,
+    isSuperAdmin,
+    logSecurityEvent
+  };
+
+  console.log('AuthProvider render - user:', user?.id, 'loading:', loading, 'profile:', profile?.role);
+
   return (
-    <AuthContext.Provider value={{
-      user,
-      profile,
-      adminUser,
-      session,
-      loading,
-      signIn,
-      signUp,
-      signOut,
-      hasRole,
-      isSuperAdmin,
-      logSecurityEvent
-    }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

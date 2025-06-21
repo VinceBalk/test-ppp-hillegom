@@ -14,8 +14,11 @@ export default function Login() {
   const [showResetForm, setShowResetForm] = useState(false);
   const location = useLocation();
 
+  console.log('Login page render:', { user: user?.id, loading });
+
   // Show loading while checking auth status
   if (loading) {
+    console.log('Login: showing loading spinner');
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5">
         <div className="text-center">
@@ -29,7 +32,7 @@ export default function Login() {
   // Redirect authenticated users
   if (user) {
     const from = location.state?.from?.pathname || '/';
-    console.log('User is authenticated, redirecting to:', from);
+    console.log('Login: User is authenticated, redirecting to:', from);
     return <Navigate to={from} replace />;
   }
 
@@ -40,6 +43,8 @@ export default function Login() {
   const handleBackToLogin = () => {
     setShowResetForm(false);
   };
+
+  console.log('Login: Rendering login form');
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5 px-4">

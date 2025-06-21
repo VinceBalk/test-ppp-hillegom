@@ -12,8 +12,16 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   const { user, loading, hasRole, isSuperAdmin } = useAuth();
   const location = useLocation();
 
+  console.log('ProtectedRoute check:', { 
+    user: user?.id, 
+    loading, 
+    requiredRole, 
+    pathname: location.pathname 
+  });
+
   // Show loading spinner while checking authentication
   if (loading) {
+    console.log('ProtectedRoute: showing loading spinner');
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -26,15 +34,16 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
 
   // Redirect to login if not authenticated
   if (!user) {
-    console.log('No user found, redirecting to login from:', location.pathname);
+    console.log('ProtectedRoute: No user found, redirecting to login from:', location.pathname);
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   // Check role-based access
   if (requiredRole && !hasRole(requiredRole) && !isSuperAdmin()) {
-    console.log('Insufficient permissions for role:', requiredRole);
+    console.log('ProtectedRoute: Insufficient permissions for role:', requiredRole);
     return <Navigate to="/" replace />;
   }
 
+  console.log('ProtectedRoute: Access granted');
   return <>{children}</>;
 }
