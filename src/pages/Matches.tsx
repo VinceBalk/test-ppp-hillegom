@@ -1,19 +1,18 @@
 
 import { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { useMatches } from '@/hooks/useMatches';
-import { useTournaments, Tournament } from '@/hooks/useTournaments';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import MatchCard from '@/components/matches/MatchCard';
-import SavedMatchEditor from '@/components/matches/SavedMatchEditor';
+import { useTournaments } from '@/hooks/useTournaments';
+import MatchesHeader from '@/components/matches/MatchesHeader';
 import MatchesFilter from '@/components/matches/MatchesFilter';
+import MatchesEmptyState from '@/components/matches/MatchesEmptyState';
+import MatchesList from '@/components/matches/MatchesList';
+import MatchesResultsCount from '@/components/matches/MatchesResultsCount';
+import MatchesLoading from '@/components/matches/MatchesLoading';
+import MatchesError from '@/components/matches/MatchesError';
 import MatchesDebug from '@/components/matches/MatchesDebug';
 
 export default function Matches() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const tournamentId = searchParams.get('tournament');
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>(tournamentId || '');
@@ -63,65 +62,25 @@ export default function Matches() {
   const error = tournamentsError || matchesError;
 
   if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Wedstrijden</h1>
-          <p className="text-muted-foreground">Overzicht van alle wedstrijden en resultaten</p>
-        </div>
-        <div className="flex items-center justify-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </div>
-    );
+    return <MatchesLoading />;
   }
 
   if (error) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Wedstrijden</h1>
-          <p className="text-muted-foreground">Overzicht van alle wedstrijden en resultaten</p>
-        </div>
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Er is een fout opgetreden bij het laden van de wedstrijden: {error.message}
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="ml-2"
-              onClick={handleRefresh}
-            >
-              Probeer opnieuw
-            </Button>
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
+    return <MatchesError error={error} onRetry={handleRefresh} />;
   }
 
   // Show message if no tournaments exist
   if (!tournaments || tournaments.length === 0) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Wedstrijden</h1>
-          <p className="text-muted-foreground">Overzicht van alle wedstrijden en resultaten</p>
-        </div>
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Nog geen toernooien aangemaakt.{' '}
-            <Button 
-              variant="link" 
-              className="p-0 ml-1 h-auto"
-              onClick={() => navigate('/tournaments')}
-            >
-              Ga naar Toernooien om een toernooi aan te maken
-            </Button>
-          </AlertDescription>
-        </Alert>
+        <MatchesHeader
+          editMode={editMode}
+          onEditModeToggle={() => setEditMode(!editMode)}
+          onRefresh={handleRefresh}
+          hasMatches={matches.length > 0}
+          hasSelectedTournament={!!selectedTournamentId}
+        />
+        <MatchesEmptyState type="no-tournaments" />
       </div>
     );
   }
@@ -130,26 +89,13 @@ export default function Matches() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Wedstrijden</h1>
-          <p className="text-muted-foreground">Overzicht van alle wedstrijden en resultaten</p>
-        </div>
-        <div className="flex gap-2">
-          <Button 
-            variant={editMode ? "default" : "outline"} 
-            size="sm"
-            disabled={!selectedTournamentId || matches.length === 0}
-            onClick={() => setEditMode(!editMode)}
-          >
-            {editMode ? 'Bekijk Modus' : 'Bewerk Modus'}
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleRefresh}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Vernieuwen
-          </Button>
-        </div>
-      </div>
+      <MatchesHeader
+        editMode={editMode}
+        onEditModeToggle={() => setEditMode(!editMode)}
+        onRefresh={handleRefresh}
+        hasMatches={matches.length > 0}
+        hasSelectedTournament={!!selectedTournamentId}
+      />
 
       {/* Tournament Filter */}
       <MatchesFilter
@@ -161,53 +107,22 @@ export default function Matches() {
 
       {/* No matches alert */}
       {selectedTournamentId && matches.length === 0 && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Nog geen wedstrijden gepland voor dit toernooi.{' '}
-            <Button 
-              variant="link" 
-              className="p-0 ml-1 h-auto"
-              onClick={() => navigate(`/schedule/${selectedTournamentId}`)}
-            >
-              Ga naar Planning om een schema te genereren
-            </Button>
-          </AlertDescription>
-        </Alert>
+        <MatchesEmptyState type="no-matches" selectedTournamentId={selectedTournamentId} />
       )}
 
       {/* Matches List */}
-      <div className="grid gap-4">
-        {matches.length === 0 && !selectedTournamentId ? (
-          <Card>
-            <CardContent className="text-center py-8">
-              <p className="text-muted-foreground">
-                Selecteer een toernooi om wedstrijden te bekijken.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          matches.map((match) => (
-            editMode ? (
-              <SavedMatchEditor 
-                key={match.id} 
-                match={match} 
-                tournamentId={selectedTournamentId || match.tournament_id} 
-              />
-            ) : (
-              <MatchCard key={match.id} match={match} />
-            )
-          ))
-        )}
-      </div>
+      {matches.length === 0 && !selectedTournamentId ? (
+        <MatchesEmptyState type="no-selection" />
+      ) : (
+        <MatchesList
+          matches={matches}
+          editMode={editMode}
+          selectedTournamentId={selectedTournamentId}
+        />
+      )}
 
       {/* Results count */}
-      {matches.length > 0 && (
-        <div className="text-center text-sm text-muted-foreground">
-          {matches.length} wedstrijd{matches.length !== 1 ? 'en' : ''} gevonden
-          {selectedTournament && ` voor ${selectedTournament.name}`}
-        </div>
-      )}
+      <MatchesResultsCount matchCount={matches.length} selectedTournament={selectedTournament} />
 
       {/* Debug Info */}
       <MatchesDebug
