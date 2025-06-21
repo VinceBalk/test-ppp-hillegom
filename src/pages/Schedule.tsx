@@ -17,7 +17,7 @@ import ManualMatchBuilder from '@/components/schedule/ManualMatchBuilder';
 export default function Schedule() {
   const { tournamentId } = useParams();
   const navigate = useNavigate();
-  const { tournaments } = useTournaments();
+  const { tournaments, isLoading: tournamentsLoading, error: tournamentsError } = useTournaments();
   const { courts } = useCourts();
   const { generateSchedule, isGenerating } = useScheduleGeneration();
   const { 
@@ -32,11 +32,58 @@ export default function Schedule() {
   const [selectedTournament, setSelectedTournament] = useState<string>('');
   const [showManualBuilder, setShowManualBuilder] = useState(false);
 
+  console.log('Schedule page - Tournament ID from URL:', tournamentId);
+  console.log('Available tournaments:', tournaments);
+  console.log('Tournaments loading:', tournamentsLoading);
+  console.log('Tournaments error:', tournamentsError);
+
+  // Loading state
+  if (tournamentsLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Planning</h1>
+          <p className="text-muted-foreground">
+            2v2 Wedstrijd planning en speelschema beheer
+          </p>
+        </div>
+        <div className="flex items-center justify-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (tournamentsError) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Planning</h1>
+          <p className="text-muted-foreground">
+            2v2 Wedstrijd planning en speelschema beheer
+          </p>
+        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Er is een fout opgetreden bij het laden van de toernooien: {tournamentsError.message}
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   const currentTournament = tournamentId 
     ? tournaments.find(t => t.id === tournamentId)
     : tournaments.find(t => selectedTournament === t.id);
 
-  const { tournamentPlayers } = useTournamentPlayers(currentTournament?.id);
+  console.log('Current tournament:', currentTournament);
+
+  const { tournamentPlayers, isLoading: playersLoading } = useTournamentPlayers(currentTournament?.id);
+
+  console.log('Tournament players:', tournamentPlayers);
+  console.log('Players loading:', playersLoading);
 
   const handleSetupManualSchedule = async () => {
     if (!currentTournament) {
@@ -178,27 +225,36 @@ export default function Schedule() {
             <CardTitle>Selecteer een Toernooi</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {tournaments
-                .filter(t => t.status === 'open' || t.status === 'in_progress')
-                .map((tournament) => (
-                <Card 
-                  key={tournament.id} 
-                  className="cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => handleTournamentSelect(tournament)}
-                >
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold">{tournament.name}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {tournament.start_date} - {tournament.end_date}
-                    </p>
-                    <Badge variant="outline" className="mt-2">
-                      {tournament.status === 'open' ? 'Open' : 'Bezig'}
-                    </Badge>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            {tournaments.length === 0 ? (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Geen toernooien gevonden. Maak eerst een toernooi aan.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {tournaments
+                  .filter(t => t.status === 'open' || t.status === 'in_progress')
+                  .map((tournament) => (
+                  <Card 
+                    key={tournament.id} 
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => handleTournamentSelect(tournament)}
+                  >
+                    <CardContent className="p-4">
+                      <h3 className="font-semibold">{tournament.name}</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {tournament.start_date} - {tournament.end_date}
+                      </p>
+                      <Badge variant="outline" className="mt-2">
+                        {tournament.status === 'open' ? 'Open' : 'Bezig'}
+                      </Badge>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -211,63 +267,72 @@ export default function Schedule() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    Spelers: {tournamentPlayers.length} / {currentTournament.max_players}
-                  </span>
+              {playersLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                  <span className="ml-2">Spelers laden...</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    Ronde: {currentTournament.current_round || 1} van {currentTournament.total_rounds || 3}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">
-                    {currentTournament.status === 'open' ? 'Open' : 
-                     currentTournament.status === 'in_progress' ? 'Bezig' : 
-                     currentTournament.status}
-                  </Badge>
-                </div>
-              </div>
+              ) : (
+                <>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">
+                        Spelers: {tournamentPlayers.length} / {currentTournament.max_players}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">
+                        Ronde: {currentTournament.current_round || 1} van {currentTournament.total_rounds || 3}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">
+                        {currentTournament.status === 'open' ? 'Open' : 
+                         currentTournament.status === 'in_progress' ? 'Bezig' : 
+                         currentTournament.status}
+                      </Badge>
+                    </div>
+                  </div>
 
-              {!canGenerateSchedule && (
-                <Alert className="mt-4">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Er moeten minimaal 4 spelers toegewezen zijn om 2v2 wedstrijden te genereren.
-                    Momenteel zijn er {tournamentPlayers.length} spelers toegewezen.
-                  </AlertDescription>
-                </Alert>
-              )}
+                  {!canGenerateSchedule && (
+                    <Alert className="mt-4">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        Er moeten minimaal 4 spelers toegewezen zijn om 2v2 wedstrijden te genereren.
+                        Momenteel zijn er {tournamentPlayers.length} spelers toegewezen.
+                      </AlertDescription>
+                    </Alert>
+                  )}
 
-              {canGenerateSchedule && (
-                <Alert className="mt-4">
-                  <AlertDescription>
-                    <strong>Handmatig 2v2 Schema overzicht:</strong><br />
-                    Links groep: {leftPlayers.length} spelers<br />
-                    Rechts groep: {rightPlayers.length} spelers<br />
-                    Je kunt nu handmatig 2v2 wedstrijden samenstellen voor beide groepen.
-                  </AlertDescription>
-                </Alert>
+                  {canGenerateSchedule && (
+                    <Alert className="mt-4">
+                      <AlertDescription>
+                        <strong>Handmatig 2v2 Schema overzicht:</strong><br />
+                        Links groep: {leftPlayers.length} spelers<br />
+                        Rechts groep: {rightPlayers.length} spelers<br />
+                        Je kunt nu handmatig 2v2 wedstrijden samenstellen voor beide groepen.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  <div className="mt-6 flex gap-4">
+                    <Button 
+                      onClick={handleSetupManualSchedule}
+                      disabled={!canGenerateSchedule || isGeneratingPreview}
+                    >
+                      {isGeneratingPreview ? 'Spelers Laden...' : 'Handmatig 2v2 Schema Maken'}
+                    </Button>
+                    <Button variant="outline" onClick={() => navigate(`/matches?tournament=${currentTournament.id}`)}>
+                      Wedstrijden Bekijken
+                    </Button>
+                    <Button variant="outline" onClick={() => navigate(`/tournaments/${currentTournament.id}/assign-players`)}>
+                      Spelers Beheren
+                    </Button>
+                  </div>
+                </>
               )}
-              
-              <div className="mt-6 flex gap-4">
-                <Button 
-                  onClick={handleSetupManualSchedule}
-                  disabled={!canGenerateSchedule || isGeneratingPreview}
-                >
-                  {isGeneratingPreview ? 'Spelers Laden...' : 'Handmatig 2v2 Schema Maken'}
-                </Button>
-                <Button variant="outline" onClick={() => navigate(`/matches?tournament=${currentTournament.id}`)}>
-                  Wedstrijden Bekijken
-                </Button>
-                <Button variant="outline" onClick={() => navigate(`/tournaments/${currentTournament.id}/assign-players`)}>
-                  Spelers Beheren
-                </Button>
-              </div>
             </CardContent>
           </Card>
 

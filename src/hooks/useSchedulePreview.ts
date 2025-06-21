@@ -31,8 +31,18 @@ export const useSchedulePreview = () => {
   const { toast } = useToast();
 
   const generatePreview = async (tournamentId: string, roundNumber: number) => {
+    if (!tournamentId) {
+      console.error('No tournament ID provided');
+      toast({
+        title: "Fout",
+        description: "Geen toernooi ID opgegeven.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsGenerating(true);
-    console.log('Fetching players for manual 2v2 schedule setup');
+    console.log('Fetching players for manual 2v2 schedule setup, tournament:', tournamentId);
     
     try {
       // Haal alle spelers op voor dit toernooi
@@ -47,6 +57,8 @@ export const useSchedulePreview = () => {
         .eq('tournament_id', tournamentId)
         .eq('active', true);
 
+      console.log('Raw tournament players data:', tournamentPlayers);
+
       if (playersError) {
         console.error('Error fetching tournament players:', playersError);
         throw playersError;
@@ -56,12 +68,26 @@ export const useSchedulePreview = () => {
         throw new Error('Er moeten minimaal 4 spelers zijn om 2v2 wedstrijden te genereren');
       }
 
-      console.log('Found players for manual setup:', tournamentPlayers);
-      setAvailablePlayers(tournamentPlayers);
+      // Filter out players without valid data
+      const validPlayers = tournamentPlayers.filter(tp => 
+        tp.player && tp.player.id && tp.player.name && tp.group
+      );
+
+      console.log('Valid players after filtering:', validPlayers);
+
+      if (validPlayers.length < 4) {
+        throw new Error('Er zijn niet genoeg geldige spelers om 2v2 wedstrijden te genereren');
+      }
+
+      console.log('Found players for manual setup:', validPlayers);
+      setAvailablePlayers(validPlayers);
 
       // Groepeer spelers per groep
-      const leftPlayers = tournamentPlayers.filter(tp => tp.group === 'left');
-      const rightPlayers = tournamentPlayers.filter(tp => tp.group === 'right');
+      const leftPlayers = validPlayers.filter(tp => tp.group === 'left');
+      const rightPlayers = validPlayers.filter(tp => tp.group === 'right');
+
+      console.log('Left players:', leftPlayers);
+      console.log('Right players:', rightPlayers);
 
       // Start met lege preview voor handmatige invoer
       const schedulePreview: SchedulePreview = {
@@ -82,9 +108,10 @@ export const useSchedulePreview = () => {
 
     } catch (error) {
       console.error('Error loading players for manual setup:', error);
+      const errorMessage = error instanceof Error ? error.message : "Er is een fout opgetreden bij het laden van de spelers.";
       toast({
         title: "Fout",
-        description: error instanceof Error ? error.message : "Er is een fout opgetreden bij het laden van de spelers.",
+        description: errorMessage,
         variant: "destructive",
       });
       throw error;
@@ -94,7 +121,15 @@ export const useSchedulePreview = () => {
   };
 
   const addManualMatch = (match: Omit<ScheduleMatch, 'tournament_id' | 'round_number'>, tournamentId: string, roundNumber: number) => {
-    if (!preview) return;
+    if (!preview) {
+      console.error('No preview available to add match to');
+      return;
+    }
+
+    if (!tournamentId || !roundNumber) {
+      console.error('Missing tournament ID or round number');
+      return;
+    }
 
     const newMatch: ScheduleMatch = {
       ...match,
@@ -102,13 +137,20 @@ export const useSchedulePreview = () => {
       round_number: roundNumber,
     };
 
+    console.log('Adding new match:', newMatch);
+
     const updatedMatches = [...preview.matches, newMatch];
-    const leftGroupMatches = updatedMatches.filter(m => 
-      availablePlayers.find(p => p.player_id === m.team1_player1_id)?.group === 'left'
-    );
-    const rightGroupMatches = updatedMatches.filter(m => 
-      availablePlayers.find(p => p.player_id === m.team1_player1_id)?.group === 'right'
-    );
+    
+    // Determine group based on first player of team 1
+    const leftGroupMatches = updatedMatches.filter(m => {
+      const player = availablePlayers.find(p => p.player_id === m.team1_player1_id);
+      return player?.group === 'left';
+    });
+    
+    const rightGroupMatches = updatedMatches.filter(m => {
+      const player = availablePlayers.find(p => p.player_id === m.team1_player1_id);
+      return player?.group === 'right';
+    });
 
     const updatedPreview: SchedulePreview = {
       matches: updatedMatches,
@@ -117,6 +159,7 @@ export const useSchedulePreview = () => {
       totalMatches: updatedMatches.length
     };
 
+    console.log('Updated preview:', updatedPreview);
     setPreview(updatedPreview);
     
     toast({
@@ -128,13 +171,22 @@ export const useSchedulePreview = () => {
   const removeMatch = (matchIndex: number) => {
     if (!preview) return;
 
+    if (matchIndex < 0 || matchIndex >= preview.matches.length) {
+      console.error('Invalid match index:', matchIndex);
+      return;
+    }
+
     const updatedMatches = preview.matches.filter((_, index) => index !== matchIndex);
-    const leftGroupMatches = updatedMatches.filter(m => 
-      availablePlayers.find(p => p.player_id === m.team1_player1_id)?.group === 'left'
-    );
-    const rightGroupMatches = updatedMatches.filter(m => 
-      availablePlayers.find(p => p.player_id === m.team1_player1_id)?.group === 'right'
-    );
+    
+    const leftGroupMatches = updatedMatches.filter(m => {
+      const player = availablePlayers.find(p => p.player_id === m.team1_player1_id);
+      return player?.group === 'left';
+    });
+    
+    const rightGroupMatches = updatedMatches.filter(m => {
+      const player = availablePlayers.find(p => p.player_id === m.team1_player1_id);
+      return player?.group === 'right';
+    });
 
     const updatedPreview: SchedulePreview = {
       matches: updatedMatches,
@@ -144,9 +196,15 @@ export const useSchedulePreview = () => {
     };
 
     setPreview(updatedPreview);
+    
+    toast({
+      title: "Wedstrijd verwijderd",
+      description: "De wedstrijd is verwijderd uit het schema.",
+    });
   };
 
   const clearPreview = () => {
+    console.log('Clearing preview and available players');
     setPreview(null);
     setAvailablePlayers([]);
   };
