@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trophy, Users, Calendar, Target, TrendingUp, TrendingDown, Minus } from 'lucide-react';
@@ -65,10 +66,7 @@ export default function Dashboard() {
     // Fetch current/upcoming tournament
     const { data: currentData } = await supabase
       .from('tournaments')
-      .select(
-        *,
-        tournament_players(count)
-      )
+      .select('*, tournament_players(count)')
       .in('status', ['open', 'in_progress'])
       .order('start_date', { ascending: true })
       .limit(1);
@@ -84,10 +82,7 @@ export default function Dashboard() {
     // Fetch recent tournaments
     const { data: recentData } = await supabase
       .from('tournaments')
-      .select(
-        *,
-        tournament_players(count)
-      )
+      .select('*, tournament_players(count)')
       .eq('status', 'completed')
       .order('end_date', { ascending: false })
       .limit(3);
