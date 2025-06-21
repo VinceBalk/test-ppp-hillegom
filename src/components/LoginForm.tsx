@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,7 +60,7 @@ export function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }
 
       // Check for suspicious login patterns with proper typing
       const suspiciousData = await detectSuspiciousPatterns(sanitizedEmail);
-      const suspiciousPatterns = suspiciousData as SuspiciousPatterns | null;
+      const suspiciousPatterns = suspiciousData as unknown as SuspiciousPatterns | null;
       
       if (suspiciousPatterns?.is_suspicious) {
         await logSecurityEvent('suspicious_activity', 'suspicious_login_pattern_detected', 'authentication', null, {
