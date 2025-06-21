@@ -38,10 +38,15 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  // Check role-based access
-  if (requiredRole && !hasRole(requiredRole) && !isSuperAdmin()) {
-    console.log('ProtectedRoute: Insufficient permissions for role:', requiredRole);
-    return <Navigate to="/" replace />;
+  // Check role-based access - be more defensive
+  if (requiredRole) {
+    const hasRequiredRole = hasRole(requiredRole);
+    const isSuper = isSuperAdmin();
+    
+    if (!hasRequiredRole && !isSuper) {
+      console.log('ProtectedRoute: Insufficient permissions for role:', requiredRole);
+      return <Navigate to="/" replace />;
+    }
   }
 
   console.log('ProtectedRoute: Access granted');

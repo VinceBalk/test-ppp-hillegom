@@ -49,11 +49,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching user profile:', error);
-        // Don't throw here, just log the error
         return null;
       }
 
@@ -68,23 +67,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchAdminUser = async (userId: string) => {
     try {
-      console.log('Fetching admin user for:', userId);
+      console.log('Checking admin status for user:', userId);
+      // Use a simple query to avoid RLS recursion issues
       const { data, error } = await supabase
         .from('admin_users')
-        .select('*')
+        .select('id, user_id, email, is_super_admin, created_at')
         .eq('user_id', userId)
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching admin user:', error);
+        // Don't set adminUser on error, just return null
         return null;
       }
 
-      console.log('Admin user fetched:', data);
+      console.log('Admin user check result:', data);
       setAdminUser(data as AdminUser | null);
       return data;
     } catch (error) {
       console.error('Exception fetching admin user:', error);
+      // Set adminUser to null on exception to prevent issues
+      setAdminUser(null);
       return null;
     }
   };
@@ -111,32 +114,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Force logout on initialization to clear any corrupted state
   useEffect(() => {
-    console.log('AuthProvider initializing - forcing logout first...');
+    console.log('AuthProvider initializing...');
     
     const initializeAuth = async () => {
       try {
-        // Force logout first to clear any corrupted state
-        await supabase.auth.signOut();
-        console.log('Forced logout completed');
-        
-        // Small delay to ensure logout is processed
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Now get the session (should be null after logout)
+        // Get the current session
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Session fetch error:', error);
         }
         
-        console.log('Session after forced logout:', session ? 'still exists' : 'cleared');
+        console.log('Initial session:', session ? 'exists' : 'null');
         
         setSession(session);
         setUser(session?.user ?? null);
-        setProfile(null);
-        setAdminUser(null);
+        
+        // Only fetch profile data if we have a user
+        if (session?.user) {
+          // Use setTimeout to defer these calls and prevent blocking
+          setTimeout(() => {
+            fetchUserProfile(session.user.id).catch(console.error);
+            fetchAdminUser(session.user.id).catch(console.error);
+          }, 0);
+        } else {
+          setProfile(null);
+          setAdminUser(null);
+        }
         
       } catch (error) {
         console.error('Auth initialization error:', error);
@@ -156,23 +161,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Fetch additional user data
-          Promise.all([
-            fetchUserProfile(session.user.id),
-            fetchAdminUser(session.user.id)
-          ]).catch(error => {
-            console.error('Error fetching user data:', error);
-          });
+          // Defer profile fetching to avoid blocking the auth state change
+          setTimeout(() => {
+            fetchUserProfile(session.user.id).catch(console.error);
+            fetchAdminUser(session.user.id).catch(console.error);
+          }, 0);
           
           if (event === 'SIGNED_IN') {
-            logSecurityEvent('user_signed_in').catch(console.error);
+            setTimeout(() => {
+              logSecurityEvent('user_signed_in').catch(console.error);
+            }, 100);
           }
         } else {
           setProfile(null);
           setAdminUser(null);
           
           if (event === 'SIGNED_OUT') {
-            logSecurityEvent('user_signed_out').catch(console.error);
+            setTimeout(() => {
+              logSecurityEvent('user_signed_out').catch(console.error);
+            }, 100);
           }
         }
       }
@@ -196,7 +203,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (error) {
         console.error('Sign in error:', error.message);
-        logSecurityEvent('failed_sign_in_attempt', 'auth', null, { email, error: error.message }).catch(console.error);
+        setTimeout(() => {
+          logSecurityEvent('failed_sign_in_attempt', 'auth', null, { email, error: error.message }).catch(console.error);
+        }, 100);
       } else {
         console.log('Sign in successful for user:', data.user?.id);
       }
@@ -204,7 +213,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error };
     } catch (error: any) {
       console.error('Sign in exception:', error);
-      logSecurityEvent('failed_sign_in_attempt', 'auth', null, { email, error: 'Unknown error' }).catch(console.error);
+      setTimeout(() => {
+        logSecurityEvent('failed_sign_in_attempt', 'auth', null, { email, error: 'Unknown error' }).catch(console.error);
+      }, 100);
       return { error };
     } finally {
       setLoading(false);
@@ -228,16 +239,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (error) {
         console.error('Sign up error:', error.message);
-        logSecurityEvent('failed_sign_up_attempt', 'auth', null, { email, error: error.message }).catch(console.error);
+        setTimeout(() => {
+          logSecurityEvent('failed_sign_up_attempt', 'auth', null, { email, error: error.message }).catch(console.error);
+        }, 100);
       } else {
         console.log('Sign up successful for:', email);
-        logSecurityEvent('successful_sign_up', 'auth', null, { email }).catch(console.error);
+        setTimeout(() => {
+          logSecurityEvent('successful_sign_up', 'auth', null, { email }).catch(console.error);
+        }, 100);
       }
       
       return { error };
     } catch (error: any) {
       console.error('Sign up exception:', error);
-      logSecurityEvent('failed_sign_up_attempt', 'auth', null, { email, error: 'Unknown error' }).catch(console.error);
+      setTimeout(() => {
+        logSecurityEvent('failed_sign_up_attempt', 'auth', null, { email, error: 'Unknown error' }).catch(console.error);
+      }, 100);
       return { error };
     } finally {
       setLoading(false);
@@ -249,7 +266,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('Signing out...');
       setLoading(true);
       
-      logSecurityEvent('user_sign_out_initiated').catch(console.error);
+      setTimeout(() => {
+        logSecurityEvent('user_sign_out_initiated').catch(console.error);
+      }, 0);
       
       const { error } = await supabase.auth.signOut();
       
