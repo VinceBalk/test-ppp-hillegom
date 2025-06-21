@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,6 +13,7 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 export default function Players() {
+  const navigate = useNavigate();
   const { players, isLoading, createPlayer, updatePlayer, deletePlayer, isCreating, isUpdating, isDeleting } = usePlayers();
   const [searchTerm, setSearchTerm] = useState('');
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
@@ -36,6 +38,10 @@ export default function Players() {
 
   const handleDeletePlayer = (id: string) => {
     deletePlayer(id);
+  };
+
+  const handlePlayerRowClick = (playerId: string) => {
+    navigate(`/players/${playerId}`);
   };
 
   const getRowSideBadge = (side?: string) => {
@@ -149,7 +155,11 @@ export default function Players() {
                 </TableRow>
               ) : (
                 filteredPlayers.map((player) => (
-                  <TableRow key={player.id}>
+                  <TableRow 
+                    key={player.id} 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handlePlayerRowClick(player.id)}
+                  >
                     <TableCell className="font-medium">{player.name}</TableCell>
                     <TableCell>{player.email || '-'}</TableCell>
                     <TableCell>{player.phone || '-'}</TableCell>
@@ -165,7 +175,7 @@ export default function Players() {
                       </div>
                     </TableCell>
                     <TableCell className="text-xs">{formatSpecials(player.specials)}</TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-2">
                         <Dialog open={editingPlayer?.id === player.id} onOpenChange={(open) => !open && setEditingPlayer(null)}>
                           <DialogTrigger asChild>

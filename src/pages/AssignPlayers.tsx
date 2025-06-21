@@ -66,8 +66,28 @@ export default function AssignPlayers() {
     );
   };
 
-  const leftPlayers = tournamentPlayers.filter(tp => tp.group === 'left');
-  const rightPlayers = tournamentPlayers.filter(tp => tp.group === 'right');
+  // Sort players by group, then by ranking, then by first name
+  const sortedTournamentPlayers = [...tournamentPlayers].sort((a, b) => {
+    // First sort by group
+    if (a.group !== b.group) {
+      return a.group === 'left' ? -1 : 1;
+    }
+    
+    // Then by ranking score (higher first)
+    const aRanking = a.player?.ranking_score || 0;
+    const bRanking = b.player?.ranking_score || 0;
+    if (aRanking !== bRanking) {
+      return bRanking - aRanking;
+    }
+    
+    // Finally by first name
+    const aFirstName = a.player?.name?.split(' ')[0] || '';
+    const bFirstName = b.player?.name?.split(' ')[0] || '';
+    return aFirstName.localeCompare(bFirstName);
+  });
+
+  const leftPlayers = sortedTournamentPlayers.filter(tp => tp.group === 'left');
+  const rightPlayers = sortedTournamentPlayers.filter(tp => tp.group === 'right');
 
   if (isLoading || !tournament) {
     return (
@@ -179,85 +199,156 @@ export default function AssignPlayers() {
         </Card>
       </div>
 
-      {/* Players List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Toegewezen Spelers ({tournamentPlayers.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {tournamentPlayers.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Nog geen spelers toegewezen aan dit toernooi.
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Naam</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Groep</TableHead>
-                  <TableHead>Registratiedatum</TableHead>
-                  <TableHead>Acties</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tournamentPlayers.map((tournamentPlayer) => (
-                  <TableRow key={tournamentPlayer.id}>
-                    <TableCell className="font-medium">
-                      {tournamentPlayer.player.name}
-                    </TableCell>
-                    <TableCell>{tournamentPlayer.player.email || '-'}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {getGroupBadge(tournamentPlayer.group)}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleGroupChange(
-                            tournamentPlayer.id, 
-                            tournamentPlayer.group === 'left' ? 'right' : 'left'
-                          )}
-                          className="h-6 px-2 text-xs"
-                        >
-                          Wissel
-                        </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(tournamentPlayer.registration_date).toLocaleDateString('nl-NL')}
-                    </TableCell>
-                    <TableCell>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Speler verwijderen</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Weet je zeker dat je {tournamentPlayer.player.name} wilt verwijderen uit dit toernooi?
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={() => handleRemovePlayer(tournamentPlayer.id)}
-                            >
-                              Verwijderen
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
+      {/* Players in Two Columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Column */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              Links Groep ({leftPlayers.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {leftPlayers.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Nog geen spelers in de linker groep.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Naam</TableHead>
+                    <TableHead>Ranking</TableHead>
+                    <TableHead>Acties</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {leftPlayers.map((tournamentPlayer) => (
+                    <TableRow key={tournamentPlayer.id}>
+                      <TableCell className="font-medium">
+                        {tournamentPlayer.player.name}
+                      </TableCell>
+                      <TableCell>{tournamentPlayer.player.ranking_score || 0}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleGroupChange(
+                              tournamentPlayer.id, 
+                              'right'
+                            )}
+                            className="text-xs"
+                          >
+                            → Rechts
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Speler verwijderen</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Weet je zeker dat je {tournamentPlayer.player.name} wilt verwijderen uit dit toernooi?
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleRemovePlayer(tournamentPlayer.id)}
+                                >
+                                  Verwijderen
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Right Column */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              Rechts Groep ({rightPlayers.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {rightPlayers.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Nog geen spelers in de rechter groep.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Naam</TableHead>
+                    <TableHead>Ranking</TableHead>
+                    <TableHead>Acties</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rightPlayers.map((tournamentPlayer) => (
+                    <TableRow key={tournamentPlayer.id}>
+                      <TableCell className="font-medium">
+                        {tournamentPlayer.player.name}
+                      </TableCell>
+                      <TableCell>{tournamentPlayer.player.ranking_score || 0}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleGroupChange(
+                              tournamentPlayer.id, 
+                              'left'
+                            )}
+                            className="text-xs"
+                          >
+                            ← Links
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Speler verwijderen</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Weet je zeker dat je {tournamentPlayer.player.name} wilt verwijderen uit dit toernooi?
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleRemovePlayer(tournamentPlayer.id)}
+                                >
+                                  Verwijderen
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </Alert>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
