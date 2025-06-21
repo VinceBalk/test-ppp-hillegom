@@ -103,4 +103,37 @@ export default function Dashboard() {
     const addTrend = (p: Player, index: number): PlayerWithTrend => ({
       ...p,
       position: index + 1,
-      trend: p.rank_change > 0 ? 'up' : p.rank_change
+      trend: p.rank_change > 0 ? 'up' : p.rank_change < 0 ? 'down' : 'same'
+    });
+
+    setLeftRankings(
+      players.filter(p => p.row_side === 'left').map(addTrend).slice(0, 10)
+    );
+
+    setRightRankings(
+      players.filter(p => p.row_side === 'right').map(addTrend).slice(0, 10)
+    );
+  };
+
+  const fetchStats = async () => {
+    const [{ count: tournaments }, { count: players }, { count: matches }] = await Promise.all([
+      supabase.from('tournaments').select('*', { count: 'exact', head: true }).in('status', ['open', 'in_progress']),
+      supabase.from('players').select('*', { count: 'exact', head: true }),
+      supabase.from('matches').select('*', { count: 'exact', head: true }).eq('status', 'scheduled')
+    ]);
+
+    setStats({
+      activeTournaments: tournaments || 0,
+      totalPlayers: players || 0,
+      matchesToday: matches || 0
+    });
+  };
+
+  const getTrendIcon = (trend: 'up' | 'down' | 'same') => {
+    const size = "h-3 w-3";
+    switch (trend) {
+      case 'up': return <TrendingUp className={`${size} text-green-500`} />;
+      case 'down': return <TrendingDown className={`${size} text-red-500`} />;
+      default: return <Minus className={`${size} text-muted-foreground`} />;
+    }
+  };
