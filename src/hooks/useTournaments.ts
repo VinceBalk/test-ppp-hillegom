@@ -26,28 +26,51 @@ export const useTournaments = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: tournaments = [], isLoading, error } = useQuery({
+  const { data: tournaments = [], isLoading, error, refetch } = useQuery({
     queryKey: ['tournaments'],
     queryFn: async () => {
+      console.log('=== FETCHING TOURNAMENTS ===');
+      
       const { data, error } = await supabase
         .from('tournaments')
         .select('*')
         .order('start_date', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('=== TOURNAMENTS QUERY ERROR ===');
+        console.error('Error details:', error);
+        throw error;
+      }
+      
+      console.log('=== TOURNAMENTS QUERY SUCCESS ===');
+      console.log('Raw data from database:', data);
+      console.log('Number of tournaments found:', data?.length || 0);
+      
       return data as Tournament[];
     },
+    retry: 3,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   const createTournament = useMutation({
     mutationFn: async (tournament: Omit<Tournament, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => {
+      console.log('=== CREATING TOURNAMENT ===');
+      console.log('Tournament data:', tournament);
+      
       const { data, error } = await supabase
         .from('tournaments')
         .insert([tournament])
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('=== CREATE TOURNAMENT ERROR ===');
+        console.error('Error details:', error);
+        throw error;
+      }
+      
+      console.log('=== TOURNAMENT CREATED ===');
+      console.log('Created tournament:', data);
       return data;
     },
     onSuccess: () => {
@@ -69,6 +92,10 @@ export const useTournaments = () => {
 
   const updateTournament = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Tournament> & { id: string }) => {
+      console.log('=== UPDATING TOURNAMENT ===');
+      console.log('Tournament ID:', id);
+      console.log('Updates:', updates);
+      
       const { data, error } = await supabase
         .from('tournaments')
         .update({ ...updates, updated_at: new Date().toISOString() })
@@ -76,7 +103,14 @@ export const useTournaments = () => {
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('=== UPDATE TOURNAMENT ERROR ===');
+        console.error('Error details:', error);
+        throw error;
+      }
+      
+      console.log('=== TOURNAMENT UPDATED ===');
+      console.log('Updated tournament:', data);
       return data;
     },
     onSuccess: () => {
@@ -98,12 +132,21 @@ export const useTournaments = () => {
 
   const deleteTournament = useMutation({
     mutationFn: async (id: string) => {
+      console.log('=== DELETING TOURNAMENT ===');
+      console.log('Tournament ID:', id);
+      
       const { error } = await supabase
         .from('tournaments')
         .delete()
         .eq('id', id);
       
-      if (error) throw error;
+      if (error) {
+        console.error('=== DELETE TOURNAMENT ERROR ===');
+        console.error('Error details:', error);
+        throw error;
+      }
+      
+      console.log('=== TOURNAMENT DELETED ===');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tournaments'] });
@@ -126,6 +169,7 @@ export const useTournaments = () => {
     tournaments,
     isLoading,
     error,
+    refetch,
     createTournament: createTournament.mutate,
     updateTournament: updateTournament.mutate,
     deleteTournament: deleteTournament.mutate,

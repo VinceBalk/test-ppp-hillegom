@@ -91,9 +91,12 @@ export const useScheduleGeneration = () => {
       console.log('=== SCHEDULE GENERATION SUCCESS ===');
       console.log('Generated matches count:', data.length);
       
-      // Invalidate queries to refresh data
+      // Invalidate ALL relevant queries to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ['matches'] });
       queryClient.invalidateQueries({ queryKey: ['tournaments'] });
+      
+      // Force refetch matches for all tournaments
+      queryClient.refetchQueries({ queryKey: ['matches'] });
       
       toast({
         title: "2v2 Schema goedgekeurd en opgeslagen",

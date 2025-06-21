@@ -19,17 +19,19 @@ export default function Matches() {
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>(tournamentId || '');
   const [editMode, setEditMode] = useState(false);
   
-  const { tournaments } = useTournaments();
-  const { matches, isLoading, error, refetch } = useMatches(selectedTournamentId || undefined);
+  const { tournaments, isLoading: tournamentsLoading, error: tournamentsError } = useTournaments();
+  const { matches, isLoading: matchesLoading, error: matchesError, refetch } = useMatches(selectedTournamentId || undefined);
 
   console.log('=== MATCHES PAGE DEBUG ===');
   console.log('Tournament from URL:', tournamentId);
   console.log('Selected tournament:', selectedTournamentId);
   console.log('All tournaments:', tournaments);
+  console.log('Tournaments loading:', tournamentsLoading);
+  console.log('Tournaments error:', tournamentsError);
   console.log('Matches found:', matches?.length || 0);
   console.log('Matches data:', matches);
-  console.log('Loading:', isLoading);
-  console.log('Error:', error);
+  console.log('Matches loading:', matchesLoading);
+  console.log('Matches error:', matchesError);
 
   // Update URL when tournament selection changes
   useEffect(() => {
@@ -56,6 +58,9 @@ export default function Matches() {
     console.log('Manual refresh triggered');
     refetch();
   };
+
+  const isLoading = tournamentsLoading || matchesLoading;
+  const error = tournamentsError || matchesError;
 
   if (isLoading) {
     return (
@@ -96,6 +101,31 @@ export default function Matches() {
     );
   }
 
+  // Show message if no tournaments exist
+  if (!tournaments || tournaments.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Wedstrijden</h1>
+          <p className="text-muted-foreground">Overzicht van alle wedstrijden en resultaten</p>
+        </div>
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Nog geen toernooien aangemaakt.{' '}
+            <Button 
+              variant="link" 
+              className="p-0 ml-1 h-auto"
+              onClick={() => navigate('/tournaments')}
+            >
+              Ga naar Toernooien om een toernooi aan te maken
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   const selectedTournament = tournaments.find(t => t.id === selectedTournamentId);
 
   return (
@@ -108,7 +138,8 @@ export default function Matches() {
         <div className="flex gap-2">
           <Button 
             variant={editMode ? "default" : "outline"} 
-            size="sm" 
+            size="sm"
+            disabled={!selectedTournamentId || matches.length === 0}
             onClick={() => setEditMode(!editMode)}
           >
             {editMode ? 'Bekijk Modus' : 'Bewerk Modus'}
@@ -161,7 +192,7 @@ export default function Matches() {
               <SavedMatchEditor 
                 key={match.id} 
                 match={match} 
-                tournamentId={selectedTournamentId} 
+                tournamentId={selectedTournamentId || match.tournament_id} 
               />
             ) : (
               <MatchCard key={match.id} match={match} />
