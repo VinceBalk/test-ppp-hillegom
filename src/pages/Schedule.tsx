@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,7 +33,7 @@ export default function Schedule() {
       return;
     }
 
-    console.log('Creating schedule preview for tournament:', currentTournament.name);
+    console.log('Creating 2v2 schedule preview for tournament:', currentTournament.name);
     console.log('Tournament players:', tournamentPlayers);
 
     try {
@@ -43,7 +42,7 @@ export default function Schedule() {
         currentTournament.current_round || 1
       );
     } catch (error) {
-      console.error('Error generating preview:', error);
+      console.error('Error generating 2v2 preview:', error);
     }
   };
 
@@ -80,7 +79,7 @@ export default function Schedule() {
     navigate(`/schedule/${tournament.id}`);
   };
 
-  const canGenerateSchedule = currentTournament && tournamentPlayers.length >= 2;
+  const canGenerateSchedule = currentTournament && tournamentPlayers.length >= 4;
   const leftPlayers = tournamentPlayers.filter(tp => tp.group === 'left');
   const rightPlayers = tournamentPlayers.filter(tp => tp.group === 'right');
 
@@ -91,7 +90,7 @@ export default function Schedule() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Planning</h1>
           <p className="text-muted-foreground">
-            Schema preview voor {currentTournament.name}
+            2v2 Schema preview voor {currentTournament.name}
           </p>
         </div>
 
@@ -112,7 +111,7 @@ export default function Schedule() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Planning</h1>
         <p className="text-muted-foreground">
-          Wedstrijd planning en speelschema beheer
+          2v2 Wedstrijd planning en speelschema beheer
         </p>
       </div>
 
@@ -151,7 +150,7 @@ export default function Schedule() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
-                Schema voor {currentTournament.name}
+                2v2 Schema voor {currentTournament.name}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -181,7 +180,7 @@ export default function Schedule() {
                 <Alert className="mt-4">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    Er moeten minimaal 2 spelers toegewezen zijn om een schema te genereren.
+                    Er moeten minimaal 4 spelers toegewezen zijn om 2v2 wedstrijden te genereren.
                     Momenteel zijn er {tournamentPlayers.length} spelers toegewezen.
                   </AlertDescription>
                 </Alert>
@@ -190,10 +189,13 @@ export default function Schedule() {
               {canGenerateSchedule && (
                 <Alert className="mt-4">
                   <AlertDescription>
-                    <strong>Schema overzicht:</strong><br />
+                    <strong>2v2 Schema overzicht:</strong><br />
                     Links groep: {leftPlayers.length} spelers<br />
                     Rechts groep: {rightPlayers.length} spelers<br />
-                    Geschatte wedstrijden: {Math.floor(leftPlayers.length * (leftPlayers.length - 1) / 2) + Math.floor(rightPlayers.length * (rightPlayers.length - 1) / 2)}
+                    Geschatte 2v2 wedstrijden: {
+                      Math.floor(leftPlayers.length >= 4 ? (leftPlayers.length * (leftPlayers.length - 1) * (leftPlayers.length - 2) * (leftPlayers.length - 3)) / (4 * 3 * 2 * 1) * 6 / 2 : 0) + 
+                      Math.floor(rightPlayers.length >= 4 ? (rightPlayers.length * (rightPlayers.length - 1) * (rightPlayers.length - 2) * (rightPlayers.length - 3)) / (4 * 3 * 2 * 1) * 6 / 2 : 0)
+                    }
                   </AlertDescription>
                 </Alert>
               )}
@@ -203,7 +205,7 @@ export default function Schedule() {
                   onClick={handleCreateSchedulePreview}
                   disabled={!canGenerateSchedule || isGeneratingPreview}
                 >
-                  {isGeneratingPreview ? 'Schema Preview Genereren...' : 'Schema Preview Genereren'}
+                  {isGeneratingPreview ? '2v2 Schema Preview Genereren...' : '2v2 Schema Preview Genereren'}
                 </Button>
                 <Button variant="outline" onClick={() => navigate(`/matches?tournament=${currentTournament.id}`)}>
                   Wedstrijden Bekijken
