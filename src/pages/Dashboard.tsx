@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trophy, Users, Calendar, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,7 +40,7 @@ export default function Dashboard() {
     matchesToday: 0
   });
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchDashboardData();
@@ -163,7 +163,7 @@ export default function Dashboard() {
       </div>
 
       {/* Actief Toernooi */}
-      <Card className="cursor-pointer" onClick={() => currentTournament && router.push(`/tournament/${currentTournament.id}`)}>
+      <Card className="cursor-pointer" onClick={() => currentTournament && navigate(`/tournament/${currentTournament.id}`)}>
         <CardHeader>
           <CardTitle>Huidig Toernooi</CardTitle>
           <CardDescription>{currentTournament?.name || 'Geen actief toernooi'}</CardDescription>
@@ -190,7 +190,7 @@ export default function Dashboard() {
           <CardContent className="space-y-2">
             {leftRankings.map(p => (
               <div key={p.id} className="flex justify-between items-center cursor-pointer hover:bg-muted p-2 rounded"
-                   onClick={() => router.push(`/players/${p.id}`)}>
+                   onClick={() => navigate(`/players/${p.id}`)}>
                 <span>#{p.position} {p.name}</span>
                 <span className="flex items-center space-x-1">
                   <span>{p.ranking_score}</span>
@@ -208,7 +208,7 @@ export default function Dashboard() {
           <CardContent className="space-y-2">
             {rightRankings.map(p => (
               <div key={p.id} className="flex justify-between items-center cursor-pointer hover:bg-muted p-2 rounded"
-                   onClick={() => router.push(`/players/${p.id}`)}>
+                   onClick={() => navigate(`/players/${p.id}`)}>
                 <span>#{p.position} {p.name}</span>
                 <span className="flex items-center space-x-1">
                   <span>{p.ranking_score}</span>
