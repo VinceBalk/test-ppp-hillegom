@@ -809,7 +809,7 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: {
-        Args: { user_id: string }
+        Args: Record<PropertyKey, never> | { user_id: string }
         Returns: boolean
       }
       log_comprehensive_security_event: {
@@ -853,6 +853,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      sanitize_user_input: {
+        Args: { input: string }
+        Returns: string
+      }
       save_individual_match: {
         Args: {
           p_match_id: string
@@ -865,6 +869,10 @@ export type Database = {
           p_round_within_group?: number
         }
         Returns: Json
+      }
+      validate_email_format: {
+        Args: { email: string }
+        Returns: boolean
       }
     }
     Enums: {
