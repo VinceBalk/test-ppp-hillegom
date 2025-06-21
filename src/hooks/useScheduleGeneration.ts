@@ -14,7 +14,7 @@ export const useScheduleGeneration = () => {
 
   const generateSchedule = useMutation({
     mutationFn: async ({ tournamentId, roundNumber }: GenerateScheduleParams) => {
-      console.log('Generating schedule for tournament:', tournamentId, 'round:', roundNumber);
+      console.log('Generating and saving schedule for tournament:', tournamentId, 'round:', roundNumber);
       
       // Haal alle spelers op voor dit toernooi
       const { data: tournamentPlayers, error: playersError } = await supabase
@@ -114,12 +114,12 @@ export const useScheduleGeneration = () => {
 
       return createdMatches;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['matches'] });
       queryClient.invalidateQueries({ queryKey: ['tournaments'] });
       toast({
-        title: "Schema gegenereerd",
-        description: "Het wedstrijdschema is succesvol gegenereerd.",
+        title: "Schema goedgekeurd en opgeslagen",
+        description: `${data.length} wedstrijden zijn succesvol aangemaakt.`,
       });
     },
     onError: (error) => {

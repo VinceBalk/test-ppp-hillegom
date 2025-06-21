@@ -8,8 +8,10 @@ import { useTournaments } from '@/hooks/useTournaments';
 import { useCourts } from '@/hooks/useCourts';
 import { useTournamentPlayers } from '@/hooks/useTournamentPlayers';
 import { useScheduleGeneration } from '@/hooks/useScheduleGeneration';
+import { useSchedulePreview } from '@/hooks/useSchedulePreview';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import SchedulePreview from '@/components/schedule/SchedulePreview';
 
 export default function Schedule() {
   const { tournamentId } = useParams();
@@ -17,6 +19,7 @@ export default function Schedule() {
   const { tournaments } = useTournaments();
   const { courts } = useCourts();
   const { generateSchedule, isGenerating } = useScheduleGeneration();
+  const { preview, generatePreview, clearPreview, isGenerating: isGeneratingPreview } = useSchedulePreview();
   const [selectedTournament, setSelectedTournament] = useState<string>('');
 
   const currentTournament = tournamentId 
@@ -25,19 +28,44 @@ export default function Schedule() {
 
   const { tournamentPlayers } = useTournamentPlayers(currentTournament?.id);
 
-  const handleCreateSchedule = () => {
+  const handleCreateSchedulePreview = async () => {
     if (!currentTournament) {
       console.error('No tournament selected');
       return;
     }
 
-    console.log('Creating schedule for tournament:', currentTournament.name);
+    console.log('Creating schedule preview for tournament:', currentTournament.name);
     console.log('Tournament players:', tournamentPlayers);
 
+    try {
+      await generatePreview(
+        currentTournament.id,
+        currentTournament.current_round || 1
+      );
+    } catch (error) {
+      console.error('Error generating preview:', error);
+    }
+  };
+
+  const handleApproveSchedule = () => {
+    if (!currentTournament || !preview) {
+      console.error('No tournament or preview available');
+      return;
+    }
+
+    console.log('Approving schedule for tournament:', currentTournament.name);
+    
     generateSchedule({
       tournamentId: currentTournament.id,
       roundNumber: currentTournament.current_round || 1
     });
+
+    // Clear preview after approval
+    clearPreview();
+  };
+
+  const handleRejectSchedule = () => {
+    clearPreview();
   };
 
   const handleTournamentSelect = (tournament: any) => {
@@ -48,6 +76,29 @@ export default function Schedule() {
   const canGenerateSchedule = currentTournament && tournamentPlayers.length >= 2;
   const leftPlayers = tournamentPlayers.filter(tp => tp.group === 'left');
   const rightPlayers = tournamentPlayers.filter(tp => tp.group === 'right');
+
+  // Show preview if available
+  if (preview && currentTournament) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Planning</h1>
+          <p className="text-muted-foreground">
+            Schema preview voor {currentTournament.name}
+          </p>
+        </div>
+
+        <SchedulePreview
+          preview={preview}
+          onApprove={handleApproveSchedule}
+          onReject={handleRejectSchedule}
+          isApproving={isGenerating}
+          tournamentName={currentTournament.name}
+          roundNumber={currentTournament.current_round || 1}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -142,10 +193,10 @@ export default function Schedule() {
               
               <div className="mt-6 flex gap-4">
                 <Button 
-                  onClick={handleCreateSchedule}
-                  disabled={!canGenerateSchedule || isGenerating}
+                  onClick={handleCreateSchedulePreview}
+                  disabled={!canGenerateSchedule || isGeneratingPreview}
                 >
-                  {isGenerating ? 'Schema Genereren...' : 'Schema Genereren'}
+                  {isGeneratingPreview ? 'Schema Preview Genereren...' : 'Schema Preview Genereren'}
                 </Button>
                 <Button variant="outline" onClick={() => navigate(`/matches?tournament=${currentTournament.id}`)}>
                   Wedstrijden Bekijken
