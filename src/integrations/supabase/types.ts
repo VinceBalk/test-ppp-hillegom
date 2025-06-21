@@ -493,13 +493,15 @@ export type Database = {
         Returns: undefined
       }
       log_security_event: {
-        Args: {
-          p_user_id: string
-          p_action: string
-          p_resource_type?: string
-          p_resource_id?: string
-          p_details?: Json
-        }
+        Args:
+          | Record<PropertyKey, never>
+          | {
+              p_user_id: string
+              p_action: string
+              p_resource_type?: string
+              p_resource_id?: string
+              p_details?: Json
+            }
         Returns: undefined
       }
       log_security_event_enhanced: {

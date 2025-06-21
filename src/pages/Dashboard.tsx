@@ -16,15 +16,27 @@ export default function Dashboard() {
     loading
   } = useDashboardData();
 
+  console.log('Dashboard component render:', {
+    loading,
+    hasCurrentTournament: !!currentTournament,
+    recentTournamentsCount: recentTournaments.length,
+    leftRankingsCount: leftRankings.length,
+    rightRankingsCount: rightRankings.length,
+    stats
+  });
+
   const handlePlayerClick = (playerId: string) => {
+    console.log('Dashboard: Player clicked:', playerId);
     navigate(`/players/${playerId}`);
   };
 
   const handleTournamentClick = () => {
+    console.log('Dashboard: Tournament clicked');
     navigate('/tournaments');
   };
 
   if (loading) {
+    console.log('Dashboard: Showing loading state');
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center py-12">
@@ -34,6 +46,8 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  console.log('Dashboard: Rendering main content');
 
   return (
     <div className="space-y-6">
