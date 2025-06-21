@@ -11,7 +11,7 @@ export const usePasswordSecurity = () => {
   const { validatePasswordSecurity } = useAdvancedPasswordSecurity();
   const { logSecurityEventEnhanced } = useEnhancedSecurity();
 
-  const updatePassword = async (newPassword: string) => {
+  const updatePassword = async (newPassword: string, requireCurrentPassword: boolean = true) => {
     setLoading(true);
     
     try {
@@ -106,8 +106,13 @@ export const usePasswordSecurity = () => {
     }
   };
 
+  const validatePassword = (password: string) => {
+    return validatePasswordSecurity(password);
+  };
+
   return {
     updatePassword,
+    validatePassword,
     loading
   };
 };
