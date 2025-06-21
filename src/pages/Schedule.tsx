@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +12,7 @@ import { useSchedulePreview } from '@/hooks/useSchedulePreview';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import SchedulePreview from '@/components/schedule/SchedulePreview';
+import ManualMatchBuilder from '@/components/schedule/ManualMatchBuilder';
 
 export default function Schedule() {
   const { tournamentId } = useParams();
@@ -18,8 +20,17 @@ export default function Schedule() {
   const { tournaments } = useTournaments();
   const { courts } = useCourts();
   const { generateSchedule, isGenerating } = useScheduleGeneration();
-  const { preview, generatePreview, clearPreview, isGenerating: isGeneratingPreview } = useSchedulePreview();
+  const { 
+    preview, 
+    availablePlayers, 
+    generatePreview, 
+    addManualMatch, 
+    removeMatch, 
+    clearPreview, 
+    isGenerating: isGeneratingPreview 
+  } = useSchedulePreview();
   const [selectedTournament, setSelectedTournament] = useState<string>('');
+  const [showManualBuilder, setShowManualBuilder] = useState(false);
 
   const currentTournament = tournamentId 
     ? tournaments.find(t => t.id === tournamentId)
@@ -27,23 +38,29 @@ export default function Schedule() {
 
   const { tournamentPlayers } = useTournamentPlayers(currentTournament?.id);
 
-  const handleCreateSchedulePreview = async () => {
+  const handleSetupManualSchedule = async () => {
     if (!currentTournament) {
       console.error('No tournament selected');
       return;
     }
 
-    console.log('Creating 2v2 schedule preview for tournament:', currentTournament.name);
-    console.log('Tournament players:', tournamentPlayers);
+    console.log('Setting up manual 2v2 schedule for tournament:', currentTournament.name);
 
     try {
       await generatePreview(
         currentTournament.id,
         currentTournament.current_round || 1
       );
+      setShowManualBuilder(true);
     } catch (error) {
-      console.error('Error generating 2v2 preview:', error);
+      console.error('Error setting up manual schedule:', error);
     }
+  };
+
+  const handleAddMatch = (match: any) => {
+    if (!currentTournament) return;
+    
+    addManualMatch(match, currentTournament.id, currentTournament.current_round || 1);
   };
 
   const handleApproveSchedule = () => {
@@ -52,17 +69,18 @@ export default function Schedule() {
       return;
     }
 
-    console.log('Approving schedule for tournament:', currentTournament.name);
+    console.log('Approving manual schedule for tournament:', currentTournament.name);
     console.log('Preview data being sent:', preview);
     
     generateSchedule({
       tournamentId: currentTournament.id,
       roundNumber: currentTournament.current_round || 1,
-      preview: preview // Pass the preview data
+      preview: preview
     });
 
     // Clear preview after approval
     clearPreview();
+    setShowManualBuilder(false);
 
     // Navigate to matches page to show the results
     setTimeout(() => {
@@ -72,6 +90,7 @@ export default function Schedule() {
 
   const handleRejectSchedule = () => {
     clearPreview();
+    setShowManualBuilder(false);
   };
 
   const handleTournamentSelect = (tournament: any) => {
@@ -83,8 +102,46 @@ export default function Schedule() {
   const leftPlayers = tournamentPlayers.filter(tp => tp.group === 'left');
   const rightPlayers = tournamentPlayers.filter(tp => tp.group === 'right');
 
+  // Show manual builder if available
+  if (showManualBuilder && availablePlayers.length > 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Planning</h1>
+          <p className="text-muted-foreground">
+            Handmatig 2v2 schema samenstellen voor {currentTournament?.name}
+          </p>
+        </div>
+
+        <div className="flex gap-4 mb-6">
+          <Button 
+            onClick={handleApproveSchedule} 
+            disabled={!preview || preview.matches.length === 0 || isGenerating}
+            className="flex items-center gap-2"
+          >
+            {isGenerating ? 'Schema Opslaan...' : `Schema Opslaan (${preview?.matches.length || 0} wedstrijden)`}
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleRejectSchedule}
+            disabled={isGenerating}
+          >
+            Annuleren
+          </Button>
+        </div>
+
+        <ManualMatchBuilder
+          availablePlayers={availablePlayers}
+          onAddMatch={handleAddMatch}
+          currentMatches={preview?.matches || []}
+          onRemoveMatch={removeMatch}
+        />
+      </div>
+    );
+  }
+
   // Show preview if available
-  if (preview && currentTournament) {
+  if (preview && currentTournament && !showManualBuilder) {
     return (
       <div className="space-y-6">
         <div>
@@ -150,7 +207,7 @@ export default function Schedule() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
-                2v2 Schema voor {currentTournament.name}
+                Handmatig 2v2 Schema voor {currentTournament.name}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -189,23 +246,20 @@ export default function Schedule() {
               {canGenerateSchedule && (
                 <Alert className="mt-4">
                   <AlertDescription>
-                    <strong>2v2 Schema overzicht:</strong><br />
+                    <strong>Handmatig 2v2 Schema overzicht:</strong><br />
                     Links groep: {leftPlayers.length} spelers<br />
                     Rechts groep: {rightPlayers.length} spelers<br />
-                    Geschatte 2v2 wedstrijden: {
-                      Math.floor(leftPlayers.length >= 4 ? (leftPlayers.length * (leftPlayers.length - 1) * (leftPlayers.length - 2) * (leftPlayers.length - 3)) / (4 * 3 * 2 * 1) * 6 / 2 : 0) + 
-                      Math.floor(rightPlayers.length >= 4 ? (rightPlayers.length * (rightPlayers.length - 1) * (rightPlayers.length - 2) * (rightPlayers.length - 3)) / (4 * 3 * 2 * 1) * 6 / 2 : 0)
-                    }
+                    Je kunt nu handmatig 2v2 wedstrijden samenstellen voor beide groepen.
                   </AlertDescription>
                 </Alert>
               )}
               
               <div className="mt-6 flex gap-4">
                 <Button 
-                  onClick={handleCreateSchedulePreview}
+                  onClick={handleSetupManualSchedule}
                   disabled={!canGenerateSchedule || isGeneratingPreview}
                 >
-                  {isGeneratingPreview ? '2v2 Schema Preview Genereren...' : '2v2 Schema Preview Genereren'}
+                  {isGeneratingPreview ? 'Spelers Laden...' : 'Handmatig 2v2 Schema Maken'}
                 </Button>
                 <Button variant="outline" onClick={() => navigate(`/matches?tournament=${currentTournament.id}`)}>
                   Wedstrijden Bekijken
