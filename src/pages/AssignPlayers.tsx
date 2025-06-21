@@ -338,7 +338,7 @@ export default function AssignPlayers() {
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
-                          </Alert>
+                          </AlertDialog>
                         </div>
                       </TableCell>
                     </TableRow>
