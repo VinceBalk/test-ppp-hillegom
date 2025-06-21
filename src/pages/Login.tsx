@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,11 +10,27 @@ import { SignUpForm } from '@/components/SignUpForm';
 import { ForgotPasswordForm } from '@/components/ForgotPasswordForm';
 
 export default function Login() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [showResetForm, setShowResetForm] = useState(false);
+  const location = useLocation();
 
+  // Show loading while checking auth status
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Laden...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect authenticated users
   if (user) {
-    return <Navigate to="/" replace />;
+    const from = location.state?.from?.pathname || '/';
+    console.log('User is authenticated, redirecting to:', from);
+    return <Navigate to={from} replace />;
   }
 
   const handleForgotPassword = () => {

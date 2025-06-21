@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (error) {
+      if (error && error.code !== 'PGRST116') {
         console.error('Error fetching admin user:', error);
         return;
       }
@@ -87,8 +87,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     details?: any
   ) => {
     try {
+      if (!user?.id) return;
+      
       await supabase.rpc('log_security_event', {
-        p_user_id: user?.id,
+        p_user_id: user.id,
         p_action: action,
         p_resource_type: resourceType,
         p_resource_id: resourceId,
@@ -100,30 +102,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    console.log('Setting up auth state listener...');
+    
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session:', session ? 'found' : 'none');
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        // Use setTimeout to prevent blocking
+        setTimeout(() => {
+          fetchUserProfile(session.user.id);
+          fetchAdminUser(session.user.id);
+        }, 0);
+      }
+      
+      setLoading(false);
+    });
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event);
+        console.log('Auth state changed:', event, session ? 'session exists' : 'no session');
+        
         setSession(session);
         setUser(session?.user ?? null);
-        setLoading(false);
 
         if (session?.user) {
-          // Fetch user profile and admin status after authentication
+          // Use setTimeout to prevent infinite loops
           setTimeout(() => {
             fetchUserProfile(session.user.id);
             fetchAdminUser(session.user.id);
-          }, 0);
-
-          // Log authentication events
-          if (event === 'SIGNED_IN') {
-            setTimeout(() => {
+            
+            if (event === 'SIGNED_IN') {
               logSecurityEvent('user_signed_in');
-            }, 0);
-          }
+            }
+          }, 0);
         } else {
           setProfile(null);
           setAdminUser(null);
+          
           if (event === 'SIGNED_OUT') {
             setTimeout(() => {
               logSecurityEvent('user_signed_out');
@@ -133,34 +152,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-        fetchAdminUser(session.user.id);
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log('Cleaning up auth listener');
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('Attempting sign in for:', email);
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
       if (error) {
-        await logSecurityEvent('failed_sign_in_attempt', 'auth', null, { email, error: error.message });
+        console.error('Sign in error:', error.message);
+        setTimeout(() => {
+          logSecurityEvent('failed_sign_in_attempt', 'auth', null, { email, error: error.message });
+        }, 0);
+      } else {
+        console.log('Sign in successful');
       }
       
       return { error };
-    } catch (error) {
-      await logSecurityEvent('failed_sign_in_attempt', 'auth', null, { email, error: 'Unknown error' });
+    } catch (error: any) {
+      console.error('Sign in exception:', error);
+      setTimeout(() => {
+        logSecurityEvent('failed_sign_in_attempt', 'auth', null, { email, error: 'Unknown error' });
+      }, 0);
       return { error };
     }
   };
@@ -178,23 +198,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       
       if (error) {
-        await logSecurityEvent('failed_sign_up_attempt', 'auth', null, { email, error: error.message });
+        setTimeout(() => {
+          logSecurityEvent('failed_sign_up_attempt', 'auth', null, { email, error: error.message });
+        }, 0);
       } else {
-        await logSecurityEvent('successful_sign_up', 'auth', null, { email });
+        setTimeout(() => {
+          logSecurityEvent('successful_sign_up', 'auth', null, { email });
+        }, 0);
       }
       
       return { error };
-    } catch (error) {
-      await logSecurityEvent('failed_sign_up_attempt', 'auth', null, { email, error: 'Unknown error' });
+    } catch (error: any) {
+      setTimeout(() => {
+        logSecurityEvent('failed_sign_up_attempt', 'auth', null, { email, error: 'Unknown error' });
+      }, 0);
       return { error };
     }
   };
 
   const signOut = async () => {
-    await logSecurityEvent('user_sign_out_initiated');
-    await supabase.auth.signOut();
-    setProfile(null);
-    setAdminUser(null);
+    try {
+      console.log('Signing out...');
+      setTimeout(() => {
+        logSecurityEvent('user_sign_out_initiated');
+      }, 0);
+      
+      await supabase.auth.signOut();
+      setProfile(null);
+      setAdminUser(null);
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
   };
 
   const hasRole = (role: string) => {
