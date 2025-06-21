@@ -20,6 +20,7 @@ import Specials from "./pages/Specials";
 import Settings from "./pages/Settings";
 import Users from "./pages/Users";
 import Profile from "./pages/Profile";
+import Courts from "./pages/Courts";
 import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
 
@@ -49,6 +50,11 @@ const App = () => (
               <Route path="schedule" element={<Schedule />} />
               <Route path="scores" element={<Scores />} />
               <Route path="specials" element={<Specials />} />
+              <Route path="courts" element={
+                <ProtectedRoute requiredRole="organisator">
+                  <Courts />
+                </ProtectedRoute>
+              } />
               <Route path="settings" element={<Settings />} />
               <Route path="profile" element={<Profile />} />
               <Route path="users" element={

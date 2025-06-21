@@ -8,6 +8,8 @@ interface Tournament {
   start_date: string;
   end_date: string;
   status: string;
+  current_round?: number;
+  total_rounds?: number;
   player_count?: number;
 }
 

@@ -10,6 +10,8 @@ interface Tournament {
   start_date: string;
   end_date: string;
   status: string;
+  current_round?: number;
+  total_rounds?: number;
   player_count?: number;
 }
 
@@ -44,6 +46,11 @@ export function CurrentTournament({ tournament, onTournamentClick }: CurrentTour
               <span className="font-medium">Status:</span> 
               <span className="ml-1 capitalize">{tournament.status.replace('_', ' ')}</span>
             </p>
+            {tournament.current_round && tournament.total_rounds && (
+              <p className="text-sm">
+                <span className="font-medium">Ronde:</span> {tournament.current_round} van {tournament.total_rounds}
+              </p>
+            )}
           </div>
         ) : (
           <p className="text-muted-foreground">Geen actief toernooi beschikbaar</p>

@@ -111,7 +111,7 @@ export default function PlayerDetail() {
             </div>
             <div className="flex justify-between items-center">
               <span className="font-medium">Rij:</span>
-              {getRowSideBadge(player.group_side)}
+              {getRowSideBadge(player.row_side)}
             </div>
             <div className="flex justify-between items-center">
               <span className="font-medium">Positie:</span>
