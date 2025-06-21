@@ -1,48 +1,100 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Users, AlertCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle, ArrowLeft, Calendar, Users, CheckCircle } from 'lucide-react';
 import { useTournaments } from '@/hooks/useTournaments';
 import { useTournamentPlayers } from '@/hooks/useTournamentPlayers';
 import { useSchedulePreview } from '@/hooks/useSchedulePreview';
 import { useScheduleGeneration } from '@/hooks/useScheduleGeneration';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import SchedulePreview from '@/components/schedule/SchedulePreview';
-import ScheduleDebug from '@/components/schedule/ScheduleDebug';
+import TournamentMatches from '@/components/tournaments/TournamentMatches';
 
 export default function Schedule() {
-  const { tournamentId } = useParams();
+  const { tournamentId } = useParams<{ tournamentId?: string }>();
   const navigate = useNavigate();
-  const { tournaments, isLoading: tournamentsLoading } = useTournaments();
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>(tournamentId || '');
+  const [currentRound, setCurrentRound] = useState<number>(1);
+  const [scheduleGenerated, setScheduleGenerated] = useState<boolean>(false);
 
-  console.log('=== SCHEDULE DEBUG ===');
+  const { tournaments, isLoading: tournamentsLoading } = useTournaments();
+  const { tournamentPlayers, isLoading: playersLoading } = useTournamentPlayers(selectedTournamentId);
+  const { 
+    preview, 
+    generatePreview, 
+    updatePreviewMatch, 
+    isGeneratingPreview 
+  } = useSchedulePreview();
+  const { generateSchedule, isGenerating } = useScheduleGeneration();
+
+  console.log('=== SCHEDULE PAGE DEBUG ===');
   console.log('Tournament ID from URL:', tournamentId);
-  console.log('Selected Tournament ID:', selectedTournamentId);
+  console.log('Selected tournament ID:', selectedTournamentId);
+  console.log('Current round:', currentRound);
+  console.log('Schedule generated:', scheduleGenerated);
 
-  // Find the current tournament
-  const currentTournament = tournaments.find(t => 
-    t.id === (tournamentId || selectedTournamentId)
-  );
+  useEffect(() => {
+    if (tournamentId) {
+      setSelectedTournamentId(tournamentId);
+    }
+  }, [tournamentId]);
 
-  const { tournamentPlayers = [], isLoading: playersLoading } = useTournamentPlayers(
-    currentTournament?.id
-  );
+  // Check if schedule has already been generated
+  useEffect(() => {
+    if (selectedTournamentId) {
+      const tournament = tournaments.find(t => t.id === selectedTournamentId);
+      if (tournament) {
+        // Check if any round has been generated
+        const hasGeneratedSchedule = tournament.round_1_generated || 
+                                   tournament.round_2_generated || 
+                                   tournament.round_3_generated;
+        setScheduleGenerated(hasGeneratedSchedule);
+        
+        // Set current round based on what's been generated
+        if (tournament.round_3_generated) setCurrentRound(3);
+        else if (tournament.round_2_generated) setCurrentRound(2);
+        else setCurrentRound(1);
+      }
+    }
+  }, [selectedTournamentId, tournaments]);
 
-  const { preview, generatePreview, updateMatch, clearPreview, isGenerating } = useSchedulePreview(
-    currentTournament?.id
-  );
+  const selectedTournament = tournaments.find(t => t.id === selectedTournamentId);
+  const leftPlayers = tournamentPlayers.filter(tp => tp.group === 'left');
+  const rightPlayers = tournamentPlayers.filter(tp => tp.group === 'right');
 
-  const { generateSchedule, isGenerating: isSaving } = useScheduleGeneration();
+  const handleGeneratePreview = () => {
+    if (selectedTournamentId) {
+      generatePreview({
+        tournamentId: selectedTournamentId,
+        roundNumber: currentRound
+      });
+    }
+  };
 
-  if (tournamentsLoading) {
+  const handleApproveSchedule = () => {
+    if (preview && selectedTournamentId) {
+      generateSchedule({
+        tournamentId: selectedTournamentId,
+        roundNumber: currentRound,
+        preview: preview
+      });
+      setScheduleGenerated(true);
+    }
+  };
+
+  const isLoading = tournamentsLoading || playersLoading;
+
+  if (isLoading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Planning</h1>
-          <p className="text-muted-foreground">2v2 Wedstrijd planning en speelschema beheer</p>
+        <div className="flex items-center space-x-4">
+          <Button variant="outline" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Terug
+          </Button>
+          <h1 className="text-3xl font-bold tracking-tight">Schema Planning</h1>
         </div>
         <div className="flex items-center justify-center h-32">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -51,239 +103,137 @@ export default function Schedule() {
     );
   }
 
-  // No tournament selected - show tournament selector
-  if (!currentTournament) {
+  if (!selectedTournament) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Planning</h1>
-          <p className="text-muted-foreground">2v2 Wedstrijd planning en speelschema beheer</p>
+        <div className="flex items-center space-x-4">
+          <Button variant="outline" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Terug
+          </Button>
+          <h1 className="text-3xl font-bold tracking-tight">Schema Planning</h1>
         </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Selecteer een Toernooi</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {tournaments.length === 0 ? (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Geen toernooien gevonden. Maak eerst een toernooi aan.
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {tournaments
-                  .filter(t => t.status === 'open' || t.status === 'in_progress')
-                  .map((tournament) => (
-                  <Card 
-                    key={tournament.id} 
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => {
-                      setSelectedTournamentId(tournament.id);
-                      navigate(`/schedule/${tournament.id}`);
-                    }}
-                  >
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold">{tournament.name}</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {tournament.start_date} - {tournament.end_date}
-                      </p>
-                      <Badge variant="outline" className="mt-2">
-                        {tournament.status === 'open' ? 'Open' : 'Bezig'}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Tournament selected - show schedule interface
-  const leftPlayers = tournamentPlayers.filter(tp => tp.group === 'left');
-  const rightPlayers = tournamentPlayers.filter(tp => tp.group === 'right');
-  const canGenerateSchedule = tournamentPlayers.length >= 4;
-
-  const handleGeneratePreview = async () => {
-    try {
-      await generatePreview();
-    } catch (error) {
-      console.error('Error generating preview:', error);
-    }
-  };
-
-  const handleApproveSchedule = () => {
-    if (preview && currentTournament) {
-      generateSchedule({
-        tournamentId: currentTournament.id,
-        roundNumber: currentTournament.current_round || 1,
-        preview
-      });
-      clearPreview();
-    }
-  };
-
-  const handleRejectSchedule = () => {
-    clearPreview();
-  };
-
-  // Show preview if available
-  if (preview) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Planning</h1>
-          <p className="text-muted-foreground">2v2 Wedstrijd planning en speelschema beheer</p>
-        </div>
-
-        <SchedulePreview
-          preview={preview}
-          onApprove={handleApproveSchedule}
-          onReject={handleRejectSchedule}
-          onUpdateMatch={updateMatch}
-          isApproving={isSaving}
-          tournamentName={currentTournament.name}
-          tournamentId={currentTournament.id}
-          roundNumber={currentTournament.current_round || 1}
-        />
-
-        <ScheduleDebug
-          tournaments={tournaments}
-          currentTournament={currentTournament}
-          tournamentPlayers={tournamentPlayers}
-          tournamentId={tournamentId}
-        />
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Toernooi niet gevonden. Ga terug naar de toernooien lijst.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Planning</h1>
-        <p className="text-muted-foreground">2v2 Wedstrijd planning en speelschema beheer</p>
+      <div className="flex items-center space-x-4">
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Terug
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Schema Planning</h1>
+          <p className="text-muted-foreground">Genereer wedstrijdschema voor {selectedTournament.name}</p>
+        </div>
       </div>
 
+      {/* Tournament Info */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            2v2 Schema voor {currentTournament.name}
+            {selectedTournament.name}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {playersLoading ? (
-            <div className="flex items-center justify-center py-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-              <span className="ml-2">Spelers laden...</span>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span>{tournamentPlayers.length} spelers ingeschreven</span>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {/* Tournament Info */}
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    Spelers: {tournamentPlayers.length} / {currentTournament.max_players || 16}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">
-                    Status: {currentTournament.status}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">
-                    Ronde: {currentTournament.current_round || 1}
-                  </Badge>
-                </div>
-              </div>
-
-              {/* Player Groups Info */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Links Groep</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {leftPlayers.length} spelers
-                  </p>
-                  {leftPlayers.map(tp => (
-                    <div key={tp.id} className="text-sm">
-                      {tp.player.name}
-                    </div>
-                  ))}
-                </div>
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Rechts Groep</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {rightPlayers.length} spelers
-                  </p>
-                  {rightPlayers.map(tp => (
-                    <div key={tp.id} className="text-sm">
-                      {tp.player.name}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Alerts */}
-              {!canGenerateSchedule && (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Er moeten minimaal 4 spelers toegewezen zijn om 2v2 wedstrijden te genereren.
-                    Momenteel zijn er {tournamentPlayers.length} spelers toegewezen.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {canGenerateSchedule && (
-                <Alert>
-                  <AlertDescription>
-                    <strong>2v2 Schema gereed voor generatie!</strong><br />
-                    Links groep: {leftPlayers.length} spelers<br />
-                    Rechts groep: {rightPlayers.length} spelers
-                  </AlertDescription>
-                </Alert>
-              )}
-              
-              {/* Action Buttons */}
-              <div className="flex gap-4">
-                <Button 
-                  onClick={handleGeneratePreview}
-                  disabled={!canGenerateSchedule || isGenerating}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  {isGenerating ? '2v2 Schema Genereren...' : '2v2 Schema Genereren'}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => navigate(`/matches?tournament=${currentTournament.id}`)}
-                >
-                  Wedstrijden Bekijken
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => navigate(`/tournaments/${currentTournament.id}/assign-players`)}
-                >
-                  Spelers Beheren
-                </Button>
-              </div>
+            <div>
+              <span className="font-medium">Links groep:</span> {leftPlayers.length} spelers
             </div>
-          )}
+            <div>
+              <span className="font-medium">Rechts groep:</span> {rightPlayers.length} spelers
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      <ScheduleDebug
-        tournaments={tournaments}
-        currentTournament={currentTournament}
-        tournamentPlayers={tournamentPlayers}
-        tournamentId={tournamentId}
-      />
+      {scheduleGenerated ? (
+        /* Show generated matches */
+        <div className="space-y-6">
+          <Alert>
+            <CheckCircle className="h-4 w-4" />
+            <AlertDescription>
+              Het wedstrijdschema is succesvol gegenereerd en opgeslagen. Hieronder zie je alle wedstrijden voor dit toernooi.
+            </AlertDescription>
+          </Alert>
+          
+          <TournamentMatches 
+            tournamentId={selectedTournamentId} 
+            tournamentName={selectedTournament.name}
+          />
+        </div>
+      ) : (
+        /* Show generation interface */
+        <div className="space-y-6">
+          {tournamentPlayers.length < 4 ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Minimaal 4 spelers nodig om een schema te genereren. 
+                Ga naar de toernooi instellingen om meer spelers toe te voegen.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Schema Genereren</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Huidige Ronde:</label>
+                      <select 
+                        value={currentRound} 
+                        onChange={(e) => setCurrentRound(parseInt(e.target.value))}
+                        className="border rounded px-3 py-2"
+                      >
+                        <option value={1}>Ronde 1</option>
+                        <option value={2}>Ronde 2</option>
+                        <option value={3}>Ronde 3</option>
+                      </select>
+                    </div>
+                    
+                    <Button 
+                      onClick={handleGeneratePreview}
+                      disabled={isGeneratingPreview}
+                      className="w-full md:w-auto"
+                    >
+                      {isGeneratingPreview ? 'Preview Genereren...' : '2v2 Schema Preview Genereren'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {preview && (
+                <SchedulePreview
+                  preview={preview}
+                  onApprove={handleApproveSchedule}
+                  onReject={() => setScheduleGenerated(false)}
+                  onUpdateMatch={updatePreviewMatch}
+                  isApproving={isGenerating}
+                  tournamentName={selectedTournament.name}
+                  tournamentId={selectedTournamentId}
+                  roundNumber={currentRound}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

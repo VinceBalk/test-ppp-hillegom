@@ -1,10 +1,10 @@
-
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, TrendingUp, TrendingDown, Minus, Trophy, Target, Calendar } from 'lucide-react';
 import { usePlayers } from '@/hooks/usePlayers';
+import PlayerMatches from '@/components/player/PlayerMatches';
 
 export default function PlayerDetail() {
   const { id } = useParams<{ id: string }>();
@@ -172,6 +172,8 @@ export default function PlayerDetail() {
           </CardContent>
         </Card>
       )}
+
+      <PlayerMatches playerId={player.id} playerName={player.name} />
     </div>
   );
 }
