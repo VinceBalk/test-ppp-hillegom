@@ -35,10 +35,12 @@ export function PlayerRankings({ title, description, players, onPlayerClick }: P
       </CardHeader>
       <CardContent className="space-y-2">
         {players.length > 0 ? (
-          players.map(p => (
+          players.map((p, index) => (
             <div 
               key={p.id} 
-              className="flex justify-between items-center cursor-pointer hover:bg-muted p-2 rounded transition-colors"
+              className={`flex justify-between items-center cursor-pointer p-2 rounded transition-colors hover:bg-orange-500 hover:text-black ${
+                index % 2 === 0 ? 'bg-muted/30' : 'bg-transparent'
+              }`}
               onClick={() => onPlayerClick(p.id)}
             >
               <span className="font-medium">#{p.position} {p.name}</span>

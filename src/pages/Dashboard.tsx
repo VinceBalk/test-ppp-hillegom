@@ -17,7 +17,7 @@ export default function Dashboard() {
   } = useDashboardData();
 
   const handlePlayerClick = (playerId: string) => {
-    navigate(`/players?highlight=${playerId}`);
+    navigate(`/players/${playerId}`);
   };
 
   const handleTournamentClick = () => {
