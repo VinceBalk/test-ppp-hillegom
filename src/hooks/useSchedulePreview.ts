@@ -58,11 +58,15 @@ export const useSchedulePreview = (tournamentId?: string) => {
           if (groupPlayers.length >= 4) {
             const courtIndex = Math.floor(groupStart / 4);
             const assignedCourt = activeCourts[courtIndex % activeCourts.length];
-            const courtName = assignedCourt ? assignedCourt.name : `${courtPrefix} Baan ${courtIndex + 1}`;
+            
+            // Create more meaningful court names that include group info
+            const courtName = assignedCourt ? 
+              `${assignedCourt.name} (${courtPrefix})` : 
+              `${courtPrefix} Baan ${courtIndex + 1}`;
             const courtId = assignedCourt ? assignedCourt.id : undefined;
             
-            // Based on the new Round 1 image pattern:
-            // Round 1: Player 1&3 vs Player 2&4 (Ronde 1 in the image shows first+third vs second+fourth)
+            // Based on the Excel pattern:
+            // Round 1: Player 1&3 vs Player 2&4
             matches.push({
               id: `${courtPrefix.toLowerCase()}-g${courtIndex + 1}-r1`,
               team1_player1_id: groupPlayers[0].player_id,
@@ -149,8 +153,12 @@ export const useSchedulePreview = (tournamentId?: string) => {
       match.id === matchId ? { ...match, ...updates } : match
     );
     
-    const updatedLeftMatches = updatedMatches.filter(m => m.court_name?.includes('Links'));
-    const updatedRightMatches = updatedMatches.filter(m => m.court_name?.includes('Rechts'));
+    const updatedLeftMatches = updatedMatches.filter(m => 
+      m.court_name?.includes('Links') || m.id.includes('links')
+    );
+    const updatedRightMatches = updatedMatches.filter(m => 
+      m.court_name?.includes('Rechts') || m.id.includes('rechts')
+    );
     
     setPreview({
       matches: updatedMatches,

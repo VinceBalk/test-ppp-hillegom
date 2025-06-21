@@ -24,6 +24,17 @@ export default function MatchEditor({ match, tournamentId, onUpdate }: MatchEdit
 
   const activeCourts = courts.filter(court => court.is_active);
 
+  // Determine which group this match belongs to based on court name
+  const isLeftGroup = match.court_name?.includes('Links') || false;
+  const isRightGroup = match.court_name?.includes('Rechts') || false;
+  
+  // Filter players based on the match's group
+  const availablePlayers = tournamentPlayers.filter(tp => {
+    if (isLeftGroup) return tp.group === 'left';
+    if (isRightGroup) return tp.group === 'right';
+    return true; // If group can't be determined, show all players
+  });
+
   const handleSave = () => {
     onUpdate(match.id, editedMatch);
     setIsEditing(false);
@@ -35,7 +46,7 @@ export default function MatchEditor({ match, tournamentId, onUpdate }: MatchEdit
   };
 
   const updatePlayer = (position: 'team1_player1' | 'team1_player2' | 'team2_player1' | 'team2_player2', playerId: string) => {
-    const player = tournamentPlayers.find(tp => tp.player_id === playerId);
+    const player = availablePlayers.find(tp => tp.player_id === playerId);
     if (!player) return;
 
     setEditedMatch(prev => ({
@@ -90,7 +101,7 @@ export default function MatchEditor({ match, tournamentId, onUpdate }: MatchEdit
     <Card className="border-blue-200">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center justify-between">
-          Wedstrijd Bewerken
+          Wedstrijd Bewerken - {isLeftGroup ? 'Links Groep' : isRightGroup ? 'Rechts Groep' : 'Onbekende Groep'}
           <div className="flex gap-1">
             <Button variant="ghost" size="sm" onClick={handleSave} className="h-6 w-6 p-0">
               <Check className="h-3 w-3" />
@@ -122,6 +133,11 @@ export default function MatchEditor({ match, tournamentId, onUpdate }: MatchEdit
           </Select>
         </div>
 
+        {/* Available Players Info */}
+        <div className="text-xs text-muted-foreground border-l-2 border-blue-200 pl-2">
+          Beschikbare spelers uit {isLeftGroup ? 'linker' : isRightGroup ? 'rechter' : 'onbekende'} groep: {availablePlayers.length}
+        </div>
+
         {/* Team 1 */}
         <div>
           <Label className="text-xs text-blue-600">Team 1</Label>
@@ -131,10 +147,10 @@ export default function MatchEditor({ match, tournamentId, onUpdate }: MatchEdit
               onValueChange={(value) => updatePlayer('team1_player1', value)}
             >
               <SelectTrigger className="h-7 text-xs">
-                <SelectValue />
+                <SelectValue placeholder="Speler 1" />
               </SelectTrigger>
               <SelectContent>
-                {tournamentPlayers.map(tp => (
+                {availablePlayers.map(tp => (
                   <SelectItem key={tp.player_id} value={tp.player_id} className="text-xs">
                     {tp.player.name}
                   </SelectItem>
@@ -146,10 +162,10 @@ export default function MatchEditor({ match, tournamentId, onUpdate }: MatchEdit
               onValueChange={(value) => updatePlayer('team1_player2', value)}
             >
               <SelectTrigger className="h-7 text-xs">
-                <SelectValue />
+                <SelectValue placeholder="Speler 2" />
               </SelectTrigger>
               <SelectContent>
-                {tournamentPlayers.map(tp => (
+                {availablePlayers.map(tp => (
                   <SelectItem key={tp.player_id} value={tp.player_id} className="text-xs">
                     {tp.player.name}
                   </SelectItem>
@@ -168,10 +184,10 @@ export default function MatchEditor({ match, tournamentId, onUpdate }: MatchEdit
               onValueChange={(value) => updatePlayer('team2_player1', value)}
             >
               <SelectTrigger className="h-7 text-xs">
-                <SelectValue />
+                <SelectValue placeholder="Speler 1" />
               </SelectTrigger>
               <SelectContent>
-                {tournamentPlayers.map(tp => (
+                {availablePlayers.map(tp => (
                   <SelectItem key={tp.player_id} value={tp.player_id} className="text-xs">
                     {tp.player.name}
                   </SelectItem>
@@ -183,10 +199,10 @@ export default function MatchEditor({ match, tournamentId, onUpdate }: MatchEdit
               onValueChange={(value) => updatePlayer('team2_player2', value)}
             >
               <SelectTrigger className="h-7 text-xs">
-                <SelectValue />
+                <SelectValue placeholder="Speler 2" />
               </SelectTrigger>
               <SelectContent>
-                {tournamentPlayers.map(tp => (
+                {availablePlayers.map(tp => (
                   <SelectItem key={tp.player_id} value={tp.player_id} className="text-xs">
                     {tp.player.name}
                   </SelectItem>
@@ -194,6 +210,22 @@ export default function MatchEditor({ match, tournamentId, onUpdate }: MatchEdit
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        {/* Round Info */}
+        <div>
+          <Label className="text-xs">Ronde binnen groep</Label>
+          <Input
+            type="number"
+            min="1"
+            max="3"
+            value={editedMatch.round_within_group}
+            onChange={(e) => setEditedMatch(prev => ({
+              ...prev,
+              round_within_group: parseInt(e.target.value) || 1
+            }))}
+            className="h-7 text-xs"
+          />
         </div>
       </CardContent>
     </Card>
