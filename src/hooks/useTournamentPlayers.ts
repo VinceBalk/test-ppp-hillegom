@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +13,7 @@ export interface TournamentPlayer {
     id: string;
     name: string;
     email?: string;
+    ranking_score?: number;
   };
 }
 
@@ -30,7 +30,7 @@ export const useTournamentPlayers = (tournamentId?: string) => {
         .from('tournament_players')
         .select(`
           *,
-          player:players(id, name, email)
+          player:players(id, name, email, ranking_score)
         `)
         .eq('tournament_id', tournamentId)
         .eq('active', true)
@@ -54,7 +54,7 @@ export const useTournamentPlayers = (tournamentId?: string) => {
         }])
         .select(`
           *,
-          player:players(id, name, email)
+          player:players(id, name, email, ranking_score)
         `)
         .single();
       
@@ -112,7 +112,7 @@ export const useTournamentPlayers = (tournamentId?: string) => {
         .eq('id', tournamentPlayerId)
         .select(`
           *,
-          player:players(id, name, email)
+          player:players(id, name, email, ranking_score)
         `)
         .single();
       

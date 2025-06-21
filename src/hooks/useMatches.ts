@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +24,30 @@ export interface Match {
   notes?: string;
   created_at?: string;
   updated_at?: string;
+  tournament?: {
+    name: string;
+  };
+  player1?: {
+    name: string;
+  };
+  player2?: {
+    name: string;
+  };
+  team1_player1?: {
+    name: string;
+  };
+  team1_player2?: {
+    name: string;
+  };
+  team2_player1?: {
+    name: string;
+  };
+  team2_player2?: {
+    name: string;
+  };
+  court?: {
+    name: string;
+  };
 }
 
 export const useMatches = (tournamentId?: string) => {
@@ -62,7 +85,7 @@ export const useMatches = (tournamentId?: string) => {
   });
 
   const createMatch = useMutation({
-    mutationFn: async (match: Omit<Match, 'id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (match: Omit<Match, 'id' | 'created_at' | 'updated_at' | 'tournament' | 'player1' | 'player2' | 'team1_player1' | 'team1_player2' | 'team2_player1' | 'team2_player2' | 'court'>) => {
       const { data, error } = await supabase
         .from('matches')
         .insert([match])
