@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,7 @@ import { Edit, Check, X, Save } from 'lucide-react';
 import { Match } from '@/hooks/useMatches';
 import { useTournamentPlayers } from '@/hooks/useTournamentPlayers';
 import { useCourts } from '@/hooks/useCourts';
-import { useIndividualMatchSave } from '@/hooks/useIndividualMatchSave';
+import { useIndividualMatchSaveMutation } from '@/hooks/useIndividualMatchSaveMutation';
 
 interface SavedMatchEditorProps {
   match: Match;
@@ -21,12 +20,12 @@ export default function SavedMatchEditor({ match, tournamentId }: SavedMatchEdit
   const [editedMatch, setEditedMatch] = useState(match);
   const { tournamentPlayers } = useTournamentPlayers(tournamentId);
   const { courts } = useCourts();
-  const saveMatch = useIndividualMatchSave();
+  const saveMatch = useIndividualMatchSaveMutation();
 
-  const activeCourts = courts.filter(court => court.is_active);
-  
   // Get all players for this tournament
   const availablePlayers = tournamentPlayers;
+
+  const activeCourts = courts.filter(court => court.is_active);
 
   const handleSaveToDatabase = async () => {
     if (!editedMatch.team1_player1_id || !editedMatch.team1_player2_id || 

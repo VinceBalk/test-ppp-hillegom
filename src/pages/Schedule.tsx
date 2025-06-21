@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,11 +24,14 @@ export default function Schedule() {
     updateMatch, 
     clearPreview, 
     isGenerating 
-  } = useSchedulePreview();
+  } = useSchedulePreview(tournamentId);
   const { 
     generateSchedule, 
     isGenerating: isGeneratingSchedule 
   } = useScheduleGeneration();
+
+  // Find tournament after tournaments are loaded
+  const tournament = tournaments?.find(t => t.id === tournamentId);
 
   useEffect(() => {
     if (!tournamentId) {
@@ -56,7 +60,7 @@ export default function Schedule() {
     
     try {
       console.log('Generating preview for tournament:', tournament.id, 'round:', selectedRound);
-      await generatePreview(tournament.id, selectedRound);
+      await generatePreview();
     } catch (error) {
       console.error('Error generating preview:', error);
     }
@@ -67,7 +71,11 @@ export default function Schedule() {
     
     try {
       console.log('Approving schedule for tournament:', tournament.id, 'round:', selectedRound);
-      await generateSchedule(tournament.id, selectedRound);
+      generateSchedule({ 
+        tournamentId: tournament.id, 
+        roundNumber: selectedRound, 
+        preview 
+      });
       clearPreview();
     } catch (error) {
       console.error('Error approving schedule:', error);
@@ -128,8 +136,6 @@ export default function Schedule() {
       </div>
     );
   }
-
-  const tournament = tournaments?.find(t => t.id === tournamentId);
 
   return (
     <div className="space-y-6">
@@ -211,7 +217,7 @@ export default function Schedule() {
 
       {/* Debug Info */}
       <ScheduleDebug 
-        tournament={tournament}
+        tournaments={[tournament]}
         selectedRound={selectedRound}
         preview={preview}
       />

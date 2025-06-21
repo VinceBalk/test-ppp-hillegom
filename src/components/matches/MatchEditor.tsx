@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,7 @@ import { Edit, Check, X, Save } from 'lucide-react';
 import { ScheduleMatch } from '@/hooks/useSchedulePreview';
 import { useTournamentPlayers } from '@/hooks/useTournamentPlayers';
 import { useCourts } from '@/hooks/useCourts';
-import { useIndividualMatchSave } from '@/hooks/useIndividualMatchSave';
+import { useIndividualMatchSaveMutation } from '@/hooks/useIndividualMatchSaveMutation';
 
 interface MatchEditorProps {
   match: ScheduleMatch;
@@ -23,7 +22,7 @@ export default function MatchEditor({ match, tournamentId, onUpdate, showSaveBut
   const [editedMatch, setEditedMatch] = useState<ScheduleMatch>(match);
   const { tournamentPlayers } = useTournamentPlayers(tournamentId);
   const { courts } = useCourts();
-  const saveMatch = useIndividualMatchSave();
+  const saveMatch = useIndividualMatchSaveMutation();
 
   const activeCourts = courts.filter(court => court.is_active);
 
