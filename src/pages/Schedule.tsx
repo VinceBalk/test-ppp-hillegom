@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +7,7 @@ import { AlertCircle, ArrowLeft, Calendar } from 'lucide-react';
 import { useTournaments } from '@/hooks/useTournaments';
 import { useSchedulePreview } from '@/hooks/useSchedulePreview';
 import { useScheduleGeneration } from '@/hooks/useScheduleGeneration';
+import { useTournamentPlayers } from '@/hooks/useTournamentPlayers';
 import SchedulePreview from '@/components/schedule/SchedulePreview';
 import ManualMatchBuilder from '@/components/schedule/ManualMatchBuilder';
 import ScheduleDebug from '@/components/schedule/ScheduleDebug';
@@ -16,8 +16,10 @@ export default function Schedule() {
   const { tournamentId } = useParams<{ tournamentId: string }>();
   const navigate = useNavigate();
   const [selectedRound, setSelectedRound] = useState(1);
+  const [manualMatches, setManualMatches] = useState<any[]>([]);
   
   const { tournaments, isLoading: tournamentsLoading, error: tournamentsError } = useTournaments();
+  const { tournamentPlayers } = useTournamentPlayers(tournamentId);
   const { 
     preview, 
     generatePreview, 
@@ -80,6 +82,14 @@ export default function Schedule() {
     } catch (error) {
       console.error('Error approving schedule:', error);
     }
+  };
+
+  const handleAddManualMatch = (match: any) => {
+    setManualMatches(prev => [...prev, match]);
+  };
+
+  const handleRemoveManualMatch = (index: number) => {
+    setManualMatches(prev => prev.filter((_, i) => i !== index));
   };
 
   if (tournamentsLoading) {
@@ -213,13 +223,19 @@ export default function Schedule() {
       )}
 
       {/* Manual Match Builder */}
-      <ManualMatchBuilder tournamentId={tournament.id} />
+      <ManualMatchBuilder 
+        availablePlayers={tournamentPlayers}
+        onAddMatch={handleAddManualMatch}
+        currentMatches={manualMatches}
+        onRemoveMatch={handleRemoveManualMatch}
+      />
 
       {/* Debug Info */}
       <ScheduleDebug 
-        tournaments={[tournament]}
-        selectedRound={selectedRound}
-        preview={preview}
+        tournaments={tournaments || []}
+        currentTournament={tournament}
+        tournamentPlayers={tournamentPlayers}
+        tournamentId={tournamentId}
       />
     </div>
   );
