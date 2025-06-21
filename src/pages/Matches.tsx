@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Clock, MapPin } from 'lucide-react';
+import { Calendar, Clock, MapPin, AlertCircle } from 'lucide-react';
 import { useMatches } from '@/hooks/useMatches';
 import { useTournaments } from '@/hooks/useTournaments';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function Matches() {
   const [searchParams] = useSearchParams();
@@ -15,7 +16,12 @@ export default function Matches() {
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>(tournamentId || '');
   
   const { tournaments } = useTournaments();
-  const { matches, isLoading } = useMatches(selectedTournamentId || undefined);
+  const { matches, isLoading, error } = useMatches(selectedTournamentId || undefined);
+
+  console.log('Matches page - Selected tournament:', selectedTournamentId);
+  console.log('Matches data:', matches);
+  console.log('Loading:', isLoading);
+  console.log('Error:', error);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -31,6 +37,8 @@ export default function Matches() {
   };
 
   const getPlayerNames = (match: any) => {
+    console.log('Getting player names for match:', match);
+    
     if (match.player1 && match.player2) {
       return `${match.player1.name} vs ${match.player2.name}`;
     }
@@ -58,6 +66,25 @@ export default function Matches() {
         <div className="flex items-center justify-center h-32">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Wedstrijden</h1>
+          <p className="text-muted-foreground">
+            Overzicht van alle wedstrijden en resultaten
+          </p>
+        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Er is een fout opgetreden bij het laden van de wedstrijden: {error.message}
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -98,9 +125,17 @@ export default function Matches() {
             <CardContent className="text-center py-8">
               <p className="text-muted-foreground">
                 {selectedTournamentId 
-                  ? 'Nog geen wedstrijden gepland voor dit toernooi.' 
+                  ? 'Nog geen wedstrijden gepland voor dit toernooi. Ga naar de Planning pagina om een schema te genereren.' 
                   : 'Nog geen wedstrijden gepland.'}
               </p>
+              {selectedTournamentId && (
+                <Button 
+                  className="mt-4" 
+                  onClick={() => window.location.href = `/schedule/${selectedTournamentId}`}
+                >
+                  Ga naar Planning
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
