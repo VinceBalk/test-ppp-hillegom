@@ -54,14 +54,21 @@ export default function Schedule() {
     }
 
     console.log('Approving schedule for tournament:', currentTournament.name);
+    console.log('Preview data being sent:', preview);
     
     generateSchedule({
       tournamentId: currentTournament.id,
-      roundNumber: currentTournament.current_round || 1
+      roundNumber: currentTournament.current_round || 1,
+      preview: preview // Pass the preview data
     });
 
     // Clear preview after approval
     clearPreview();
+
+    // Navigate to matches page to show the results
+    setTimeout(() => {
+      navigate(`/matches?tournament=${currentTournament.id}`);
+    }, 1000);
   };
 
   const handleRejectSchedule = () => {

@@ -2,10 +2,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { SchedulePreview } from './useSchedulePreview';
 
 export interface GenerateScheduleParams {
   tournamentId: string;
   roundNumber: number;
+  preview?: SchedulePreview;
 }
 
 export const useScheduleGeneration = () => {
@@ -13,10 +15,62 @@ export const useScheduleGeneration = () => {
   const queryClient = useQueryClient();
 
   const generateSchedule = useMutation({
-    mutationFn: async ({ tournamentId, roundNumber }: GenerateScheduleParams) => {
+    mutationFn: async ({ tournamentId, roundNumber, preview }: GenerateScheduleParams) => {
       console.log('Generating and saving schedule for tournament:', tournamentId, 'round:', roundNumber);
       
-      // Haal alle spelers op voor dit toernooi
+      // If we have a preview, use those matches directly
+      if (preview && preview.matches.length > 0) {
+        console.log('Using preview matches:', preview.matches);
+        
+        const matches = preview.matches.map(match => ({
+          tournament_id: tournamentId,
+          player1_id: match.player1_id,
+          player2_id: match.player2_id,
+          round_number: roundNumber,
+          status: 'scheduled' as const,
+          player1_score: 0,
+          player2_score: 0
+        }));
+
+        console.log('Prepared matches for insert:', matches);
+
+        // Sla wedstrijden op in database
+        const { data: createdMatches, error: matchesError } = await supabase
+          .from('matches')
+          .insert(matches)
+          .select(`
+            *,
+            tournament:tournaments(name),
+            player1:players!matches_player1_id_fkey(name),
+            player2:players!matches_player2_id_fkey(name)
+          `);
+
+        if (matchesError) {
+          console.error('Error creating matches:', matchesError);
+          throw matchesError;
+        }
+
+        console.log('Created matches:', createdMatches);
+
+        // Update toernooi status
+        const { error: tournamentError } = await supabase
+          .from('tournaments')
+          .update({
+            [`round_${roundNumber}_generated`]: true,
+            status: 'in_progress',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', tournamentId);
+
+        if (tournamentError) {
+          console.error('Error updating tournament:', tournamentError);
+          throw tournamentError;
+        }
+
+        return createdMatches;
+      }
+
+      // Fallback: generate matches from scratch if no preview provided
       const { data: tournamentPlayers, error: playersError } = await supabase
         .from('tournament_players')
         .select(`
@@ -88,7 +142,12 @@ export const useScheduleGeneration = () => {
       const { data: createdMatches, error: matchesError } = await supabase
         .from('matches')
         .insert(matches)
-        .select();
+        .select(`
+          *,
+          tournament:tournaments(name),
+          player1:players!matches_player1_id_fkey(name),
+          player2:players!matches_player2_id_fkey(name)
+        `);
 
       if (matchesError) {
         console.error('Error creating matches:', matchesError);
