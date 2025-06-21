@@ -792,6 +792,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      save_individual_match: {
+        Args: {
+          p_match_id: string
+          p_team1_player1_id: string
+          p_team1_player2_id: string
+          p_team2_player1_id: string
+          p_team2_player2_id: string
+          p_court_id?: string
+          p_court_number?: string
+          p_round_within_group?: number
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

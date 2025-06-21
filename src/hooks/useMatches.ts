@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -88,7 +89,7 @@ export const useMatches = (tournamentId?: string) => {
       console.log('Fetched matches:', data);
       return data as Match[];
     },
-    enabled: true, // Always enabled, even without tournamentId
+    enabled: true,
   });
 
   const createMatch = useMutation({
@@ -148,13 +149,64 @@ export const useMatches = (tournamentId?: string) => {
     },
   });
 
+  const saveIndividualMatch = useMutation({
+    mutationFn: async (params: {
+      matchId: string;
+      team1Player1Id: string;
+      team1Player2Id: string;
+      team2Player1Id: string;
+      team2Player2Id: string;
+      courtId?: string;
+      courtNumber?: string;
+      roundWithinGroup?: number;
+    }) => {
+      console.log('Saving individual match with params:', params);
+      
+      const { data, error } = await supabase.rpc('save_individual_match', {
+        p_match_id: params.matchId,
+        p_team1_player1_id: params.team1Player1Id,
+        p_team1_player2_id: params.team1Player2Id,
+        p_team2_player1_id: params.team2Player1Id,
+        p_team2_player2_id: params.team2Player2Id,
+        p_court_id: params.courtId || null,
+        p_court_number: params.courtNumber || null,
+        p_round_within_group: params.roundWithinGroup || 1
+      });
+      
+      if (error) {
+        console.error('Error saving individual match:', error);
+        throw error;
+      }
+      
+      console.log('Individual match saved successfully:', data);
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
+      toast({
+        title: "Wedstrijd opgeslagen",
+        description: "De wijzigingen aan de wedstrijd zijn succesvol opgeslagen.",
+      });
+    },
+    onError: (error) => {
+      console.error('Error saving individual match:', error);
+      toast({
+        title: "Fout bij opslaan",
+        description: "Er is een fout opgetreden bij het opslaan van de wedstrijdwijzigingen.",
+        variant: "destructive",
+      });
+    },
+  });
+
   return {
     matches,
     isLoading,
     error,
     createMatch: createMatch.mutate,
     updateMatch: updateMatch.mutate,
+    saveIndividualMatch: saveIndividualMatch.mutate,
     isCreating: createMatch.isPending,
     isUpdating: updateMatch.isPending,
+    isSavingIndividual: saveIndividualMatch.isPending,
   };
 };

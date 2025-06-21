@@ -8,6 +8,7 @@ import { useMatches } from '@/hooks/useMatches';
 import { useTournaments, Tournament } from '@/hooks/useTournaments';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import MatchCard from '@/components/matches/MatchCard';
+import SavedMatchEditor from '@/components/matches/SavedMatchEditor';
 import MatchesFilter from '@/components/matches/MatchesFilter';
 import MatchesDebug from '@/components/matches/MatchesDebug';
 
@@ -15,6 +16,7 @@ export default function Matches() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tournamentId = searchParams.get('tournament');
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>(tournamentId || '');
+  const [editMode, setEditMode] = useState(false);
   
   const { tournaments } = useTournaments();
   const { matches, isLoading, error } = useMatches(selectedTournamentId || undefined);
@@ -77,10 +79,19 @@ export default function Matches() {
           <h1 className="text-3xl font-bold tracking-tight">Wedstrijden</h1>
           <p className="text-muted-foreground">Overzicht van alle wedstrijden en resultaten</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Vernieuwen
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant={editMode ? "default" : "outline"} 
+            size="sm" 
+            onClick={() => setEditMode(!editMode)}
+          >
+            {editMode ? 'Bekijk Modus' : 'Bewerk Modus'}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Vernieuwen
+          </Button>
+        </div>
       </div>
 
       {/* Tournament Filter */}
@@ -120,7 +131,15 @@ export default function Matches() {
           </Card>
         ) : (
           matches.map((match) => (
-            <MatchCard key={match.id} match={match} />
+            editMode ? (
+              <SavedMatchEditor 
+                key={match.id} 
+                match={match} 
+                tournamentId={selectedTournamentId} 
+              />
+            ) : (
+              <MatchCard key={match.id} match={match} />
+            )
           ))
         )}
       </div>
