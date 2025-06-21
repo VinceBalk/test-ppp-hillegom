@@ -74,13 +74,16 @@ export default function Schedule() {
     );
   }
 
-  const currentTournament = tournamentId 
+  // Safely find the current tournament
+  const currentTournament = tournamentId && tournaments.length > 0
     ? tournaments.find(t => t.id === tournamentId)
-    : tournaments.find(t => selectedTournament === t.id);
+    : tournaments.length > 0 && selectedTournament
+    ? tournaments.find(t => selectedTournament === t.id)
+    : null;
 
   console.log('Current tournament:', currentTournament);
 
-  const { tournamentPlayers, isLoading: playersLoading } = useTournamentPlayers(currentTournament?.id);
+  const { tournamentPlayers = [], isLoading: playersLoading } = useTournamentPlayers(currentTournament?.id);
 
   console.log('Tournament players:', tournamentPlayers);
   console.log('Players loading:', playersLoading);
