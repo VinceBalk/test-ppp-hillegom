@@ -1,6 +1,6 @@
 
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { logComprehensiveSecurityEvent } from '@/utils/securityLogger';
 
 export const useEnhancedSecurity = () => {
   const { user } = useAuth();
@@ -15,21 +15,26 @@ export const useEnhancedSecurity = () => {
     try {
       if (!user) return;
       
-      await supabase.rpc('log_security_event_enhanced', {
-        p_user_id: user.id,
-        p_action: action,
-        p_resource_type: resourceType,
-        p_resource_id: resourceId,
-        p_details: details ? JSON.stringify(details) : null,
-        p_risk_level: riskLevel
-      });
+      await logComprehensiveSecurityEvent(
+        user.id,
+        'system_event',
+        action,
+        resourceType,
+        resourceId,
+        details,
+        riskLevel
+      );
     } catch (error) {
       console.error('Error logging enhanced security event:', error);
     }
   };
 
   const logHighRiskActivity = (activity: string, details?: any) => {
-    logSecurityEventEnhanced(
+    if (!user) return;
+    
+    logComprehensiveSecurityEvent(
+      user.id,
+      'suspicious_activity',
       'high_risk_activity_detected',
       'security',
       null,
@@ -39,7 +44,11 @@ export const useEnhancedSecurity = () => {
   };
 
   const logCriticalSecurityEvent = (event: string, details?: any) => {
-    logSecurityEventEnhanced(
+    if (!user) return;
+    
+    logComprehensiveSecurityEvent(
+      user.id,
+      'suspicious_activity',
       'critical_security_event',
       'security',
       null,
@@ -48,9 +57,39 @@ export const useEnhancedSecurity = () => {
     );
   };
 
+  const logDataAccessViolation = (violation: string, details?: any) => {
+    if (!user) return;
+    
+    logComprehensiveSecurityEvent(
+      user.id,
+      'data_access_violation',
+      violation,
+      'data_access',
+      null,
+      details,
+      'high'
+    );
+  };
+
+  const logAdminAction = (action: string, details?: any) => {
+    if (!user) return;
+    
+    logComprehensiveSecurityEvent(
+      user.id,
+      'admin_action',
+      action,
+      'admin',
+      null,
+      details,
+      'medium'
+    );
+  };
+
   return {
     logSecurityEventEnhanced,
     logHighRiskActivity,
-    logCriticalSecurityEvent
+    logCriticalSecurityEvent,
+    logDataAccessViolation,
+    logAdminAction
   };
 };

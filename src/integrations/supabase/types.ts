@@ -466,6 +466,7 @@ export type Database = {
           action: string
           created_at: string | null
           details: Json | null
+          event_type: Database["public"]["Enums"]["security_event_type"] | null
           id: string
           ip_address: unknown | null
           resource_id: string | null
@@ -479,6 +480,7 @@ export type Database = {
           action: string
           created_at?: string | null
           details?: Json | null
+          event_type?: Database["public"]["Enums"]["security_event_type"] | null
           id?: string
           ip_address?: unknown | null
           resource_id?: string | null
@@ -492,6 +494,7 @@ export type Database = {
           action?: string
           created_at?: string | null
           details?: Json | null
+          event_type?: Database["public"]["Enums"]["security_event_type"] | null
           id?: string
           ip_address?: unknown | null
           resource_id?: string | null
@@ -736,6 +739,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_sessions: {
+        Row: {
+          created_at: string | null
+          ended_at: string | null
+          id: string
+          ip_address: unknown | null
+          is_active: boolean | null
+          last_activity: string | null
+          session_id: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          ended_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          is_active?: boolean | null
+          last_activity?: string | null
+          session_id: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          ended_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          is_active?: boolean | null
+          last_activity?: string | null
+          session_id?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -753,6 +792,14 @@ export type Database = {
         Args: { p_email: string; p_ip_address?: unknown }
         Returns: boolean
       }
+      cleanup_old_audit_logs: {
+        Args: { p_days_to_keep?: number }
+        Returns: number
+      }
+      detect_suspicious_login_patterns: {
+        Args: { p_email: string; p_ip_address?: unknown }
+        Returns: Json
+      }
       get_user_role: {
         Args: Record<PropertyKey, never> | { user_id: string }
         Returns: string
@@ -764,6 +811,20 @@ export type Database = {
       is_super_admin: {
         Args: { user_id: string }
         Returns: boolean
+      }
+      log_comprehensive_security_event: {
+        Args: {
+          p_user_id: string
+          p_event_type: Database["public"]["Enums"]["security_event_type"]
+          p_action: string
+          p_resource_type?: string
+          p_resource_id?: string
+          p_details?: Json
+          p_risk_level?: string
+          p_ip_address?: unknown
+          p_user_agent?: string
+        }
+        Returns: undefined
       }
       log_login_attempt: {
         Args: { p_email: string; p_success: boolean; p_ip_address?: unknown }
@@ -807,7 +868,14 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      security_event_type:
+        | "login_attempt"
+        | "password_change"
+        | "role_change"
+        | "data_access_violation"
+        | "suspicious_activity"
+        | "admin_action"
+        | "system_event"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -922,6 +990,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      security_event_type: [
+        "login_attempt",
+        "password_change",
+        "role_change",
+        "data_access_violation",
+        "suspicious_activity",
+        "admin_action",
+        "system_event",
+      ],
+    },
   },
 } as const

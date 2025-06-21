@@ -6,15 +6,15 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRateLimiting } from '@/hooks/useRateLimiting';
-import { useInputSanitization } from '@/hooks/useInputSanitization';
-import { useEnhancedSecurity } from '@/hooks/useEnhancedSecurity';
+import { useEnhancedInputValidation } from '@/hooks/useEnhancedInputValidation';
+import { useComprehensiveSecurityMonitoring } from '@/hooks/useComprehensiveSecurityMonitoring';
 
 export function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
   const { signIn } = useAuth();
   const { toast } = useToast();
   const { isBlocked, checkRateLimit, logLoginAttempt } = useRateLimiting();
-  const { sanitizeInput, validateInput } = useInputSanitization();
-  const { logHighRiskActivity } = useEnhancedSecurity();
+  const { validateAndSanitize } = useEnhancedInputValidation();
+  const { logSecurityEvent, detectSuspiciousPatterns } = useComprehensiveSecurityMonitoring();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,23 +26,43 @@ export function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }
     setLoading(true);
 
     try {
-      // Sanitize and validate input
-      const sanitizedEmail = sanitizeInput(email.trim(), 'email');
+      // Enhanced input validation and sanitization
+      const emailValidation = validateAndSanitize(email.trim(), 'email');
+      const passwordValidation = validateAndSanitize(password, 'password');
       
-      if (!validateInput(sanitizedEmail, 'email')) {
+      if (!emailValidation.isValid) {
         toast({
           title: 'Ongeldige invoer',
-          description: 'Voer een geldig e-mailadres in.',
+          description: emailValidation.errors.join(', '),
           variant: 'destructive',
         });
         setLoading(false);
         return;
       }
 
-      if (password.length < 6 || password.length > 128) {
+      if (!passwordValidation.isValid) {
         toast({
           title: 'Ongeldig wachtwoord',
-          description: 'Wachtwoord moet tussen 6 en 128 karakters lang zijn.',
+          description: passwordValidation.errors.join(', '),
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+
+      const sanitizedEmail = emailValidation.sanitized;
+
+      // Check for suspicious login patterns
+      const suspiciousPatterns = await detectSuspiciousPatterns(sanitizedEmail);
+      if (suspiciousPatterns?.is_suspicious) {
+        await logSecurityEvent('suspicious_activity', 'suspicious_login_pattern_detected', 'authentication', null, {
+          email: sanitizedEmail,
+          patterns: suspiciousPatterns
+        }, 'high');
+        
+        toast({
+          title: 'Beveiligingswaarschuwing',
+          description: 'Verdachte inlogactiviteit gedetecteerd. Probeer het later opnieuw.',
           variant: 'destructive',
         });
         setLoading(false);
@@ -56,29 +76,43 @@ export function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }
         return;
       }
 
-      // Log suspicious activity for very long passwords or unusual characters
-      if (password.length > 64 || /[^\x20-\x7E]/.test(password)) {
-        logHighRiskActivity('suspicious_login_attempt', {
-          email: sanitizedEmail,
-          password_length: password.length,
-          has_unusual_chars: /[^\x20-\x7E]/.test(password)
-        });
-      }
+      // Log login attempt start
+      await logSecurityEvent('login_attempt', 'login_attempt_started', 'authentication', null, {
+        email: sanitizedEmail,
+        timestamp: new Date().toISOString()
+      }, 'low');
 
       const { error } = await signIn(sanitizedEmail, password);
       
-      // Log the attempt
+      // Log the attempt result
       await logLoginAttempt(sanitizedEmail, !error);
       
       if (error) {
+        await logSecurityEvent('login_attempt', 'login_failed', 'authentication', null, {
+          email: sanitizedEmail,
+          error_message: error.message,
+          timestamp: new Date().toISOString()
+        }, 'medium');
+
         toast({
           title: 'Inloggen mislukt',
           description: 'E-mail of wachtwoord is onjuist.',
           variant: 'destructive',
         });
+      } else {
+        await logSecurityEvent('login_attempt', 'login_successful', 'authentication', null, {
+          email: sanitizedEmail,
+          timestamp: new Date().toISOString()
+        }, 'low');
       }
     } catch (error) {
       console.error('Login error:', error);
+      
+      await logSecurityEvent('system_event', 'login_exception', 'authentication', null, {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      }, 'high');
+
       toast({
         title: 'Fout bij inloggen',
         description: 'Er is een onverwachte fout opgetreden.',
