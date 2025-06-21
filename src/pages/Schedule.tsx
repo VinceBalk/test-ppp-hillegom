@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,7 +31,7 @@ export default function Schedule() {
     currentTournament?.id
   );
 
-  const { preview, generatePreview, clearPreview, isGenerating } = useSchedulePreview(
+  const { preview, generatePreview, updateMatch, clearPreview, isGenerating } = useSchedulePreview(
     currentTournament?.id
   );
 
@@ -146,8 +145,10 @@ export default function Schedule() {
           preview={preview}
           onApprove={handleApproveSchedule}
           onReject={handleRejectSchedule}
+          onUpdateMatch={updateMatch}
           isApproving={isSaving}
           tournamentName={currentTournament.name}
+          tournamentId={currentTournament.id}
           roundNumber={currentTournament.current_round || 1}
         />
 

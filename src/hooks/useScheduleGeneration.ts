@@ -28,10 +28,12 @@ export const useScheduleGeneration = () => {
           team1_player2_id: match.team1_player2_id,
           team2_player1_id: match.team2_player1_id,
           team2_player2_id: match.team2_player2_id,
+          court_number: match.court_number?.toString() || '1',
           round_number: roundNumber,
           status: 'scheduled' as const,
           team1_score: 0,
-          team2_score: 0
+          team2_score: 0,
+          notes: match.court_name ? `Baan: ${match.court_name} - Ronde ${match.round_within_group}` : undefined
         }));
 
         console.log('Prepared 2v2 matches for insert:', matches);
@@ -82,7 +84,7 @@ export const useScheduleGeneration = () => {
       queryClient.invalidateQueries({ queryKey: ['tournaments'] });
       toast({
         title: "2v2 Schema goedgekeurd en opgeslagen",
-        description: `${data.length} 2v2 wedstrijden zijn succesvol aangemaakt.`,
+        description: `${data.length} 2v2 wedstrijden zijn succesvol aangemaakt met baan-toewijzingen.`,
       });
     },
     onError: (error) => {
