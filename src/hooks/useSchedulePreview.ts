@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { useTournamentPlayers } from './useTournamentPlayers';
+import { useCourts } from './useCourts';
 
 export interface ScheduleMatch {
   id: string;
@@ -14,6 +15,7 @@ export interface ScheduleMatch {
   team2_player2_name: string;
   court_name?: string;
   court_number?: number;
+  court_id?: string;
   round_within_group: number;
 }
 
@@ -28,6 +30,7 @@ export const useSchedulePreview = (tournamentId?: string) => {
   const [preview, setPreview] = useState<SchedulePreview | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const { tournamentPlayers } = useTournamentPlayers(tournamentId);
+  const { courts } = useCourts();
 
   const generatePreview = async () => {
     if (!tournamentId) return;
@@ -41,6 +44,9 @@ export const useSchedulePreview = (tournamentId?: string) => {
       
       console.log('Left players for 2v2:', leftPlayers.length);
       console.log('Right players for 2v2:', rightPlayers.length);
+      console.log('Available courts:', courts);
+
+      const activeCourts = courts.filter(court => court.is_active);
 
       const generateGroupMatches = (players: typeof leftPlayers, courtPrefix: string): ScheduleMatch[] => {
         const matches: ScheduleMatch[] = [];
@@ -50,29 +56,15 @@ export const useSchedulePreview = (tournamentId?: string) => {
           const groupPlayers = players.slice(groupStart, groupStart + 4);
           
           if (groupPlayers.length >= 4) {
-            const courtNumber = Math.floor(groupStart / 4) + 1;
-            const courtName = `${courtPrefix} Baan ${courtNumber}`;
+            const courtIndex = Math.floor(groupStart / 4);
+            const assignedCourt = activeCourts[courtIndex % activeCourts.length];
+            const courtName = assignedCourt ? assignedCourt.name : `${courtPrefix} Baan ${courtIndex + 1}`;
+            const courtId = assignedCourt ? assignedCourt.id : undefined;
             
-            // Generate 3 rounds following the Excel pattern
-            // Round 1: Player 1&2 vs Player 3&4
+            // Based on the new Round 1 image pattern:
+            // Round 1: Player 1&3 vs Player 2&4 (Ronde 1 in the image shows first+third vs second+fourth)
             matches.push({
-              id: `${courtPrefix.toLowerCase()}-g${courtNumber}-r1`,
-              team1_player1_id: groupPlayers[0].player_id,
-              team1_player2_id: groupPlayers[1].player_id,
-              team2_player1_id: groupPlayers[2].player_id,
-              team2_player2_id: groupPlayers[3].player_id,
-              team1_player1_name: groupPlayers[0].player.name,
-              team1_player2_name: groupPlayers[1].player.name,
-              team2_player1_name: groupPlayers[2].player.name,
-              team2_player2_name: groupPlayers[3].player.name,
-              court_name: courtName,
-              court_number: courtNumber,
-              round_within_group: 1,
-            });
-
-            // Round 2: Player 1&3 vs Player 2&4
-            matches.push({
-              id: `${courtPrefix.toLowerCase()}-g${courtNumber}-r2`,
+              id: `${courtPrefix.toLowerCase()}-g${courtIndex + 1}-r1`,
               team1_player1_id: groupPlayers[0].player_id,
               team1_player2_id: groupPlayers[2].player_id,
               team2_player1_id: groupPlayers[1].player_id,
@@ -82,13 +74,14 @@ export const useSchedulePreview = (tournamentId?: string) => {
               team2_player1_name: groupPlayers[1].player.name,
               team2_player2_name: groupPlayers[3].player.name,
               court_name: courtName,
-              court_number: courtNumber,
-              round_within_group: 2,
+              court_number: courtIndex + 1,
+              court_id: courtId,
+              round_within_group: 1,
             });
 
-            // Round 3: Player 1&4 vs Player 2&3
+            // Round 2: Player 1&4 vs Player 2&3 
             matches.push({
-              id: `${courtPrefix.toLowerCase()}-g${courtNumber}-r3`,
+              id: `${courtPrefix.toLowerCase()}-g${courtIndex + 1}-r2`,
               team1_player1_id: groupPlayers[0].player_id,
               team1_player2_id: groupPlayers[3].player_id,
               team2_player1_id: groupPlayers[1].player_id,
@@ -98,7 +91,25 @@ export const useSchedulePreview = (tournamentId?: string) => {
               team2_player1_name: groupPlayers[1].player.name,
               team2_player2_name: groupPlayers[2].player.name,
               court_name: courtName,
-              court_number: courtNumber,
+              court_number: courtIndex + 1,
+              court_id: courtId,
+              round_within_group: 2,
+            });
+
+            // Round 3: Player 1&2 vs Player 3&4
+            matches.push({
+              id: `${courtPrefix.toLowerCase()}-g${courtIndex + 1}-r3`,
+              team1_player1_id: groupPlayers[0].player_id,
+              team1_player2_id: groupPlayers[1].player_id,
+              team2_player1_id: groupPlayers[2].player_id,
+              team2_player2_id: groupPlayers[3].player_id,
+              team1_player1_name: groupPlayers[0].player.name,
+              team1_player2_name: groupPlayers[1].player.name,
+              team2_player1_name: groupPlayers[2].player.name,
+              team2_player2_name: groupPlayers[3].player.name,
+              court_name: courtName,
+              court_number: courtIndex + 1,
+              court_id: courtId,
               round_within_group: 3,
             });
           }
@@ -112,7 +123,7 @@ export const useSchedulePreview = (tournamentId?: string) => {
       
       const allMatches = [...leftMatches, ...rightMatches];
       
-      console.log('Generated 2v2 matches following Excel pattern:', allMatches.length);
+      console.log('Generated 2v2 matches with court assignments from database:', allMatches.length);
 
       const schedulePreview: SchedulePreview = {
         matches: allMatches,

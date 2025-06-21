@@ -28,6 +28,7 @@ export const useScheduleGeneration = () => {
           team1_player2_id: match.team1_player2_id,
           team2_player1_id: match.team2_player1_id,
           team2_player2_id: match.team2_player2_id,
+          court_id: match.court_id || null,
           court_number: match.court_number?.toString() || '1',
           round_number: roundNumber,
           status: 'scheduled' as const,
@@ -45,6 +46,7 @@ export const useScheduleGeneration = () => {
           .select(`
             *,
             tournament:tournaments(name),
+            court:courts(name),
             team1_player1:players!matches_team1_player1_id_fkey(name),
             team1_player2:players!matches_team1_player2_id_fkey(name),
             team2_player1:players!matches_team2_player1_id_fkey(name),

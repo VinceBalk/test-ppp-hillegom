@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Edit, Check, X } from 'lucide-react';
 import { ScheduleMatch } from '@/hooks/useSchedulePreview';
 import { useTournamentPlayers } from '@/hooks/useTournamentPlayers';
+import { useCourts } from '@/hooks/useCourts';
 
 interface MatchEditorProps {
   match: ScheduleMatch;
@@ -19,6 +20,9 @@ export default function MatchEditor({ match, tournamentId, onUpdate }: MatchEdit
   const [isEditing, setIsEditing] = useState(false);
   const [editedMatch, setEditedMatch] = useState<ScheduleMatch>(match);
   const { tournamentPlayers } = useTournamentPlayers(tournamentId);
+  const { courts } = useCourts();
+
+  const activeCourts = courts.filter(court => court.is_active);
 
   const handleSave = () => {
     onUpdate(match.id, editedMatch);
@@ -38,6 +42,17 @@ export default function MatchEditor({ match, tournamentId, onUpdate }: MatchEdit
       ...prev,
       [`${position}_id`]: playerId,
       [`${position}_name`]: player.player.name,
+    }));
+  };
+
+  const updateCourt = (courtId: string) => {
+    const court = activeCourts.find(c => c.id === courtId);
+    if (!court) return;
+
+    setEditedMatch(prev => ({
+      ...prev,
+      court_id: courtId,
+      court_name: court.name,
     }));
   };
 
@@ -87,25 +102,24 @@ export default function MatchEditor({ match, tournamentId, onUpdate }: MatchEdit
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Court Settings */}
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label className="text-xs">Baan Naam</Label>
-            <Input
-              value={editedMatch.court_name || ''}
-              onChange={(e) => setEditedMatch(prev => ({ ...prev, court_name: e.target.value }))}
-              className="h-7 text-xs"
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Baan Nummer</Label>
-            <Input
-              type="number"
-              value={editedMatch.court_number || ''}
-              onChange={(e) => setEditedMatch(prev => ({ ...prev, court_number: parseInt(e.target.value) || 1 }))}
-              className="h-7 text-xs"
-            />
-          </div>
+        {/* Court Selection */}
+        <div>
+          <Label className="text-xs">Baan</Label>
+          <Select
+            value={editedMatch.court_id || ''}
+            onValueChange={updateCourt}
+          >
+            <SelectTrigger className="h-7 text-xs">
+              <SelectValue placeholder="Selecteer baan..." />
+            </SelectTrigger>
+            <SelectContent>
+              {activeCourts.map(court => (
+                <SelectItem key={court.id} value={court.id} className="text-xs">
+                  {court.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Team 1 */}
