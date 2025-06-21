@@ -52,6 +52,17 @@ export default function MatchCard({ match }: MatchCardProps) {
     return 'Onbekend';
   };
 
+  // Fix court name display - prioritize court.name over court_number
+  const getCourtName = (match: Match) => {
+    if (match.court?.name) {
+      return match.court.name;
+    }
+    if (match.court_number) {
+      return `Baan ${match.court_number}`;
+    }
+    return 'Geen baan toegewezen';
+  };
+
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader>
@@ -97,12 +108,10 @@ export default function MatchCard({ match }: MatchCardProps) {
               </div>
             </>
           )}
-          {(match.court?.name || match.court_number) && (
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              {match.court?.name || `Baan ${match.court_number}`}
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
+            {getCourtName(match)}
+          </div>
           {match.notes && (
             <div className="text-xs text-blue-600">
               {match.notes}

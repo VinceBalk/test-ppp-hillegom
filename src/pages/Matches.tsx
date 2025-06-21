@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, RefreshCw } from 'lucide-react';
@@ -13,15 +13,16 @@ import MatchesFilter from '@/components/matches/MatchesFilter';
 import MatchesDebug from '@/components/matches/MatchesDebug';
 
 export default function Matches() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const tournamentId = searchParams.get('tournament');
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>(tournamentId || '');
   const [editMode, setEditMode] = useState(false);
   
   const { tournaments } = useTournaments();
-  const { matches, isLoading, error } = useMatches(selectedTournamentId || undefined);
+  const { matches, isLoading, error, refetch } = useMatches(selectedTournamentId || undefined);
 
-  console.log('=== MATCHES DEBUG ===');
+  console.log('=== MATCHES PAGE DEBUG ===');
   console.log('Tournament from URL:', tournamentId);
   console.log('Selected tournament:', selectedTournamentId);
   console.log('All tournaments:', tournaments);
@@ -38,6 +39,23 @@ export default function Matches() {
       setSearchParams({});
     }
   }, [selectedTournamentId, setSearchParams]);
+
+  // Handle browser back button properly
+  useEffect(() => {
+    const handlePopState = () => {
+      console.log('Browser popstate event detected');
+      // Force a refetch when user navigates back
+      refetch();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [refetch]);
+
+  const handleRefresh = () => {
+    console.log('Manual refresh triggered');
+    refetch();
+  };
 
   if (isLoading) {
     return (
@@ -64,6 +82,14 @@ export default function Matches() {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             Er is een fout opgetreden bij het laden van de wedstrijden: {error.message}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="ml-2"
+              onClick={handleRefresh}
+            >
+              Probeer opnieuw
+            </Button>
           </AlertDescription>
         </Alert>
       </div>
@@ -87,7 +113,7 @@ export default function Matches() {
           >
             {editMode ? 'Bekijk Modus' : 'Bewerk Modus'}
           </Button>
-          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+          <Button variant="outline" size="sm" onClick={handleRefresh}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Vernieuwen
           </Button>
@@ -111,7 +137,7 @@ export default function Matches() {
             <Button 
               variant="link" 
               className="p-0 ml-1 h-auto"
-              onClick={() => window.location.href = `/schedule/${selectedTournamentId}`}
+              onClick={() => navigate(`/schedule/${selectedTournamentId}`)}
             >
               Ga naar Planning om een schema te genereren
             </Button>

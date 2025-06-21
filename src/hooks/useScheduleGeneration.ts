@@ -16,11 +16,14 @@ export const useScheduleGeneration = () => {
 
   const generateSchedule = useMutation({
     mutationFn: async ({ tournamentId, roundNumber, preview }: GenerateScheduleParams) => {
-      console.log('Generating and saving 2v2 schedule for tournament:', tournamentId, 'round:', roundNumber);
+      console.log('=== GENERATING SCHEDULE ===');
+      console.log('Tournament ID:', tournamentId);
+      console.log('Round Number:', roundNumber);
+      console.log('Preview matches:', preview?.matches?.length || 0);
       
       // If we have a preview, use those matches directly
       if (preview && preview.matches.length > 0) {
-        console.log('Using 2v2 preview matches:', preview.matches);
+        console.log('Using preview matches for generation');
         
         const matches = preview.matches.map(match => ({
           tournament_id: tournamentId,
@@ -37,7 +40,7 @@ export const useScheduleGeneration = () => {
           notes: match.court_name ? `Baan: ${match.court_name} - Ronde ${match.round_within_group}` : undefined
         }));
 
-        console.log('Prepared 2v2 matches for insert:', matches);
+        console.log('Prepared matches for database insert:', matches);
 
         // Sla wedstrijden op in database
         const { data: createdMatches, error: matchesError } = await supabase
@@ -54,11 +57,13 @@ export const useScheduleGeneration = () => {
           `);
 
         if (matchesError) {
-          console.error('Error creating 2v2 matches:', matchesError);
+          console.error('=== DATABASE INSERT ERROR ===');
+          console.error('Error details:', matchesError);
           throw matchesError;
         }
 
-        console.log('Created 2v2 matches:', createdMatches);
+        console.log('=== MATCHES CREATED SUCCESSFULLY ===');
+        console.log('Created matches:', createdMatches);
 
         // Update toernooi status
         const { error: tournamentError } = await supabase
@@ -75,6 +80,7 @@ export const useScheduleGeneration = () => {
           throw tournamentError;
         }
 
+        console.log('Tournament status updated successfully');
         return createdMatches;
       }
 
@@ -82,15 +88,22 @@ export const useScheduleGeneration = () => {
       throw new Error('Geen preview beschikbaar. Genereer eerst een preview.');
     },
     onSuccess: (data) => {
+      console.log('=== SCHEDULE GENERATION SUCCESS ===');
+      console.log('Generated matches count:', data.length);
+      
+      // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['matches'] });
       queryClient.invalidateQueries({ queryKey: ['tournaments'] });
+      
       toast({
         title: "2v2 Schema goedgekeurd en opgeslagen",
         description: `${data.length} 2v2 wedstrijden zijn succesvol aangemaakt met baan-toewijzingen.`,
       });
     },
     onError: (error) => {
-      console.error('Error generating 2v2 schedule:', error);
+      console.error('=== SCHEDULE GENERATION ERROR ===');
+      console.error('Error details:', error);
+      
       toast({
         title: "Fout",
         description: error.message || "Er is een fout opgetreden bij het genereren van het 2v2 schema.",

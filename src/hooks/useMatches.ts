@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -55,10 +54,11 @@ export const useMatches = (tournamentId?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: matches = [], isLoading, error } = useQuery({
+  const { data: matches = [], isLoading, error, refetch } = useQuery({
     queryKey: ['matches', tournamentId],
     queryFn: async () => {
-      console.log('Fetching matches for tournament:', tournamentId);
+      console.log('=== FETCHING MATCHES ===');
+      console.log('Tournament ID:', tournamentId);
       
       let query = supabase
         .from('matches')
@@ -72,24 +72,49 @@ export const useMatches = (tournamentId?: string) => {
           team2_player1:players!matches_team2_player1_id_fkey(name),
           team2_player2:players!matches_team2_player2_id_fkey(name),
           court:courts(name)
-        `)
-        .order('created_at', { ascending: false });
+        `);
 
       if (tournamentId) {
         query = query.eq('tournament_id', tournamentId);
       }
       
+      query = query.order('created_at', { ascending: false });
+      
       const { data, error } = await query;
       
       if (error) {
-        console.error('Error fetching matches:', error);
+        console.error('=== MATCHES QUERY ERROR ===');
+        console.error('Error details:', error);
         throw error;
       }
       
-      console.log('Fetched matches:', data);
+      console.log('=== MATCHES QUERY SUCCESS ===');
+      console.log('Raw data from database:', data);
+      console.log('Number of matches found:', data?.length || 0);
+      
+      // Add detailed logging for each match
+      if (data && data.length > 0) {
+        data.forEach((match, index) => {
+          console.log(`Match ${index + 1}:`, {
+            id: match.id,
+            tournament_id: match.tournament_id,
+            team1_player1: match.team1_player1?.name,
+            team1_player2: match.team1_player2?.name,
+            team2_player1: match.team2_player1?.name,
+            team2_player2: match.team2_player2?.name,
+            court: match.court?.name,
+            court_number: match.court_number,
+            status: match.status,
+            created_at: match.created_at
+          });
+        });
+      }
+      
       return data as Match[];
     },
     enabled: true,
+    refetchOnWindowFocus: true,
+    staleTime: 0, // Always refetch to ensure fresh data
   });
 
   const createMatch = useMutation({
@@ -202,6 +227,7 @@ export const useMatches = (tournamentId?: string) => {
     matches,
     isLoading,
     error,
+    refetch,
     createMatch: createMatch.mutate,
     updateMatch: updateMatch.mutate,
     saveIndividualMatch: saveIndividualMatch.mutate,
