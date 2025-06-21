@@ -2,42 +2,20 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-interface PasswordValidation {
-  isValid: boolean;
-  errors: string[];
-}
+import { useAdvancedPasswordSecurity } from './useAdvancedPasswordSecurity';
+import { useEnhancedSecurity } from './useEnhancedSecurity';
 
 export const usePasswordSecurity = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { validatePasswordSecurity } = useAdvancedPasswordSecurity();
+  const { logSecurityEventEnhanced } = useEnhancedSecurity();
 
-  const validatePassword = (password: string): PasswordValidation => {
-    const errors: string[] = [];
-    
-    if (password.length < 6) {
-      errors.push('Wachtwoord moet minimaal 6 karakters lang zijn');
-    }
-    
-    if (!/[A-Z]/.test(password)) {
-      errors.push('Wachtwoord moet minimaal één hoofdletter bevatten');
-    }
-    
-    if (!/[0-9]/.test(password)) {
-      errors.push('Wachtwoord moet minimaal één cijfer bevatten');
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
-  };
-
-  const updatePassword = async (newPassword: string, requireCurrentPassword = true) => {
+  const updatePassword = async (newPassword: string) => {
     setLoading(true);
     
     try {
-      const validation = validatePassword(newPassword);
+      const validation = validatePasswordSecurity(newPassword);
       if (!validation.isValid) {
         toast({
           title: "Wachtwoord voldoet niet aan eisen",
@@ -47,12 +25,35 @@ export const usePasswordSecurity = () => {
         return { error: new Error(validation.errors.join(', ')) };
       }
 
+      // Log password change attempt
+      await logSecurityEventEnhanced(
+        'password_change_attempt',
+        'auth',
+        null,
+        {
+          password_strength_score: validation.strength.score,
+          timestamp: new Date().toISOString()
+        },
+        'medium'
+      );
+
       const { error } = await supabase.auth.updateUser({
         password: newPassword
       });
 
       if (error) {
         console.error('Password update error:', error);
+        await logSecurityEventEnhanced(
+          'password_change_failed',
+          'auth',
+          null,
+          {
+            error: error.message,
+            timestamp: new Date().toISOString()
+          },
+          'high'
+        );
+        
         toast({
           title: "Wachtwoord update mislukt",
           description: error.message,
@@ -60,6 +61,18 @@ export const usePasswordSecurity = () => {
         });
         return { error };
       }
+
+      // Log successful password change
+      await logSecurityEventEnhanced(
+        'password_changed_successfully',
+        'auth',
+        null,
+        {
+          password_strength_score: validation.strength.score,
+          timestamp: new Date().toISOString()
+        },
+        'medium'
+      );
 
       toast({
         title: "Wachtwoord succesvol gewijzigd!",
@@ -70,6 +83,18 @@ export const usePasswordSecurity = () => {
     } catch (error) {
       console.error('Password update error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Er is een onverwachte fout opgetreden';
+      
+      await logSecurityEventEnhanced(
+        'password_change_exception',
+        'auth',
+        null,
+        {
+          error: errorMessage,
+          timestamp: new Date().toISOString()
+        },
+        'high'
+      );
+      
       toast({
         title: "Wachtwoord update mislukt",
         description: errorMessage,
@@ -82,7 +107,6 @@ export const usePasswordSecurity = () => {
   };
 
   return {
-    validatePassword,
     updatePassword,
     loading
   };

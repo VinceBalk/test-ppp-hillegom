@@ -36,6 +36,33 @@ export type Database = {
         }
         Relationships: []
       }
+      login_attempts: {
+        Row: {
+          attempt_time: string | null
+          created_at: string | null
+          email: string
+          id: string
+          ip_address: unknown | null
+          success: boolean | null
+        }
+        Insert: {
+          attempt_time?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+          ip_address?: unknown | null
+          success?: boolean | null
+        }
+        Update: {
+          attempt_time?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          ip_address?: unknown | null
+          success?: boolean | null
+        }
+        Relationships: []
+      }
       matches: {
         Row: {
           court_number: string | null
@@ -254,6 +281,8 @@ export type Database = {
           ip_address: unknown | null
           resource_id: string | null
           resource_type: string | null
+          risk_level: string | null
+          session_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -265,6 +294,8 @@ export type Database = {
           ip_address?: unknown | null
           resource_id?: string | null
           resource_type?: string | null
+          risk_level?: string | null
+          session_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -276,6 +307,8 @@ export type Database = {
           ip_address?: unknown | null
           resource_id?: string | null
           resource_type?: string | null
+          risk_level?: string | null
+          session_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -439,6 +472,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_login_rate_limit: {
+        Args: { p_email: string; p_ip_address?: unknown }
+        Returns: boolean
+      }
       get_user_role: {
         Args: Record<PropertyKey, never> | { user_id: string }
         Returns: string
@@ -451,6 +488,10 @@ export type Database = {
         Args: { user_id: string }
         Returns: boolean
       }
+      log_login_attempt: {
+        Args: { p_email: string; p_success: boolean; p_ip_address?: unknown }
+        Returns: undefined
+      }
       log_security_event: {
         Args: {
           p_user_id: string
@@ -458,6 +499,17 @@ export type Database = {
           p_resource_type?: string
           p_resource_id?: string
           p_details?: Json
+        }
+        Returns: undefined
+      }
+      log_security_event_enhanced: {
+        Args: {
+          p_user_id: string
+          p_action: string
+          p_resource_type?: string
+          p_resource_id?: string
+          p_details?: Json
+          p_risk_level?: string
         }
         Returns: undefined
       }

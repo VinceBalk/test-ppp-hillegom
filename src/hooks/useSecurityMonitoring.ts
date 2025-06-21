@@ -1,40 +1,85 @@
 
 import { useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
+import { useEnhancedSecurity } from './useEnhancedSecurity';
+import { useAuth } from '../contexts/AuthContext';
 
 export const useSecurityMonitoring = () => {
-  const { logSecurityEvent, user } = useAuth();
+  const { user } = useAuth();
   const location = useLocation();
+  const { logSecurityEventEnhanced, logHighRiskActivity } = useEnhancedSecurity();
 
   useEffect(() => {
     if (!user) return;
 
-    // Log page access
-    logSecurityEvent('page_access', 'navigation', location.pathname);
+    // Log page access with enhanced details
+    logSecurityEventEnhanced('page_access', 'navigation', location.pathname, {
+      path: location.pathname,
+      timestamp: new Date().toISOString(),
+      user_agent: navigator.userAgent.substring(0, 200) // Limit length
+    });
 
-    // Monitor for suspicious keyboard combinations (reduced logging)
+    // Enhanced keyboard monitoring
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.shiftKey && event.key === 'I') {
-        logSecurityEvent('dev_tools_access_attempt', 'security', null, {
+      // Developer tools access attempts
+      if (event.key === 'F12' || 
+          (event.ctrlKey && event.shiftKey && event.key === 'I') ||
+          (event.ctrlKey && event.shiftKey && event.key === 'C') ||
+          (event.ctrlKey && event.key === 'U')) {
+        
+        logHighRiskActivity('dev_tools_access_attempt', {
           path: location.pathname,
-          combination: 'Ctrl+Shift+I'
+          key_combination: event.ctrlKey ? `Ctrl+${event.shiftKey ? 'Shift+' : ''}${event.key}` : event.key,
+          timestamp: new Date().toISOString()
         });
       }
-      if (event.key === 'F12') {
-        logSecurityEvent('dev_tools_access_attempt', 'security', null, {
+
+      // Console access attempts
+      if (event.ctrlKey && event.shiftKey && (event.key === 'K' || event.key === 'J')) {
+        logHighRiskActivity('console_access_attempt', {
           path: location.pathname,
-          key: 'F12'
+          key_combination: `Ctrl+Shift+${event.key}`,
+          timestamp: new Date().toISOString()
         });
+      }
+    };
+
+    // Context menu monitoring (right-click)
+    const handleContextMenu = (event: MouseEvent) => {
+      logSecurityEventEnhanced('context_menu_access', 'user_interaction', location.pathname, {
+        path: location.pathname,
+        timestamp: new Date().toISOString()
+      }, 'low');
+    };
+
+    // Focus/blur monitoring for tab switching
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        logSecurityEventEnhanced('tab_hidden', 'user_behavior', location.pathname, {
+          path: location.pathname,
+          timestamp: new Date().toISOString()
+        }, 'low');
+      } else {
+        logSecurityEventEnhanced('tab_visible', 'user_behavior', location.pathname, {
+          path: location.pathname,
+          timestamp: new Date().toISOString()
+        }, 'low');
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [user, logSecurityEvent, location.pathname]);
+  }, [user, location.pathname, logSecurityEventEnhanced, logHighRiskActivity]);
 
-  return { logSecurityEvent };
+  return { 
+    logSecurityEventEnhanced,
+    logHighRiskActivity
+  };
 };
