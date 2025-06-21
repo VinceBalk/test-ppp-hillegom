@@ -1,13 +1,16 @@
 
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Calendar, Users, Edit, Trash2 } from 'lucide-react';
+import { Edit, MoreHorizontal, Trash2, Users, Calendar } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { Tournament } from '@/hooks/useTournaments';
-import { TournamentForm } from '@/components/TournamentForm';
+import { TournamentForm } from '../TournamentForm';
 import { TournamentStatusBadge } from './TournamentStatusBadge';
 
 interface TournamentRowProps {
@@ -31,12 +34,10 @@ export function TournamentRow({
   isUpdating,
   isDeleting
 }: TournamentRowProps) {
-  const formatDate = (dateStr: string) => {
-    try {
-      return format(new Date(dateStr), 'dd MMM yyyy', { locale: nl });
-    } catch {
-      return dateStr;
-    }
+  const navigate = useNavigate();
+
+  const handleCreateSchedule = () => {
+    navigate(`/schedule/${tournament.id}`);
   };
 
   return (
@@ -45,22 +46,22 @@ export function TournamentRow({
         <div>
           <div className="font-medium">{tournament.name}</div>
           {tournament.description && (
-            <div className="text-sm text-muted-foreground line-clamp-1">
+            <div className="text-sm text-muted-foreground mt-1">
               {tournament.description}
             </div>
           )}
         </div>
       </TableCell>
       <TableCell>
-        <div className="flex items-center gap-1 text-sm">
-          <Calendar className="h-3 w-3" />
-          {formatDate(tournament.start_date)} - {formatDate(tournament.end_date)}
+        <div className="text-sm">
+          {format(new Date(tournament.start_date), 'd MMM yyyy', { locale: nl })} - 
+          {format(new Date(tournament.end_date), 'd MMM yyyy', { locale: nl })}
         </div>
       </TableCell>
       <TableCell>{tournament.max_players}</TableCell>
       <TableCell>€{tournament.entry_fee?.toFixed(2) || '0.00'}</TableCell>
       <TableCell>
-        <TournamentStatusBadge status={tournament.status} />
+        <TournamentStatusBadge status={tournament.status || 'draft'} />
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
@@ -68,53 +69,53 @@ export function TournamentRow({
             variant="outline"
             size="sm"
             onClick={() => onAssignPlayers(tournament.id)}
-            title="Spelers toewijzen"
           >
-            <Users className="h-4 w-4" />
+            <Users className="h-4 w-4 mr-1" />
+            Spelers
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCreateSchedule}
+          >
+            <Calendar className="h-4 w-4 mr-1" />
+            Schema
           </Button>
 
-          <Dialog open={editingTournament?.id === tournament.id} onOpenChange={(open) => !open && setEditingTournament(null)}>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setEditingTournament(tournament)}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setEditingTournament(tournament)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Bewerken
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="text-destructive" 
+                onClick={() => onDeleteTournament(tournament.id)}
+                disabled={isDeleting}
               >
-                <Edit className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <TournamentForm
-                tournament={editingTournament || undefined}
-                onSubmit={onUpdateTournament}
-                onCancel={() => setEditingTournament(null)}
-                isSubmitting={isUpdating}
-              />
-            </DialogContent>
-          </Dialog>
-
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" disabled={isDeleting}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Toernooi verwijderen</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Weet je zeker dat je "{tournament.name}" wilt verwijderen? Deze actie kan niet ongedaan gemaakt worden en verwijdert ook alle bijbehorende wedstrijden.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                <AlertDialogAction onClick={() => onDeleteTournament(tournament.id)}>
-                  Verwijderen
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Verwijderen
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
+
+        <Dialog open={editingTournament?.id === tournament.id} onOpenChange={(open) => !open && setEditingTournament(null)}>
+          <DialogContent className="max-w-2xl">
+            <TournamentForm
+              tournament={editingTournament || undefined}
+              onSubmit={onUpdateTournament}
+              onCancel={() => setEditingTournament(null)}
+              isSubmitting={isUpdating}
+            />
+          </DialogContent>
+        </Dialog>
       </TableCell>
     </TableRow>
   );

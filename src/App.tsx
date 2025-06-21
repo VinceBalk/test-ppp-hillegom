@@ -48,6 +48,7 @@ const App = () => (
               <Route path="tournaments/:id/assign-players" element={<AssignPlayers />} />
               <Route path="matches" element={<Matches />} />
               <Route path="schedule" element={<Schedule />} />
+              <Route path="schedule/:tournamentId" element={<Schedule />} />
               <Route path="scores" element={<Scores />} />
               <Route path="specials" element={<Specials />} />
               <Route path="courts" element={
