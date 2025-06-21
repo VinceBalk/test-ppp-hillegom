@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 interface Tournament {
   id: string;
   name: string;
-  status: string;
+  status?: string;
 }
 
 interface MatchesFilterProps {
@@ -44,7 +44,7 @@ export default function MatchesFilter({
           </Select>
           {selectedTournament && (
             <Badge variant="outline">
-              {selectedTournament.name} - Status: {selectedTournament.status}
+              {selectedTournament.name} - Status: {selectedTournament.status || 'Onbekend'}
             </Badge>
           )}
         </div>

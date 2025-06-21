@@ -5,7 +5,7 @@ import { Match } from '@/hooks/useMatches';
 interface Tournament {
   id: string;
   name: string;
-  status: string;
+  status?: string;
 }
 
 interface MatchesDebugProps {

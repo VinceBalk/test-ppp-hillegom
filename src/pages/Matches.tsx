@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { useMatches } from '@/hooks/useMatches';
-import { useTournaments } from '@/hooks/useTournaments';
+import { useTournaments, Tournament } from '@/hooks/useTournaments';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import MatchCard from '@/components/matches/MatchCard';
 import MatchesFilter from '@/components/matches/MatchesFilter';
