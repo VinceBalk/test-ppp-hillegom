@@ -35,7 +35,7 @@ export function CurrentTournament({ tournament, onTournamentClick }: CurrentTour
         {tournament ? (
           <div className="space-y-2">
             <p className="text-sm">
-              <span className="font-medium">Datum:</span> {format(new Date(tournament.start_date), 'j MMMM yyyy', { locale: nl })}
+              <span className="font-medium">Datum:</span> {format(new Date(tournament.start_date), 'd MMMM yyyy', { locale: nl })}
             </p>
             <p className="text-sm">
               <span className="font-medium">Spelers:</span> {tournament.player_count || 0}
