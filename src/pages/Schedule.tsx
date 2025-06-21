@@ -6,8 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Calendar, Users, AlertCircle } from 'lucide-react';
 import { useTournaments } from '@/hooks/useTournaments';
 import { useTournamentPlayers } from '@/hooks/useTournamentPlayers';
+import { useSchedulePreview } from '@/hooks/useSchedulePreview';
+import { useScheduleGeneration } from '@/hooks/useScheduleGeneration';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import SchedulePreview from '@/components/schedule/SchedulePreview';
+import ScheduleDebug from '@/components/schedule/ScheduleDebug';
 
 export default function Schedule() {
   const { tournamentId } = useParams();
@@ -18,22 +22,21 @@ export default function Schedule() {
   console.log('=== SCHEDULE DEBUG ===');
   console.log('Tournament ID from URL:', tournamentId);
   console.log('Selected Tournament ID:', selectedTournamentId);
-  console.log('All tournaments:', tournaments);
-  console.log('Tournaments loading:', tournamentsLoading);
 
   // Find the current tournament
   const currentTournament = tournaments.find(t => 
     t.id === (tournamentId || selectedTournamentId)
   );
 
-  console.log('Current tournament found:', currentTournament);
-
   const { tournamentPlayers = [], isLoading: playersLoading } = useTournamentPlayers(
     currentTournament?.id
   );
 
-  console.log('Tournament players:', tournamentPlayers);
-  console.log('Players loading:', playersLoading);
+  const { preview, generatePreview, clearPreview, isGenerating } = useSchedulePreview(
+    currentTournament?.id
+  );
+
+  const { generateSchedule, isGenerating: isSaving } = useScheduleGeneration();
 
   if (tournamentsLoading) {
     return (
@@ -107,9 +110,56 @@ export default function Schedule() {
   const rightPlayers = tournamentPlayers.filter(tp => tp.group === 'right');
   const canGenerateSchedule = tournamentPlayers.length >= 4;
 
-  console.log('Left players:', leftPlayers);
-  console.log('Right players:', rightPlayers);
-  console.log('Can generate schedule:', canGenerateSchedule);
+  const handleGeneratePreview = async () => {
+    try {
+      await generatePreview();
+    } catch (error) {
+      console.error('Error generating preview:', error);
+    }
+  };
+
+  const handleApproveSchedule = () => {
+    if (preview && currentTournament) {
+      generateSchedule({
+        tournamentId: currentTournament.id,
+        roundNumber: currentTournament.current_round || 1,
+        preview
+      });
+      clearPreview();
+    }
+  };
+
+  const handleRejectSchedule = () => {
+    clearPreview();
+  };
+
+  // Show preview if available
+  if (preview) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Planning</h1>
+          <p className="text-muted-foreground">2v2 Wedstrijd planning en speelschema beheer</p>
+        </div>
+
+        <SchedulePreview
+          preview={preview}
+          onApprove={handleApproveSchedule}
+          onReject={handleRejectSchedule}
+          isApproving={isSaving}
+          tournamentName={currentTournament.name}
+          roundNumber={currentTournament.current_round || 1}
+        />
+
+        <ScheduleDebug
+          tournaments={tournaments}
+          currentTournament={currentTournament}
+          tournamentPlayers={tournamentPlayers}
+          tournamentId={tournamentId}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -203,14 +253,11 @@ export default function Schedule() {
               {/* Action Buttons */}
               <div className="flex gap-4">
                 <Button 
-                  onClick={() => {
-                    console.log('Schema genereren clicked for:', currentTournament.name);
-                    alert('Schema generatie functionaliteit wordt geïmplementeerd...');
-                  }}
-                  disabled={!canGenerateSchedule}
+                  onClick={handleGeneratePreview}
+                  disabled={!canGenerateSchedule || isGenerating}
                   className="bg-green-600 hover:bg-green-700"
                 >
-                  2v2 Schema Genereren
+                  {isGenerating ? '2v2 Schema Genereren...' : '2v2 Schema Genereren'}
                 </Button>
                 <Button 
                   variant="outline" 
@@ -230,20 +277,12 @@ export default function Schedule() {
         </CardContent>
       </Card>
 
-      {/* Debug Info */}
-      <Card className="border-orange-200 bg-orange-50">
-        <CardHeader>
-          <CardTitle className="text-orange-800">Debug Info</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <div>Tournament ID: {currentTournament.id}</div>
-          <div>Tournament Name: {currentTournament.name}</div>
-          <div>Tournament Status: {currentTournament.status}</div>
-          <div>Total Players: {tournamentPlayers.length}</div>
-          <div>Left Players: {leftPlayers.length}</div>
-          <div>Right Players: {rightPlayers.length}</div>
-        </CardContent>
-      </Card>
+      <ScheduleDebug
+        tournaments={tournaments}
+        currentTournament={currentTournament}
+        tournamentPlayers={tournamentPlayers}
+        tournamentId={tournamentId}
+      />
     </div>
   );
 }
