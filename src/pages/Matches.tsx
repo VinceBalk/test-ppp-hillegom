@@ -18,6 +18,14 @@ export default function Matches() {
   const { tournaments } = useTournaments();
   const { matches, isLoading, error } = useMatches(selectedTournamentId || undefined);
 
+  console.log('=== MATCHES DEBUG ===');
+  console.log('Tournament from URL:', tournamentId);
+  console.log('Selected tournament:', selectedTournamentId);
+  console.log('All tournaments:', tournaments);
+  console.log('Matches:', matches);
+  console.log('Loading:', isLoading);
+  console.log('Error:', error);
+
   // Update URL when tournament selection changes
   useEffect(() => {
     if (selectedTournamentId) {
@@ -26,11 +34,6 @@ export default function Matches() {
       setSearchParams({});
     }
   }, [selectedTournamentId, setSearchParams]);
-
-  console.log('Matches page - Selected tournament:', selectedTournamentId);
-  console.log('Matches data:', matches);
-  console.log('Loading:', isLoading);
-  console.log('Error:', error);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -48,9 +51,12 @@ export default function Matches() {
   const getPlayerNames = (match: any) => {
     console.log('Getting player names for match:', match);
     
+    // Check for 1v1 match
     if (match.player1 && match.player2) {
       return `${match.player1.name} vs ${match.player2.name}`;
     }
+    
+    // Check for 2v2 match
     if (match.team1_player1 && match.team2_player1) {
       const team1 = match.team1_player2 
         ? `${match.team1_player1.name} & ${match.team1_player2.name}`
@@ -60,11 +66,8 @@ export default function Matches() {
         : match.team2_player1.name;
       return `${team1} vs ${team2}`;
     }
+    
     return 'Spelers nog niet toegewezen';
-  };
-
-  const handleRefresh = () => {
-    window.location.reload();
   };
 
   if (isLoading) {
@@ -72,9 +75,7 @@ export default function Matches() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Wedstrijden</h1>
-          <p className="text-muted-foreground">
-            Overzicht van alle wedstrijden en resultaten
-          </p>
+          <p className="text-muted-foreground">Overzicht van alle wedstrijden en resultaten</p>
         </div>
         <div className="flex items-center justify-center h-32">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -88,9 +89,7 @@ export default function Matches() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Wedstrijden</h1>
-          <p className="text-muted-foreground">
-            Overzicht van alle wedstrijden en resultaten
-          </p>
+          <p className="text-muted-foreground">Overzicht van alle wedstrijden en resultaten</p>
         </div>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -109,16 +108,15 @@ export default function Matches() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Wedstrijden</h1>
-          <p className="text-muted-foreground">
-            Overzicht van alle wedstrijden en resultaten
-          </p>
+          <p className="text-muted-foreground">Overzicht van alle wedstrijden en resultaten</p>
         </div>
-        <Button variant="outline" size="sm" onClick={handleRefresh}>
+        <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
           <RefreshCw className="h-4 w-4 mr-2" />
           Vernieuwen
         </Button>
       </div>
 
+      {/* Tournament Filter */}
       <Card>
         <CardHeader>
           <CardTitle>Filter op Toernooi</CardTitle>
@@ -147,11 +145,12 @@ export default function Matches() {
         </CardContent>
       </Card>
 
+      {/* No matches alert */}
       {selectedTournamentId && matches.length === 0 && (
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Nog geen wedstrijden gepland voor dit toernooi. 
+            Nog geen wedstrijden gepland voor dit toernooi.{' '}
             <Button 
               variant="link" 
               className="p-0 ml-1 h-auto"
@@ -163,6 +162,7 @@ export default function Matches() {
         </Alert>
       )}
 
+      {/* Matches List */}
       <div className="grid gap-4">
         {matches.length === 0 && !selectedTournamentId ? (
           <Card>
@@ -182,9 +182,6 @@ export default function Matches() {
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     {getStatusBadge(match.status)}
-                    <Badge variant="secondary" className="text-xs">
-                      ID: {match.id.slice(0, 8)}
-                    </Badge>
                   </div>
                 </div>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -222,9 +219,6 @@ export default function Matches() {
                       {match.court?.name || `Baan ${match.court_number}`}
                     </div>
                   )}
-                  {!match.match_date && !match.court?.name && !match.court_number && (
-                    <span className="text-muted-foreground">Nog geen tijd/locatie toegewezen</span>
-                  )}
                 </div>
                 
                 {match.status === 'completed' && (
@@ -239,29 +233,31 @@ export default function Matches() {
                     </div>
                   </div>
                 )}
-                
-                <div className="mt-4 flex gap-2">
-                  <Button variant="outline" size="sm">
-                    Details
-                  </Button>
-                  {match.status === 'scheduled' && (
-                    <Button variant="outline" size="sm">
-                      Score Invoeren
-                    </Button>
-                  )}
-                </div>
               </CardContent>
             </Card>
           ))
         )}
       </div>
 
+      {/* Results count */}
       {matches.length > 0 && (
         <div className="text-center text-sm text-muted-foreground">
           {matches.length} wedstrijd{matches.length !== 1 ? 'en' : ''} gevonden
           {selectedTournament && ` voor ${selectedTournament.name}`}
         </div>
       )}
+
+      {/* Debug Info */}
+      <Card className="border-orange-200 bg-orange-50">
+        <CardHeader>
+          <CardTitle className="text-orange-800">Debug Info</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <div>Selected Tournament: {selectedTournamentId || 'Geen'}</div>
+          <div>Matches Found: {matches.length}</div>
+          <div>Tournaments Available: {tournaments.length}</div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
