@@ -22,7 +22,8 @@ export default function Matches() {
   console.log('Tournament from URL:', tournamentId);
   console.log('Selected tournament:', selectedTournamentId);
   console.log('All tournaments:', tournaments);
-  console.log('Matches:', matches);
+  console.log('Matches found:', matches?.length || 0);
+  console.log('Matches data:', matches);
   console.log('Loading:', isLoading);
   console.log('Error:', error);
 
@@ -49,14 +50,9 @@ export default function Matches() {
   };
 
   const getPlayerNames = (match: any) => {
-    console.log('Getting player names for match:', match);
+    console.log('Getting player names for match:', match.id, match);
     
-    // Check for 1v1 match
-    if (match.player1 && match.player2) {
-      return `${match.player1.name} vs ${match.player2.name}`;
-    }
-    
-    // Check for 2v2 match
+    // Check for 2v2 match first (prioritize over 1v1)
     if (match.team1_player1 && match.team2_player1) {
       const team1 = match.team1_player2 
         ? `${match.team1_player1.name} & ${match.team1_player2.name}`
@@ -67,7 +63,22 @@ export default function Matches() {
       return `${team1} vs ${team2}`;
     }
     
+    // Check for 1v1 match
+    if (match.player1 && match.player2) {
+      return `${match.player1.name} vs ${match.player2.name}`;
+    }
+    
     return 'Spelers nog niet toegewezen';
+  };
+
+  const getMatchType = (match: any) => {
+    if (match.team1_player1 && match.team2_player1) {
+      return '2v2';
+    }
+    if (match.player1 && match.player2) {
+      return '1v1';
+    }
+    return 'Onbekend';
   };
 
   if (isLoading) {
@@ -177,9 +188,14 @@ export default function Matches() {
             <Card key={match.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">
-                    {getPlayerNames(match)}
-                  </CardTitle>
+                  <div className="flex items-center gap-3">
+                    <CardTitle className="text-lg">
+                      {getPlayerNames(match)}
+                    </CardTitle>
+                    <Badge variant={getMatchType(match) === '2v2' ? 'default' : 'secondary'}>
+                      {getMatchType(match)}
+                    </Badge>
+                  </div>
                   <div className="flex items-center gap-2">
                     {getStatusBadge(match.status)}
                   </div>
@@ -219,17 +235,25 @@ export default function Matches() {
                       {match.court?.name || `Baan ${match.court_number}`}
                     </div>
                   )}
+                  {match.notes && (
+                    <div className="text-xs text-blue-600">
+                      {match.notes}
+                    </div>
+                  )}
                 </div>
                 
                 {match.status === 'completed' && (
                   <div className="mt-4 p-3 bg-muted rounded-lg">
                     <div className="text-sm font-medium">Uitslag:</div>
                     <div className="text-lg">
-                      {match.player1_score !== undefined && match.player2_score !== undefined
-                        ? `${match.player1_score} - ${match.player2_score}`
-                        : match.team1_score !== undefined && match.team2_score !== undefined
-                        ? `${match.team1_score} - ${match.team2_score}`
-                        : 'Geen score'}
+                      {getMatchType(match) === '2v2' 
+                        ? (match.team1_score !== undefined && match.team2_score !== undefined
+                          ? `${match.team1_score} - ${match.team2_score}`
+                          : 'Geen score')
+                        : (match.player1_score !== undefined && match.player2_score !== undefined
+                          ? `${match.player1_score} - ${match.player2_score}`
+                          : 'Geen score')
+                      }
                     </div>
                   </div>
                 )}
@@ -256,6 +280,7 @@ export default function Matches() {
           <div>Selected Tournament: {selectedTournamentId || 'Geen'}</div>
           <div>Matches Found: {matches.length}</div>
           <div>Tournaments Available: {tournaments.length}</div>
+          <div>Raw Matches Data: {JSON.stringify(matches.slice(0, 1), null, 2)}</div>
         </CardContent>
       </Card>
     </div>

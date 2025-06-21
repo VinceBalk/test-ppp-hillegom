@@ -57,6 +57,8 @@ export const useMatches = (tournamentId?: string) => {
   const { data: matches = [], isLoading, error } = useQuery({
     queryKey: ['matches', tournamentId],
     queryFn: async () => {
+      console.log('Fetching matches for tournament:', tournamentId);
+      
       let query = supabase
         .from('matches')
         .select(`
@@ -70,7 +72,7 @@ export const useMatches = (tournamentId?: string) => {
           team2_player2:players!matches_team2_player2_id_fkey(name),
           court:courts(name)
         `)
-        .order('match_date', { ascending: true });
+        .order('created_at', { ascending: false });
 
       if (tournamentId) {
         query = query.eq('tournament_id', tournamentId);
@@ -78,10 +80,15 @@ export const useMatches = (tournamentId?: string) => {
       
       const { data, error } = await query;
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching matches:', error);
+        throw error;
+      }
+      
+      console.log('Fetched matches:', data);
       return data as Match[];
     },
-    enabled: !!tournamentId || tournamentId === undefined,
+    enabled: true, // Always enabled, even without tournamentId
   });
 
   const createMatch = useMutation({
