@@ -12,18 +12,22 @@ export function useAuthService() {
     try {
       console.log('Attempting sign in for:', email);
       setLoading(true);
-      
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-      
+
       if (error) {
         console.error('Sign in error:', error.message);
       } else {
         console.log('Sign in successful for user:', data.user?.id);
+        if (data?.session) {
+          setSession(data.session);
+          setUser(data.user);
+        }
       }
-      
+
       return { error };
     } catch (error: any) {
       console.error('Sign in exception:', error);
@@ -37,9 +41,9 @@ export function useAuthService() {
     try {
       setLoading(true);
       const redirectUrl = `${window.location.origin}/`;
-      
+
       console.log('Attempting sign up for:', email, 'with redirect:', redirectUrl);
-      
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -47,13 +51,11 @@ export function useAuthService() {
           emailRedirectTo: redirectUrl
         }
       });
-      
+
       if (error) {
         console.error('Sign up error:', error.message);
-      } else {
-        console.log('Sign up successful for:', email);
       }
-      
+
       return { error };
     } catch (error: any) {
       console.error('Sign up exception:', error);
@@ -64,27 +66,11 @@ export function useAuthService() {
   };
 
   const signOut = async () => {
-    try {
-      console.log('Signing out...');
-      setLoading(true);
-      
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error('Sign out error:', error);
-      } else {
-        console.log('Sign out successful');
-      }
-      
-      // Clear state immediately
-      setUser(null);
-      setSession(null);
-      
-    } catch (error) {
-      console.error('Sign out exception:', error);
-    } finally {
-      setLoading(false);
-    }
+    setLoading(true);
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    setLoading(false);
   };
 
   return {
@@ -96,6 +82,6 @@ export function useAuthService() {
     signOut,
     setUser,
     setSession,
-    setLoading
+    setLoading,
   };
 }
