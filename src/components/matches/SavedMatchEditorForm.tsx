@@ -1,20 +1,27 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Save, X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { Match } from '@/hooks/useMatches';
 
 interface SavedMatchEditorFormProps {
   editedMatch: Match;
-  availablePlayers: any[];
-  activeCourts: any[];
+  availablePlayers: Array<{
+    player_id: string;
+    player: { name: string };
+  }>;
+  activeCourts: Array<{
+    id: string;
+    name: string;
+  }>;
   onSave: () => void;
   onCancel: () => void;
   onUpdatePlayer: (field: string, playerId: string) => void;
   onUpdateCourt: (courtId: string) => void;
-  isSaving: boolean;
+  isSaving?: boolean;
 }
 
 export default function SavedMatchEditorForm({
@@ -25,7 +32,7 @@ export default function SavedMatchEditorForm({
   onCancel,
   onUpdatePlayer,
   onUpdateCourt,
-  isSaving
+  isSaving = false
 }: SavedMatchEditorFormProps) {
   return (
     <Card className="border-blue-200">
@@ -40,9 +47,15 @@ export default function SavedMatchEditorForm({
               className="h-6 w-6 p-0"
               disabled={isSaving}
             >
-              <Save className="h-3 w-3" />
+              <Check className="h-3 w-3" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={onCancel} className="h-6 w-6 p-0">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={onCancel} 
+              className="h-6 w-6 p-0"
+              disabled={isSaving}
+            >
               <X className="h-3 w-3" />
             </Button>
           </div>
@@ -141,6 +154,18 @@ export default function SavedMatchEditorForm({
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        {/* Round Info */}
+        <div>
+          <Label className="text-xs">Ronde</Label>
+          <Input
+            type="number"
+            min="1"
+            value={editedMatch.round_number || 1}
+            readOnly
+            className="h-7 text-xs bg-muted"
+          />
         </div>
       </CardContent>
     </Card>
