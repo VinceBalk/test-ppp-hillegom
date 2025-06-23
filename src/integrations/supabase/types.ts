@@ -696,6 +696,7 @@ export type Database = {
           round_1_generated: boolean | null
           round_2_generated: boolean | null
           round_3_generated: boolean | null
+          schedule_type: string | null
           start_date: string
           status: string | null
           total_rounds: number | null
@@ -714,6 +715,7 @@ export type Database = {
           round_1_generated?: boolean | null
           round_2_generated?: boolean | null
           round_3_generated?: boolean | null
+          schedule_type?: string | null
           start_date: string
           status?: string | null
           total_rounds?: number | null
@@ -732,6 +734,7 @@ export type Database = {
           round_1_generated?: boolean | null
           round_2_generated?: boolean | null
           round_3_generated?: boolean | null
+          schedule_type?: string | null
           start_date?: string
           status?: string | null
           total_rounds?: number | null
