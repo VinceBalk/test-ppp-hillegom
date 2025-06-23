@@ -31,22 +31,22 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
     }
   };
 
-  const getPlayerNames = (match: Match) => {
+  const getPlayerTeams = (match: Match) => {
     // Check for 2v2 match first (prioritize over 1v1)
     if (match.team1_player1 && match.team2_player1) {
       const team1 = getShortTeamName(match.team1_player1, match.team1_player2);
       const team2 = getShortTeamName(match.team2_player1, match.team2_player2);
-      return `${team1} vs ${team2}`;
+      return { team1, team2 };
     }
     
     // Check for 1v1 match
     if (match.player1 && match.player2) {
       const team1 = getShortTeamName(match.player1);
       const team2 = getShortTeamName(match.player2);
-      return `${team1} vs ${team2}`;
+      return { team1, team2 };
     }
     
-    return 'Spelers nog niet toegewezen';
+    return { team1: 'Spelers nog niet toegewezen', team2: null };
   };
 
   const getTournamentDate = () => {
@@ -86,6 +86,8 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
     );
   }
 
+  const { team1, team2 } = getPlayerTeams(match);
+
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
@@ -113,9 +115,17 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
           </div>
         </div>
         
-        {/* Player names */}
+        {/* Player names on separate lines */}
         <CardTitle className="text-base leading-tight">
-          {getPlayerNames(match)}
+          {team2 ? (
+            <div className="space-y-1 text-center">
+              <div>{team1}</div>
+              <div className="text-sm text-muted-foreground font-normal">tegen</div>
+              <div>{team2}</div>
+            </div>
+          ) : (
+            <div className="text-center">{team1}</div>
+          )}
         </CardTitle>
         
         {/* Tournament info row */}

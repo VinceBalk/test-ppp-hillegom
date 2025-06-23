@@ -1,3 +1,4 @@
+
 import { Match } from '@/hooks/useMatches';
 
 export interface GroupedMatches {
@@ -58,18 +59,42 @@ export function splitCourtsByPosition(courtGroups: GroupedMatches[]): { leftCour
   return { leftCourts, rightCourts };
 }
 
-// Helper functie om namen proper te formatteren (alleen voor- en achternaam met hoofdletter)
+// Helper functie om namen proper te formatteren met correcte behandeling van Nederlandse tussenvoegsels
 export function formatPlayerName(name: string): string {
   if (!name) return '';
   
-  return name
-    .toLowerCase()
-    .split(' ')
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
+  // Nederlandse tussenvoegsels die klein moeten blijven (behalve aan het begin van een zin)
+  const dutchPrefixes = ['van', 'van der', 'van den', 'de', 'den', 'der', 'te', 'ten', 'ter', 'tot', 'op'];
+  
+  const words = name.toLowerCase().split(' ');
+  
+  return words.map((word, index) => {
+    // Eerste woord altijd met hoofdletter
+    if (index === 0) {
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    }
+    
+    // Check voor samengestelde tussenvoegsels eerst (van der, van den, etc.)
+    const remainingWords = words.slice(index).join(' ');
+    for (const prefix of dutchPrefixes) {
+      if (remainingWords.startsWith(prefix + ' ') || remainingWords === prefix) {
+        // Als het een tussenvoegsel is, houd het klein
+        if (prefix.includes(' ')) {
+          // Voor samengestelde tussenvoegsels zoals "van der"
+          return prefix;
+        } else {
+          // Voor enkele tussenvoegsels
+          return word;
+        }
+      }
+    }
+    
+    // Anders normale hoofdletter
+    return word.charAt(0).toUpperCase() + word.slice(1);
+  }).join(' ');
 }
 
-// Helper functie voor team namen - nu met volledige namen
+// Helper functie voor team namen - nu met volledige namen en juiste formattering
 export function getShortTeamName(player1?: { name: string }, player2?: { name: string }): string {
   if (!player1) return 'Onbekend';
   
