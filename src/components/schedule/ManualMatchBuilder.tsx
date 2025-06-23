@@ -13,6 +13,7 @@ import { Trash2, Plus } from "lucide-react";
 
 type Props = {
   tournamentId: string;
+  initialRound?: number;
 };
 
 type Match2v2 = {
@@ -23,14 +24,19 @@ type Match2v2 = {
   team2Player2: string;
 };
 
-const ManualMatchBuilder: React.FC<Props> = ({ tournamentId }) => {
+const ManualMatchBuilder: React.FC<Props> = ({ tournamentId, initialRound = 1 }) => {
   const { tournamentPlayers, isLoading: loadingPlayers } = useTournamentPlayers(tournamentId);
   const { matches, isLoading: loadingMatches } = useMatches(tournamentId);
-  const [round, setRound] = useState(1);
+  const [round, setRound] = useState(initialRound);
   const [selectedMatches, setSelectedMatches] = useState<Match2v2[]>([]);
   const [courts, setCourts] = useState<{ id: string; name: string }[]>([]);
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
+
+  // Update round when initialRound changes
+  useEffect(() => {
+    setRound(initialRound);
+  }, [initialRound]);
 
   useEffect(() => {
     const fetchCourts = async () => {
@@ -129,7 +135,6 @@ const ManualMatchBuilder: React.FC<Props> = ({ tournamentId }) => {
               <SelectContent>
                 <SelectItem value="1">1</SelectItem>
                 <SelectItem value="2">2</SelectItem>
-                <SelectItem value="3">3</SelectItem>
               </SelectContent>
             </Select>
           </div>

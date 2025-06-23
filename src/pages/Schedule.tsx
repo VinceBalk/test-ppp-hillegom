@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTournaments } from '@/hooks/useTournaments';
@@ -161,7 +162,7 @@ export default function Schedule() {
         </Card>
       )}
 
-      {!preview && !isRoundGenerated && !hasExistingMatches && (
+      {!preview && !isRoundGenerated && !hasExistingMatches && selectedRound <= 2 && (
         <PreviewGenerator
           selectedRound={selectedRound}
           onGeneratePreview={handleGeneratePreview}
@@ -182,6 +183,20 @@ export default function Schedule() {
         </div>
       )}
 
+      {selectedRound === 3 && !hasExistingMatches && (
+        <div className="text-center py-8">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-amber-900 mb-2">
+              Ronde 3 wordt automatisch bepaald
+            </h3>
+            <p className="text-amber-700">
+              Ronde 3 wordt automatisch gegenereerd na het tellen van de uitslag van ronde 1 en 2, 
+              inclusief eventuele tiebreakers als beslisser.
+            </p>
+          </div>
+        </div>
+      )}
+
       {preview && (
         <SchedulePreview
           preview={preview}
@@ -195,8 +210,8 @@ export default function Schedule() {
         />
       )}
 
-      {tournamentId && (
-        <ManualMatchBuilder tournamentId={tournamentId} />
+      {tournamentId && selectedRound <= 2 && (
+        <ManualMatchBuilder tournamentId={tournamentId} initialRound={selectedRound} />
       )}
 
       <ScheduleDebug 

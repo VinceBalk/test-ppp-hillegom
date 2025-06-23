@@ -89,22 +89,11 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
-        {/* Player names - full width */}
-        <CardTitle className="text-base leading-tight">
-          {getPlayerNames(match)}
-        </CardTitle>
-        
-        {/* Tournament info row with match number instead of round */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center gap-3">
-            <span>{match.tournament?.name || 'Onbekend toernooi'}</span>
-            <span>•</span>
-            <span>Wedstrijd {matchNumberInCourtRound}</span>
-            <span>•</span>
-            <span>{getTournamentDate()}</span>
-            <span>•</span>
-            {getStatusBadge(match.status)}
-          </div>
+        {/* Round badge and player names */}
+        <div className="flex items-start justify-between mb-2">
+          <Badge variant="default" className="bg-blue-600 text-white">
+            Ronde {match.round_number}
+          </Badge>
           <div className="flex gap-1">
             <Button 
               size="sm" 
@@ -124,6 +113,24 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
               <Play className="h-3 w-3 mr-1" />
               Simuleren
             </Button>
+          </div>
+        </div>
+        
+        {/* Player names - full width */}
+        <CardTitle className="text-base leading-tight">
+          {getPlayerNames(match)}
+        </CardTitle>
+        
+        {/* Tournament info row */}
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center gap-3">
+            <span>{match.tournament?.name || 'Onbekend toernooi'}</span>
+            <span>•</span>
+            <span>Wedstrijd {matchNumberInCourtRound}</span>
+            <span>•</span>
+            <span>{getTournamentDate()}</span>
+            <span>•</span>
+            {getStatusBadge(match.status)}
           </div>
         </div>
       </CardHeader>

@@ -1,62 +1,115 @@
 
-import MatchesCourtGroup from './MatchesCourtGroup';
+import { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { Match } from '@/hooks/useMatches';
-import { groupByCourt, splitCourtsByPosition } from '@/utils/matchUtils';
+import MatchCard from './MatchCard';
 
 interface MatchesListProps {
   matches: Match[];
   editMode: boolean;
-  selectedTournamentId?: string;
+  selectedTournamentId: string;
 }
 
 export default function MatchesList({ matches, editMode, selectedTournamentId }: MatchesListProps) {
-  // First group all matches by court
-  const courtGroups = groupByCourt(matches);
-  
-  // Then split the courts (not individual matches) between left and right
-  const { leftCourts, rightCourts } = splitCourtsByPosition(courtGroups);
+  const [selectedRound, setSelectedRound] = useState<string>('all');
+
+  // Filter matches by round if a specific round is selected
+  const filteredMatches = selectedRound === 'all' 
+    ? matches 
+    : matches.filter(match => match.round_number === parseInt(selectedRound));
+
+  // Group matches by round
+  const matchesByRound = filteredMatches.reduce((groups, match) => {
+    const round = match.round_number;
+    if (!groups[round]) {
+      groups[round] = [];
+    }
+    groups[round].push(match);
+    return groups;
+  }, {} as Record<number, Match[]>);
+
+  // Get unique rounds from all matches
+  const availableRounds = [...new Set(matches.map(match => match.round_number))].sort();
+
+  if (!matches || matches.length === 0) {
+    return null;
+  }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-      {/* Linker rijtje */}
-      <div>
-        <h2 className="text-2xl font-bold mb-4 text-primary">Linker rijtje</h2>
-        {leftCourts.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8 border-2 border-dashed rounded-lg">
-            <p>Geen wedstrijden in het linker rijtje</p>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>Wedstrijden Overzicht</CardTitle>
+          <div className="flex items-center gap-2">
+            <Label className="text-sm">Filter op ronde:</Label>
+            <Select value={selectedRound} onValueChange={setSelectedRound}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Alle rondes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle rondes</SelectItem>
+                {availableRounds.map(round => (
+                  <SelectItem key={round} value={round.toString()}>
+                    Ronde {round}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        ) : (
-          leftCourts.map(({ courtName, matches }) => (
-            <MatchesCourtGroup
-              key={courtName}
-              courtName={courtName}
-              matches={matches}
-              editMode={editMode}
-              selectedTournamentId={selectedTournamentId}
-            />
-          ))
-        )}
-      </div>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {filteredMatches.length} wedstrijd{filteredMatches.length !== 1 ? 'en' : ''} gevonden
+          {selectedRound !== 'all' && ` in ronde ${selectedRound}`}
+        </p>
+      </CardHeader>
+      
+      <CardContent className="space-y-6">
+        {Object.keys(matchesByRound)
+          .sort((a, b) => parseInt(a) - parseInt(b))
+          .map(roundKey => {
+            const round = parseInt(roundKey);
+            const roundMatches = matchesByRound[round];
+            
+            // Group matches by court for better organization
+            const matchesByCourtInRound = roundMatches.reduce((courtGroups, match) => {
+              const courtKey = match.court?.name || match.court_number || 'Geen baan';
+              if (!courtGroups[courtKey]) {
+                courtGroups[courtKey] = [];
+              }
+              courtGroups[courtKey].push(match);
+              return courtGroups;
+            }, {} as Record<string, Match[]>);
 
-      {/* Rechter rijtje */}
-      <div>
-        <h2 className="text-2xl font-bold mb-4 text-primary">Rechter rijtje</h2>
-        {rightCourts.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8 border-2 border-dashed rounded-lg">
-            <p>Geen wedstrijden in het rechter rijtje</p>
-          </div>
-        ) : (
-          rightCourts.map(({ courtName, matches }) => (
-            <MatchesCourtGroup
-              key={courtName}
-              courtName={courtName}
-              matches={matches}
-              editMode={editMode}
-              selectedTournamentId={selectedTournamentId}
-            />
-          ))
-        )}
-      </div>
-    </div>
+            return (
+              <div key={round} className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-lg">Ronde {round}</h3>
+                  <Badge variant="outline">{roundMatches.length} wedstrijd{roundMatches.length !== 1 ? 'en' : ''}</Badge>
+                </div>
+                
+                <div className="space-y-4">
+                  {Object.entries(matchesByCourtInRound).map(([courtName, courtMatches]) => (
+                    <div key={courtName} className="space-y-2">
+                      <h4 className="font-medium text-muted-foreground">{courtName}</h4>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {courtMatches.map((match, index) => (
+                          <MatchCard 
+                            key={match.id} 
+                            match={match} 
+                            matchNumberInCourtRound={index + 1}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+      </CardContent>
+    </Card>
   );
 }
