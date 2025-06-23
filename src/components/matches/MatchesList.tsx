@@ -112,13 +112,8 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
                       borderColor: court.backgroundColor
                     }}
                   >
-                    <div 
-                      className="text-sm font-medium"
-                      style={{ 
-                        color: court.backgroundColor === '#ffffff' || court.backgroundColor === '#FFFFFF' ? '#000000' : '#ffffff'
-                      }}
-                    >
-                      {court.name} (Volgorde: {court.menuOrder})
+                    <div className="text-sm font-medium text-black">
+                      {court.name}
                     </div>
                   </div>
                   <div className="space-y-3">
@@ -148,13 +143,8 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
                       borderColor: court.backgroundColor
                     }}
                   >
-                    <div 
-                      className="text-sm font-medium"
-                      style={{ 
-                        color: court.backgroundColor === '#ffffff' || court.backgroundColor === '#FFFFFF' ? '#000000' : '#ffffff'
-                      }}
-                    >
-                      {court.name} (Volgorde: {court.menuOrder})
+                    <div className="text-sm font-medium text-black">
+                      {court.name}
                     </div>
                   </div>
                   <div className="space-y-3">
