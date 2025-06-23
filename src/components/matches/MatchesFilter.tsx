@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 interface Tournament {
   id: string;
   name: string;
-  status: string;
+  status?: 'draft' | 'open' | 'in_progress' | 'completed' | 'cancelled';
   start_date: string;
   end_date: string;
 }
@@ -29,7 +29,7 @@ export default function MatchesFilter({
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Filter Wedstrijden</CardTitle>
-          {selectedTournament && (
+          {selectedTournament && selectedTournament.status && (
             <Badge variant="outline">{selectedTournament.status}</Badge>
           )}
         </div>
@@ -50,9 +50,11 @@ export default function MatchesFilter({
                   <SelectItem key={tournament.id} value={tournament.id}>
                     <div className="flex items-center justify-between w-full">
                       <span>{tournament.name}</span>
-                      <Badge variant="outline" className="ml-2">
-                        {tournament.status}
-                      </Badge>
+                      {tournament.status && (
+                        <Badge variant="outline" className="ml-2">
+                          {tournament.status}
+                        </Badge>
+                      )}
                     </div>
                   </SelectItem>
                 ))}
@@ -62,7 +64,9 @@ export default function MatchesFilter({
           
           {selectedTournament && (
             <div className="text-sm text-muted-foreground">
-              <div>Status: {selectedTournament.status}</div>
+              {selectedTournament.status && (
+                <div>Status: {selectedTournament.status}</div>
+              )}
               <div>Periode: {new Date(selectedTournament.start_date).toLocaleDateString('nl-NL')} - {new Date(selectedTournament.end_date).toLocaleDateString('nl-NL')}</div>
             </div>
           )}
