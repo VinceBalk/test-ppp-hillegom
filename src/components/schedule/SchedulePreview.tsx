@@ -5,6 +5,7 @@ import { SchedulePreview as SchedulePreviewType } from '@/types/schedule';
 import SchedulePreviewHeader from './SchedulePreviewHeader';
 import SchedulePreviewActions from './SchedulePreviewActions';
 import ScheduleGroupSection from './ScheduleGroupSection';
+import CourtsOverview from './CourtsOverview';
 
 interface SchedulePreviewProps {
   preview: SchedulePreviewType;
@@ -68,22 +69,36 @@ export default function SchedulePreview({
         </CardContent>
       </Card>
 
-      <div className="grid gap-8 lg:grid-cols-2">
-        <ScheduleGroupSection
-          title="Links Groep"
-          matches={preview.leftGroupMatches}
-          tournamentId={tournamentId}
-          onUpdateMatch={onUpdateMatch}
-          onMoveMatch={handleMoveMatch}
-        />
-        
-        <ScheduleGroupSection
-          title="Rechts Groep"
-          matches={preview.rightGroupMatches}
-          tournamentId={tournamentId}
-          onUpdateMatch={onUpdateMatch}
-          onMoveMatch={handleMoveMatch}
-        />
+      {/* Main Courts Overview */}
+      <CourtsOverview 
+        leftGroupMatches={preview.leftGroupMatches}
+        rightGroupMatches={preview.rightGroupMatches}
+      />
+
+      {/* Detailed Group Sections for Editing */}
+      <div className="space-y-8">
+        <div className="border-t pt-8">
+          <h3 className="text-lg font-semibold text-gray-700 mb-4">Gedetailleerde Weergave per Groep</h3>
+          <div className="grid gap-8 lg:grid-cols-2">
+            <ScheduleGroupSection
+              title="Links Groep"
+              matches={preview.leftGroupMatches}
+              tournamentId={tournamentId}
+              onUpdateMatch={onUpdateMatch}
+              onMoveMatch={handleMoveMatch}
+              groupColor="bg-green-500"
+            />
+            
+            <ScheduleGroupSection
+              title="Rechts Groep"
+              matches={preview.rightGroupMatches}
+              tournamentId={tournamentId}
+              onUpdateMatch={onUpdateMatch}
+              onMoveMatch={handleMoveMatch}
+              groupColor="bg-purple-500"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
