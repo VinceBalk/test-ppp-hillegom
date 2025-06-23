@@ -1,13 +1,13 @@
 
 import { ScheduleMatch } from '@/types/schedule';
-import DroppableCourt from './DroppableCourt';
+import CourtMatchesCard from './CourtMatchesCard';
 
 interface ScheduleGroupSectionProps {
   title: string;
   matches: ScheduleMatch[];
   tournamentId: string;
   onUpdateMatch: (matchId: string, updates: Partial<ScheduleMatch>) => void;
-  onMoveMatch: (draggedMatch: ScheduleMatch, targetCourtName: string, targetIndex?: number) => void;
+  onMoveMatch?: (draggedMatch: ScheduleMatch, targetCourtName: string, targetIndex?: number) => void;
 }
 
 export default function ScheduleGroupSection({
@@ -15,7 +15,6 @@ export default function ScheduleGroupSection({
   matches,
   tournamentId,
   onUpdateMatch,
-  onMoveMatch
 }: ScheduleGroupSectionProps) {
   // Group matches by court for better organization
   const groupMatchesByCourt = (matches: ScheduleMatch[]) => {
@@ -41,21 +40,28 @@ export default function ScheduleGroupSection({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold">{title}</h3>
-      {Object.entries(courtGroups).map(([courtName, courtMatches]) => (
-        <DroppableCourt
-          key={courtName}
-          courtName={courtName}
-          matches={courtMatches}
-          onUpdateMatch={onUpdateMatch}
-          onMoveMatch={onMoveMatch}
-        />
-      ))}
-      {Object.keys(courtGroups).length === 0 && (
-        <div className="text-center text-muted-foreground py-8 border rounded-lg">
-          Geen wedstrijden in {title.toLowerCase()}
-        </div>
-      )}
+      <h3 className="text-lg font-semibold flex items-center gap-2">
+        {title}
+        <Badge variant="secondary">{matches.length} wedstrijden</Badge>
+      </h3>
+      
+      <div className="grid gap-4">
+        {Object.entries(courtGroups).map(([courtName, courtMatches]) => (
+          <CourtMatchesCard
+            key={courtName}
+            courtName={courtName}
+            matches={courtMatches}
+            tournamentId={tournamentId}
+            onUpdateMatch={onUpdateMatch}
+          />
+        ))}
+        
+        {Object.keys(courtGroups).length === 0 && (
+          <div className="text-center text-muted-foreground py-8 border rounded-lg bg-muted/30">
+            <p className="text-sm">Geen wedstrijden in {title.toLowerCase()}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
