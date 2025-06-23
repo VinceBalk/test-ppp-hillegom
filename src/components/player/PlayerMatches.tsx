@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, MapPin } from 'lucide-react';
@@ -68,7 +69,7 @@ export default function PlayerMatches({ playerId, playerName }: PlayerMatchesPro
             <div key={match.id} className="border p-4 rounded-lg shadow-sm">
               <div className="text-sm text-muted-foreground mb-1">
                 <Calendar className="inline w-4 h-4 mr-1" />
-                Ronde {match.round_within_group} — {type}
+                Ronde {match.round_number} — {type}
               </div>
 
               {partner && (
@@ -81,10 +82,10 @@ export default function PlayerMatches({ playerId, playerName }: PlayerMatchesPro
                 <span className="font-medium">Tegen:</span> {opponents}
               </div>
 
-              {match.court_name && (
+              {match.court?.name && (
                 <div className="text-xs text-gray-500 mt-1">
                   <MapPin className="inline w-3 h-3 mr-1" />
-                  Baan: {match.court_name}
+                  Baan: {match.court.name}
                 </div>
               )}
             </div>
