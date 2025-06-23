@@ -18,7 +18,6 @@ import TournamentNotFoundState from '@/components/schedule/TournamentNotFoundSta
 export default function Schedule() {
   const { tournamentId } = useParams<{ tournamentId: string }>();
   const [selectedRound, setSelectedRound] = useState(1);
-  const [manualMatches, setManualMatches] = useState<any[]>([]);
   
   const { tournaments, isLoading: tournamentsLoading, error: tournamentsError } = useTournaments();
   const { tournamentPlayers } = useTournamentPlayers(tournamentId);
@@ -76,14 +75,6 @@ export default function Schedule() {
     }
   };
 
-  const handleAddManualMatch = (match: any) => {
-    setManualMatches(prev => [...prev, match]);
-  };
-
-  const handleRemoveManualMatch = (index: number) => {
-    setManualMatches(prev => prev.filter((_, i) => i !== index));
-  };
-
   if (tournamentsLoading) {
     return <ScheduleLoadingState />;
   }
@@ -126,12 +117,9 @@ export default function Schedule() {
         />
       )}
 
-      <ManualMatchBuilder 
-        availablePlayers={tournamentPlayers}
-        onAddMatch={handleAddManualMatch}
-        currentMatches={manualMatches}
-        onRemoveMatch={handleRemoveManualMatch}
-      />
+      {tournamentId && (
+        <ManualMatchBuilder tournamentId={tournamentId} />
+      )}
 
       <ScheduleDebug 
         tournaments={tournaments || []}
