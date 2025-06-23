@@ -1,13 +1,14 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Match } from '@/hooks/useMatches';
-import { Play, RotateCcw } from 'lucide-react';
+import { getShortTeamName } from '@/utils/matchUtils';
+import { Play, RotateCcw, Plus } from 'lucide-react';
+import SpecialsManager from './SpecialsManager';
 
 interface MatchSimulatorProps {
   match: Match;
@@ -21,33 +22,82 @@ export default function MatchSimulator({ match, onClose }: MatchSimulatorProps) 
   const [player2Score, setPlayer2Score] = useState(match.player2_score || 0);
   const [notes, setNotes] = useState(match.notes || '');
   const [status, setStatus] = useState<'scheduled' | 'in_progress' | 'completed'>(match.status);
+  const [showSpecials, setShowSpecials] = useState(false);
 
   const is2v2 = !!(match.team1_player1 && match.team2_player1);
   const is1v1 = !!(match.player1 && match.player2);
 
   const getPlayerNames = () => {
     if (is2v2) {
-      const team1 = match.team1_player2 
-        ? `${match.team1_player1?.name} & ${match.team1_player2?.name}`
-        : match.team1_player1?.name;
-      const team2 = match.team2_player2
-        ? `${match.team2_player1?.name} & ${match.team2_player2?.name}`
-        : match.team2_player1?.name;
+      const team1 = getShortTeamName(match.team1_player1, match.team1_player2);
+      const team2 = getShortTeamName(match.team2_player1, match.team2_player2);
       return { team1, team2 };
     }
     return { 
-      team1: match.player1?.name, 
-      team2: match.player2?.name 
+      team1: getShortTeamName(match.player1), 
+      team2: getShortTeamName(match.player2) 
     };
   };
 
   const { team1: team1Name, team2: team2Name } = getPlayerNames();
 
+  // Enforce total score = 8 constraint
+  useEffect(() => {
+    if (is2v2) {
+      const total = team1Score + team2Score;
+      if (total > 8) {
+        // Auto-adjust to maintain total of 8
+        if (team1Score > team2Score) {
+          setTeam1Score(8 - team2Score);
+        } else {
+          setTeam2Score(8 - team1Score);
+        }
+      }
+    } else {
+      const total = player1Score + player2Score;
+      if (total > 8) {
+        if (player1Score > player2Score) {
+          setPlayer1Score(8 - player2Score);
+        } else {
+          setPlayer2Score(8 - player1Score);
+        }
+      }
+    }
+  }, [team1Score, team2Score, player1Score, player2Score, is2v2]);
+
+  const handleTeam1ScoreChange = (value: number) => {
+    if (value < 0) value = 0;
+    if (value > 8) value = 8;
+    setTeam1Score(value);
+    setTeam2Score(8 - value);
+  };
+
+  const handleTeam2ScoreChange = (value: number) => {
+    if (value < 0) value = 0;
+    if (value > 8) value = 8;
+    setTeam2Score(value);
+    setTeam1Score(8 - value);
+  };
+
+  const handlePlayer1ScoreChange = (value: number) => {
+    if (value < 0) value = 0;
+    if (value > 8) value = 8;
+    setPlayer1Score(value);
+    setPlayer2Score(8 - value);
+  };
+
+  const handlePlayer2ScoreChange = (value: number) => {
+    if (value < 0) value = 0;
+    if (value > 8) value = 8;
+    setPlayer2Score(value);
+    setPlayer1Score(8 - value);
+  };
+
   const handleReset = () => {
     setTeam1Score(0);
-    setTeam2Score(0);
+    setTeam2Score(8);
     setPlayer1Score(0);
-    setPlayer2Score(0);
+    setPlayer2Score(8);
     setNotes('');
     setStatus('scheduled');
   };
@@ -71,19 +121,24 @@ export default function MatchSimulator({ match, onClose }: MatchSimulatorProps) 
     alert(`Wedstrijd gesimuleerd!\n${team1Name}: ${is2v2 ? team1Score : player1Score}\n${team2Name}: ${is2v2 ? team2Score : player2Score}\n\n(Niet opgeslagen in database)`);
   };
 
+  if (showSpecials) {
+    return (
+      <SpecialsManager 
+        match={match} 
+        onClose={() => setShowSpecials(false)} 
+        onBack={() => setShowSpecials(false)}
+      />
+    );
+  }
+
   return (
     <Card className="border-2 border-blue-200 bg-blue-50/50">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Play className="h-5 w-5 text-blue-600" />
-              Wedstrijd Simulator
-            </CardTitle>
-            <Badge variant="outline" className="bg-blue-100 text-blue-700">
-              {is2v2 ? '2v2' : '1v1'}
-            </Badge>
-          </div>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Play className="h-5 w-5 text-blue-600" />
+            Wedstrijd Simulator
+          </CardTitle>
           <Button variant="outline" size="sm" onClick={onClose}>
             Sluiten
           </Button>
@@ -127,11 +182,13 @@ export default function MatchSimulator({ match, onClose }: MatchSimulatorProps) 
             <Label>{team1Name}</Label>
             <Input
               type="number"
+              min="0"
+              max="8"
               value={is2v2 ? team1Score : player1Score}
               onChange={(e) => {
                 const value = parseInt(e.target.value) || 0;
-                if (is2v2) setTeam1Score(value);
-                else setPlayer1Score(value);
+                if (is2v2) handleTeam1ScoreChange(value);
+                else handlePlayer1ScoreChange(value);
               }}
               className="mt-1"
             />
@@ -140,24 +197,40 @@ export default function MatchSimulator({ match, onClose }: MatchSimulatorProps) 
             <Label>{team2Name}</Label>
             <Input
               type="number"
+              min="0"
+              max="8"
               value={is2v2 ? team2Score : player2Score}
               onChange={(e) => {
                 const value = parseInt(e.target.value) || 0;
-                if (is2v2) setTeam2Score(value);
-                else setPlayer2Score(value);
+                if (is2v2) handleTeam2ScoreChange(value);
+                else handlePlayer2ScoreChange(value);
               }}
               className="mt-1"
             />
           </div>
         </div>
 
+        <div className="text-xs text-center text-muted-foreground bg-yellow-50 p-2 rounded">
+          Totaal moet altijd 8 zijn: {is2v2 ? (team1Score + team2Score) : (player1Score + player2Score)}/8
+        </div>
+
+        {/* Specials Button */}
+        <Button 
+          onClick={() => setShowSpecials(true)} 
+          variant="outline" 
+          className="w-full"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Specials Registreren
+        </Button>
+
         {/* Notes */}
         <div>
-          <Label>Opmerkingen / Specials</Label>
+          <Label>Opmerkingen</Label>
           <Textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Bijzonderheden, specials, opmerkingen..."
+            placeholder="Bijzonderheden, opmerkingen..."
             className="mt-1"
             rows={3}
           />

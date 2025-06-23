@@ -1,3 +1,4 @@
+
 import { Match } from '@/hooks/useMatches';
 
 export interface GroupedMatches {
@@ -46,15 +47,37 @@ export function splitCourtsByPosition(courtGroups: GroupedMatches[]): { leftCour
   const leftCourts: GroupedMatches[] = [];
   const rightCourts: GroupedMatches[] = [];
   
-  // Distribute courts evenly across left and right columns
-  // Keep entire courts together, don't split individual matches
+  // FIX: Omdraaien van de kolommen - rechts wordt links en links wordt rechts
   courtGroups.forEach((courtGroup, index) => {
     if (index % 2 === 0) {
-      leftCourts.push(courtGroup);
+      rightCourts.push(courtGroup); // Was leftCourts
     } else {
-      rightCourts.push(courtGroup);
+      leftCourts.push(courtGroup); // Was rightCourts  
     }
   });
   
   return { leftCourts, rightCourts };
+}
+
+// Helper functie om namen in te korten
+export function shortenPlayerName(name: string): string {
+  if (!name) return '';
+  
+  const parts = name.split(' ');
+  if (parts.length === 1) return name;
+  
+  // Eerste naam volledig, rest alleen eerste letter
+  const firstName = parts[0];
+  const initials = parts.slice(1).map(part => part.charAt(0).toUpperCase()).join('.');
+  
+  return `${firstName} ${initials}`;
+}
+
+// Helper functie voor team namen
+export function getShortTeamName(player1?: { name: string }, player2?: { name: string }): string {
+  if (!player1) return 'Onbekend';
+  
+  if (!player2) return shortenPlayerName(player1.name);
+  
+  return `${shortenPlayerName(player1.name)} & ${shortenPlayerName(player2.name)}`;
 }
