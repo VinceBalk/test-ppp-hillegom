@@ -115,16 +115,16 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
           </div>
         </div>
         
-        {/* Player names on separate lines */}
+        {/* Player names on separate lines - left aligned */}
         <CardTitle className="text-base leading-tight">
           {team2 ? (
-            <div className="space-y-1 text-center">
+            <div className="space-y-1 text-left">
               <div>{team1}</div>
-              <div className="text-sm text-muted-foreground font-normal">tegen</div>
+              <div className="text-sm text-muted-foreground font-normal">vs</div>
               <div>{team2}</div>
             </div>
           ) : (
-            <div className="text-center">{team1}</div>
+            <div className="text-left">{team1}</div>
           )}
         </CardTitle>
         
@@ -145,22 +145,6 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
         {match.notes && (
           <div className="text-xs text-orange-600 mb-3 p-2 bg-orange-50 rounded">
             {match.notes}
-          </div>
-        )}
-        
-        {match.status === 'completed' && (
-          <div className="p-3 bg-muted rounded-lg">
-            <div className="text-xs font-medium mb-1">Uitslag:</div>
-            <div className="text-lg font-bold">
-              {match.team1_player1 && match.team2_player1
-                ? (match.team1_score !== undefined && match.team2_score !== undefined
-                  ? `${match.team1_score} - ${match.team2_score}`
-                  : 'Geen score')
-                : (match.player1_score !== undefined && match.player2_score !== undefined
-                  ? `${match.player1_score} - ${match.player2_score}`
-                  : 'Geen score')
-              }
-            </div>
           </div>
         )}
       </CardContent>
