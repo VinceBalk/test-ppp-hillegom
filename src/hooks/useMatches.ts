@@ -49,6 +49,7 @@ export interface Match {
   };
   court?: {
     name: string;
+    menu_order?: number;
   };
 }
 
