@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { useCourts } from '@/hooks/useCourts';
@@ -21,6 +22,14 @@ export default function Courts() {
     menu_order: 0,
     is_active: true
   });
+
+  const getColumnFromMenuOrder = (menuOrder: number) => {
+    if (menuOrder % 2 === 1) {
+      return { name: 'Links', color: 'bg-green-100 text-green-800' };
+    } else {
+      return { name: 'Rechts', color: 'bg-purple-100 text-purple-800' };
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -54,6 +63,29 @@ export default function Courts() {
     setDialogOpen(true);
   };
 
+  const handleColumnChange = (column: string) => {
+    // Get the highest menu_order for the selected column
+    const courtsInColumn = courts.filter(court => {
+      const isOdd = court.menu_order % 2 === 1;
+      return column === 'left' ? isOdd : !isOdd;
+    });
+    
+    let newMenuOrder;
+    if (courtsInColumn.length === 0) {
+      // First court in this column
+      newMenuOrder = column === 'left' ? 1 : 2;
+    } else {
+      // Find the highest menu_order in this column and add 2
+      const maxOrder = Math.max(...courtsInColumn.map(c => c.menu_order));
+      newMenuOrder = maxOrder + 2;
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      menu_order: newMenuOrder
+    }));
+  };
+
   const handleDelete = async (courtId) => {
     if (confirm('Weet je zeker dat je deze baan wilt verwijderen?')) {
       await deleteCourt(courtId);
@@ -79,7 +111,7 @@ export default function Courts() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Banen</h1>
-          <p className="text-muted-foreground">Beheer toernooi banen</p>
+          <p className="text-muted-foreground">Beheer toernooi banen en hun kolom-indeling</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
@@ -106,8 +138,28 @@ export default function Courts() {
                   required
                 />
               </div>
+              
               <div className="space-y-2">
-                <Label htmlFor="menu_order">Menu volgorde</Label>
+                <Label htmlFor="column">Kolom</Label>
+                <Select
+                  value={formData.menu_order % 2 === 1 ? 'left' : 'right'}
+                  onValueChange={handleColumnChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecteer kolom" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="left">Links (Groene kolom)</SelectItem>
+                    <SelectItem value="right">Rechts (Paarse kolom)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Menu volgorde wordt automatisch ingesteld: {formData.menu_order}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="menu_order">Menu volgorde (handmatig)</Label>
                 <Input
                   id="menu_order"
                   type="number"
@@ -116,7 +168,11 @@ export default function Courts() {
                   placeholder="Volgorde nummer"
                   min="0"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Oneven nummers = Links, Even nummers = Rechts
+                </p>
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="background_color">Achtergrondkleur</Label>
                 <Input
@@ -126,6 +182,7 @@ export default function Courts() {
                   onChange={(e) => setFormData(prev => ({ ...prev, background_color: e.target.value }))}
                 />
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="logo_url">Logo URL (optioneel)</Label>
                 <Input
@@ -135,6 +192,7 @@ export default function Courts() {
                   placeholder="https://example.com/logo.png"
                 />
               </div>
+
               <div className="flex items-center space-x-2">
                 <Switch
                   id="is_active"
@@ -143,6 +201,7 @@ export default function Courts() {
                 />
                 <Label htmlFor="is_active">Actief</Label>
               </div>
+
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                   Annuleren
@@ -157,53 +216,61 @@ export default function Courts() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {courts.map((court) => (
-          <Card key={court.id}>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle>{court.name}</CardTitle>
-                  <CardDescription className="space-y-1">
-                    <div>
-                      {court.is_active ? (
-                        <Badge variant="default">Actief</Badge>
-                      ) : (
-                        <Badge variant="secondary">Inactief</Badge>
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Volgorde: {court.menu_order}
-                    </div>
-                  </CardDescription>
+        {courts.map((court) => {
+          const column = getColumnFromMenuOrder(court.menu_order);
+          return (
+            <Card key={court.id}>
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      {court.name}
+                      <Badge className={column.color}>
+                        {column.name}
+                      </Badge>
+                    </CardTitle>
+                    <CardDescription className="space-y-1">
+                      <div>
+                        {court.is_active ? (
+                          <Badge variant="default">Actief</Badge>
+                        ) : (
+                          <Badge variant="secondary">Inactief</Badge>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Volgorde: {court.menu_order}
+                      </div>
+                    </CardDescription>
+                  </div>
+                  <div className="flex space-x-1">
+                    <Button variant="ghost" size="sm" onClick={() => handleEdit(court)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(court.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex space-x-1">
-                  <Button variant="ghost" size="sm" onClick={() => handleEdit(court)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(court.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <div 
+                      className="w-4 h-4 rounded border"
+                      style={{ backgroundColor: court.background_color || '#ffffff' }}
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      {court.background_color || '#ffffff'}
+                    </span>
+                  </div>
+                  {court.logo_url && (
+                    <p className="text-sm text-muted-foreground">Logo: {court.logo_url}</p>
+                  )}
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <div 
-                    className="w-4 h-4 rounded border"
-                    style={{ backgroundColor: court.background_color || '#ffffff' }}
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    {court.background_color || '#ffffff'}
-                  </span>
-                </div>
-                {court.logo_url && (
-                  <p className="text-sm text-muted-foreground">Logo: {court.logo_url}</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {courts.length === 0 && (
