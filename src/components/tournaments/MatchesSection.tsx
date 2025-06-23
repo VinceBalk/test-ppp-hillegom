@@ -89,8 +89,8 @@ export default function MatchesSection({
           </p>
         ) : (
           <div className="space-y-3">
-            {displayMatches.map((match) => (
-              <MatchCard key={match.id} match={match} />
+            {displayMatches.map((match, index) => (
+              <MatchCard key={match.id} match={match} index={index} />
             ))}
             {hasMoreMatches && (
               <div className="text-center pt-4">
