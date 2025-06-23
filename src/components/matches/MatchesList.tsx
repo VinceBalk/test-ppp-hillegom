@@ -36,9 +36,15 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
     return groups;
   }, {} as Record<string, Match[]>);
 
-  // Split courts into left and right columns - sort by court menu_order then name
-  const courtNames = Object.keys(matchesByCourt).sort((a, b) => {
-    // Try to get the court's menu_order for sorting
+  // Group courts by left/right based on menu_order
+  const leftCourts: string[] = [];
+  const rightCourts: string[] = [];
+
+  // Get all court names and sort them by menu_order
+  const courtNames = Object.keys(matchesByCourt);
+  
+  // Sort courts by menu_order
+  const sortedCourtNames = courtNames.sort((a, b) => {
     const courtA = filteredMatches.find(m => (m.court?.name || `Baan ${m.court_number}`) === a)?.court;
     const courtB = filteredMatches.find(m => (m.court?.name || `Baan ${m.court_number}`) === b)?.court;
     
@@ -51,14 +57,17 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
     
     return a.localeCompare(b);
   });
-  
-  const leftCourts = [];
-  const rightCourts = [];
-  
-  courtNames.forEach((courtName, index) => {
-    if (index % 2 === 0) {
+
+  // Distribute courts based on menu_order: odd numbers go left, even numbers go right
+  sortedCourtNames.forEach((courtName) => {
+    const court = filteredMatches.find(m => (m.court?.name || `Baan ${m.court_number}`) === courtName)?.court;
+    const menuOrder = court?.menu_order ?? 999;
+    
+    if (menuOrder % 2 === 1) {
+      // Odd menu_order goes to left column
       leftCourts.push(courtName);
     } else {
+      // Even menu_order goes to right column
       rightCourts.push(courtName);
     }
   });
@@ -96,12 +105,15 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left Column */}
+            {/* Left Column - Odd menu_order courts */}
             <div className="space-y-6">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold text-primary mb-4">Linker Groep</h3>
+              </div>
               {leftCourts.map((courtName) => (
                 <div key={courtName} className="space-y-4">
-                  <div className="p-3 bg-blue-100 border border-blue-200 rounded text-center">
-                    <div className="text-sm font-medium text-blue-800">
+                  <div className="p-3 bg-green-100 border border-green-200 rounded text-center">
+                    <div className="text-sm font-medium text-green-800">
                       {courtName}
                     </div>
                   </div>
@@ -118,12 +130,15 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
               ))}
             </div>
             
-            {/* Right Column */}
+            {/* Right Column - Even menu_order courts */}
             <div className="space-y-6">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold text-primary mb-4">Rechter Groep</h3>
+              </div>
               {rightCourts.map((courtName) => (
                 <div key={courtName} className="space-y-4">
-                  <div className="p-3 bg-blue-100 border border-blue-200 rounded text-center">
-                    <div className="text-sm font-medium text-blue-800">
+                  <div className="p-3 bg-purple-100 border border-purple-200 rounded text-center">
+                    <div className="text-sm font-medium text-purple-800">
                       {courtName}
                     </div>
                   </div>
