@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Match } from '@/hooks/useMatches';
+import { useCourts } from '@/hooks/useCourts';
 import MatchCard from './MatchCard';
 
 interface MatchesListProps {
@@ -15,6 +16,7 @@ interface MatchesListProps {
 
 export default function MatchesList({ matches, editMode, selectedTournamentId }: MatchesListProps) {
   const [selectedRound, setSelectedRound] = useState<string>('1');
+  const { courts } = useCourts();
 
   // Filter matches by selected round
   const filteredMatches = matches.filter(match => match.round_number === parseInt(selectedRound));
@@ -36,18 +38,46 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
     return groups;
   }, {} as Record<string, Match[]>);
 
-  // Split courts into left and right columns - sort court names in ascending order
-  const courtNames = Object.keys(matchesByCourt).sort((a, b) => a.localeCompare(b));
+  // Sort courts by the order they appear in the courts management system
+  // Active courts first, then by name if court is not found in management system
+  const sortedCourtNames = Object.keys(matchesByCourt).sort((a, b) => {
+    const courtA = courts.find(court => court.name === a);
+    const courtB = courts.find(court => court.name === b);
+    
+    // If both courts exist in management system, sort by their order (by name alphabetically for now)
+    if (courtA && courtB) {
+      return courtA.name.localeCompare(courtB.name);
+    }
+    
+    // If only one exists, prioritize the managed court
+    if (courtA && !courtB) return -1;
+    if (!courtA && courtB) return 1;
+    
+    // If neither exists in management, sort alphabetically
+    return a.localeCompare(b);
+  });
+
+  // Split courts into left and right columns
   const leftCourts = [];
   const rightCourts = [];
   
-  courtNames.forEach((courtName, index) => {
+  sortedCourtNames.forEach((courtName, index) => {
     if (index % 2 === 0) {
       leftCourts.push(courtName);
     } else {
       rightCourts.push(courtName);
     }
   });
+
+  // Get court styling from courts management
+  const getCourtStyling = (courtName: string) => {
+    const court = courts.find(c => c.name === courtName);
+    return {
+      backgroundColor: court?.background_color || '#e3f2fd',
+      borderColor: court?.background_color || '#2196f3',
+      logoUrl: court?.logo_url
+    };
+  };
 
   return (
     <Card>
@@ -84,46 +114,82 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Left Column */}
             <div className="space-y-6">
-              {leftCourts.map((courtName) => (
-                <div key={courtName} className="space-y-4">
-                  <div className="p-3 bg-blue-100 border border-blue-200 rounded text-center">
-                    <div className="text-sm font-medium text-blue-800">
-                      {courtName}
+              {leftCourts.map((courtName) => {
+                const styling = getCourtStyling(courtName);
+                return (
+                  <div key={courtName} className="space-y-4">
+                    <div 
+                      className="p-3 border rounded text-center"
+                      style={{ 
+                        backgroundColor: styling.backgroundColor,
+                        borderColor: styling.borderColor 
+                      }}
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        {styling.logoUrl && (
+                          <img 
+                            src={styling.logoUrl} 
+                            alt={`${courtName} logo`}
+                            className="w-6 h-6 object-contain"
+                          />
+                        )}
+                        <div className="text-sm font-medium" style={{ color: styling.borderColor }}>
+                          {courtName}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      {matchesByCourt[courtName].map((match, index) => (
+                        <MatchCard 
+                          key={match.id} 
+                          match={match} 
+                          matchNumberInCourtRound={index + 1}
+                        />
+                      ))}
                     </div>
                   </div>
-                  <div className="space-y-3">
-                    {matchesByCourt[courtName].map((match, index) => (
-                      <MatchCard 
-                        key={match.id} 
-                        match={match} 
-                        matchNumberInCourtRound={index + 1}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             
             {/* Right Column */}
             <div className="space-y-6">
-              {rightCourts.map((courtName) => (
-                <div key={courtName} className="space-y-4">
-                  <div className="p-3 bg-blue-100 border border-blue-200 rounded text-center">
-                    <div className="text-sm font-medium text-blue-800">
-                      {courtName}
+              {rightCourts.map((courtName) => {
+                const styling = getCourtStyling(courtName);
+                return (
+                  <div key={courtName} className="space-y-4">
+                    <div 
+                      className="p-3 border rounded text-center"
+                      style={{ 
+                        backgroundColor: styling.backgroundColor,
+                        borderColor: styling.borderColor 
+                      }}
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        {styling.logoUrl && (
+                          <img 
+                            src={styling.logoUrl} 
+                            alt={`${courtName} logo`}
+                            className="w-6 h-6 object-contain"
+                          />
+                        )}
+                        <div className="text-sm font-medium" style={{ color: styling.borderColor }}>
+                          {courtName}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      {matchesByCourt[courtName].map((match, index) => (
+                        <MatchCard 
+                          key={match.id} 
+                          match={match} 
+                          matchNumberInCourtRound={index + 1}
+                        />
+                      ))}
                     </div>
                   </div>
-                  <div className="space-y-3">
-                    {matchesByCourt[courtName].map((match, index) => (
-                      <MatchCard 
-                        key={match.id} 
-                        match={match} 
-                        matchNumberInCourtRound={index + 1}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
