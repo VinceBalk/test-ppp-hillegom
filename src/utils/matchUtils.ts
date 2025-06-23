@@ -1,4 +1,3 @@
-
 import { Match } from '@/hooks/useMatches';
 
 export interface GroupedMatches {
@@ -10,7 +9,8 @@ export function groupByCourt(matches: Match[]): GroupedMatches[] {
   const grouped: { [key: string]: Match[] } = {};
   
   matches.forEach((match) => {
-    const courtName = match.court?.name || match.court_number ? `Baan ${match.court_number}` : 'Onbekende baan';
+    // Prioritize court.name over court_number for better grouping
+    const courtName = match.court?.name || (match.court_number ? `Baan ${match.court_number}` : 'Onbekende baan');
     if (!grouped[courtName]) {
       grouped[courtName] = [];
     }
@@ -40,4 +40,21 @@ export function splitMatchesByPosition(matches: Match[]): { leftMatches: Match[]
   });
   
   return { leftMatches, rightMatches };
+}
+
+export function splitCourtsByPosition(courtGroups: GroupedMatches[]): { leftCourts: GroupedMatches[], rightCourts: GroupedMatches[] } {
+  const leftCourts: GroupedMatches[] = [];
+  const rightCourts: GroupedMatches[] = [];
+  
+  // Distribute courts evenly across left and right columns
+  // Keep entire courts together, don't split individual matches
+  courtGroups.forEach((courtGroup, index) => {
+    if (index % 2 === 0) {
+      leftCourts.push(courtGroup);
+    } else {
+      rightCourts.push(courtGroup);
+    }
+  });
+  
+  return { leftCourts, rightCourts };
 }
