@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, MapPin, Play } from 'lucide-react';
+import { Play } from 'lucide-react';
 import { Match } from '@/hooks/useMatches';
 import { getShortTeamName } from '@/utils/matchUtils';
 import MatchSimulator from './MatchSimulator';
@@ -46,7 +46,7 @@ export default function MatchCard({ match }: MatchCardProps) {
     return 'Spelers nog niet toegewezen';
   };
 
-  // Fix court name display - prioritize court.name over court_number
+  // Get court name for header
   const getCourtName = (match: Match) => {
     if (match.court?.name) {
       return match.court.name;
@@ -54,7 +54,7 @@ export default function MatchCard({ match }: MatchCardProps) {
     if (match.court_number) {
       return `Baan ${match.court_number}`;
     }
-    return 'Geen baan toegewezen';
+    return 'Onbekende baan';
   };
 
   if (showSimulator) {
@@ -69,58 +69,44 @@ export default function MatchCard({ match }: MatchCardProps) {
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base leading-tight">
-            {getPlayerNames(match)}
-          </CardTitle>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {getStatusBadge(match.status)}
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={() => setShowSimulator(true)}
-              className="text-blue-600 border-blue-600 hover:bg-blue-50"
-            >
-              <Play className="h-3 w-3 mr-1" />
-              Simuleren
-            </Button>
+        {/* Blue background row with court and match number */}
+        <div className="flex items-center justify-between mb-3 p-2 bg-blue-50 rounded">
+          <div className="text-sm font-medium text-blue-800">
+            {getCourtName(match)} - Wedstrijd {match.round_number}
           </div>
+          {getStatusBadge(match.status)}
         </div>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span>{match.tournament?.name || 'Onbekend toernooi'}</span>
-          <span>•</span>
-          <span>R{match.round_number}</span>
-          {match.created_at && (
-            <>
-              <span>•</span>
-              <span>{new Date(match.created_at).toLocaleDateString('nl-NL')}</span>
-            </>
-          )}
+        
+        {/* Player names - full width */}
+        <CardTitle className="text-base leading-tight">
+          {getPlayerNames(match)}
+        </CardTitle>
+        
+        {/* Tournament info row with Simuleren button */}
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center gap-3">
+            <span>{match.tournament?.name || 'Onbekend toernooi'}</span>
+            <span>•</span>
+            <span>Ronde {match.round_number}</span>
+            {match.created_at && (
+              <>
+                <span>•</span>
+                <span>{new Date(match.created_at).toLocaleDateString('nl-NL')}</span>
+              </>
+            )}
+          </div>
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={() => setShowSimulator(true)}
+            className="text-blue-600 border-blue-600 hover:bg-blue-50 ml-2"
+          >
+            <Play className="h-3 w-3 mr-1" />
+            Simuleren
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
-          {match.match_date && (
-            <>
-              <div className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {new Date(match.match_date).toLocaleDateString('nl-NL')}
-              </div>
-              <div className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {new Date(match.match_date).toLocaleTimeString('nl-NL', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}
-              </div>
-            </>
-          )}
-          <div className="flex items-center gap-1">
-            <MapPin className="h-3 w-3" />
-            {getCourtName(match)}
-          </div>
-        </div>
-        
         {match.notes && (
           <div className="text-xs text-blue-600 mb-3 p-2 bg-blue-50 rounded">
             {match.notes}
