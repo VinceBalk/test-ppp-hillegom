@@ -1,14 +1,14 @@
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent } from '@/components/ui/card';
 import { Match } from '@/hooks/useMatches';
 import { getShortTeamName } from '@/utils/matchUtils';
-import { Play, RotateCcw, Plus } from 'lucide-react';
 import SpecialsManager from './SpecialsManager';
+import MatchSimulatorHeader from './MatchSimulatorHeader';
+import MatchSimulatorStatus from './MatchSimulatorStatus';
+import MatchSimulatorScores from './MatchSimulatorScores';
+import MatchSimulatorNotes from './MatchSimulatorNotes';
+import MatchSimulatorActions from './MatchSimulatorActions';
 
 interface MatchSimulatorProps {
   match: Match;
@@ -25,7 +25,6 @@ export default function MatchSimulator({ match, onClose }: MatchSimulatorProps) 
   const [showSpecials, setShowSpecials] = useState(false);
 
   const is2v2 = !!(match.team1_player1 && match.team2_player1);
-  const is1v1 = !!(match.player1 && match.player2);
 
   const getPlayerNames = () => {
     if (is2v2) {
@@ -133,124 +132,35 @@ export default function MatchSimulator({ match, onClose }: MatchSimulatorProps) 
 
   return (
     <Card className="border-2 border-blue-200 bg-blue-50/50">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Play className="h-5 w-5 text-blue-600" />
-            Wedstrijd Simulator
-          </CardTitle>
-          <Button variant="outline" size="sm" onClick={onClose}>
-            Sluiten
-          </Button>
-        </div>
-        <div className="text-sm text-muted-foreground">
-          {team1Name} vs {team2Name}
-        </div>
-      </CardHeader>
+      <MatchSimulatorHeader match={match} onClose={onClose} />
       <CardContent className="space-y-4">
-        {/* Status */}
-        <div>
-          <Label>Status</Label>
-          <div className="flex gap-2 mt-1">
-            <Button
-              variant={status === 'scheduled' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStatus('scheduled')}
-            >
-              Gepland
-            </Button>
-            <Button
-              variant={status === 'in_progress' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStatus('in_progress')}
-            >
-              Bezig
-            </Button>
-            <Button
-              variant={status === 'completed' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStatus('completed')}
-            >
-              Voltooid
-            </Button>
-          </div>
-        </div>
+        <MatchSimulatorStatus 
+          status={status} 
+          onStatusChange={setStatus} 
+        />
 
-        {/* Scores - stacked layout with team names and scores side by side */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label className="flex-1">{team1Name}</Label>
-            <Input
-              type="number"
-              min="0"
-              max="8"
-              value={is2v2 ? team1Score : player1Score}
-              onChange={(e) => {
-                const value = parseInt(e.target.value) || 0;
-                if (is2v2) handleTeam1ScoreChange(value);
-                else handlePlayer1ScoreChange(value);
-              }}
-              className="w-16 ml-4"
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label className="flex-1">{team2Name}</Label>
-            <Input
-              type="number"
-              min="0"
-              max="8"
-              value={is2v2 ? team2Score : player2Score}
-              onChange={(e) => {
-                const value = parseInt(e.target.value) || 0;
-                if (is2v2) handleTeam2ScoreChange(value);
-                else handlePlayer2ScoreChange(value);
-              }}
-              className="w-16 ml-4"
-            />
-          </div>
-        </div>
+        <MatchSimulatorScores
+          match={match}
+          team1Score={team1Score}
+          team2Score={team2Score}
+          player1Score={player1Score}
+          player2Score={player2Score}
+          onTeam1ScoreChange={handleTeam1ScoreChange}
+          onTeam2ScoreChange={handleTeam2ScoreChange}
+          onPlayer1ScoreChange={handlePlayer1ScoreChange}
+          onPlayer2ScoreChange={handlePlayer2ScoreChange}
+        />
 
-        <div className="text-xs text-center text-muted-foreground bg-yellow-50 p-2 rounded">
-          Totaal moet altijd 8 zijn: {is2v2 ? (team1Score + team2Score) : (player1Score + player2Score)}/8
-        </div>
+        <MatchSimulatorNotes 
+          notes={notes} 
+          onNotesChange={setNotes} 
+        />
 
-        {/* Specials Button */}
-        <Button 
-          onClick={() => setShowSpecials(true)} 
-          variant="outline" 
-          className="w-full"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Specials Registreren
-        </Button>
-
-        {/* Notes */}
-        <div>
-          <Label>Opmerkingen</Label>
-          <Textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Bijzonderheden, opmerkingen..."
-            className="mt-1"
-            rows={3}
-          />
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2 pt-2">
-          <Button onClick={handleSimulate} className="flex-1">
-            <Play className="h-4 w-4 mr-2" />
-            Simuleren
-          </Button>
-          <Button onClick={handleReset} variant="outline">
-            <RotateCcw className="h-4 w-4 mr-2" />
-            Reset
-          </Button>
-        </div>
-
-        <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
-          💡 Dit is een simulator - data wordt niet opgeslagen in de database
-        </div>
+        <MatchSimulatorActions
+          onSimulate={handleSimulate}
+          onReset={handleReset}
+          onShowSpecials={() => setShowSpecials(true)}
+        />
       </CardContent>
     </Card>
   );
