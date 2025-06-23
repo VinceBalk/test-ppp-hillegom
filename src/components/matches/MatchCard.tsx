@@ -75,11 +75,9 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
           {getPlayerNames(match)}
         </CardTitle>
         
-        {/* Tournament info row with status badge and simulate button */}
+        {/* Tournament info row WITHOUT match number */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-3">
-            <span>Wedstrijd {matchNumberInCourtRound}</span>
-            <span>•</span>
             <span>{match.tournament?.name || 'Onbekend toernooi'}</span>
             <span>•</span>
             <span>Ronde {match.round_number}</span>
@@ -100,6 +98,13 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
         </div>
       </CardHeader>
       <CardContent className="pt-0">
+        {/* Blue bar with match number */}
+        <div className="mb-3 p-2 bg-blue-100 border border-blue-200 rounded text-center">
+          <div className="text-sm font-medium text-blue-800">
+            Wedstrijd {matchNumberInCourtRound}
+          </div>
+        </div>
+
         {match.notes && (
           <div className="text-xs text-blue-600 mb-3 p-2 bg-blue-50 rounded">
             {match.notes}
