@@ -1,6 +1,7 @@
+
 import { ScheduleMatch } from '@/types/schedule';
 import { Badge } from '@/components/ui/badge';
-import CourtMatchesCard from './CourtMatchesCard';
+import CourtScheduleTable from './CourtScheduleTable';
 
 interface ScheduleGroupSectionProps {
   title: string;
@@ -38,27 +39,33 @@ export default function ScheduleGroupSection({
 
   const courtGroups = groupMatchesByCourt(matches);
 
+  const handleEditMatch = (match: ScheduleMatch) => {
+    // For now, we'll just log the match - you can implement a modal or inline editing
+    console.log('Edit match:', match);
+  };
+
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold flex items-center gap-2">
-        {title}
-        <Badge variant="secondary">{matches.length} wedstrijden</Badge>
-      </h3>
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
+        <Badge variant="secondary" className="text-lg px-3 py-1">
+          {matches.length} wedstrijden
+        </Badge>
+      </div>
       
-      <div className="grid gap-4">
+      <div className="space-y-6">
         {Object.entries(courtGroups).map(([courtName, courtMatches]) => (
-          <CourtMatchesCard
+          <CourtScheduleTable
             key={courtName}
             courtName={courtName}
             matches={courtMatches}
-            tournamentId={tournamentId}
-            onUpdateMatch={onUpdateMatch}
+            onEditMatch={handleEditMatch}
           />
         ))}
         
         {Object.keys(courtGroups).length === 0 && (
-          <div className="text-center text-muted-foreground py-8 border rounded-lg bg-muted/30">
-            <p className="text-sm">Geen wedstrijden in {title.toLowerCase()}</p>
+          <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg bg-gray-50">
+            <p className="text-lg">Geen wedstrijden in {title.toLowerCase()}</p>
           </div>
         )}
       </div>
