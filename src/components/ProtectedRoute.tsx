@@ -1,3 +1,4 @@
+
 import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -61,5 +62,5 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   return <>{children}</>;
 }
 
-// Add default export for compatibility
+// Default export for compatibility
 export default ProtectedRoute;
