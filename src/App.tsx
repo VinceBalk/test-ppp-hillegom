@@ -1,10 +1,9 @@
-
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 // Pages
 import Index from '@/pages/Index';
