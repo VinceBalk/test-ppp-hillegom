@@ -89,7 +89,7 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
-        {/* Round badge and player names */}
+        {/* Round badge and action buttons */}
         <div className="flex items-start justify-between mb-2">
           <Badge variant="default" className="bg-blue-600 text-white">
             Ronde {match.round_number}
@@ -108,7 +108,7 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
               size="sm" 
               variant="outline"
               onClick={() => setShowSimulator(true)}
-              className="text-blue-600 border-blue-600 hover:bg-blue-50"
+              className="text-orange-600 border-orange-600 hover:bg-orange-50"
             >
               <Play className="h-3 w-3 mr-1" />
               Simuleren
@@ -116,7 +116,7 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
           </div>
         </div>
         
-        {/* Player names - full width */}
+        {/* Player names */}
         <CardTitle className="text-base leading-tight">
           {getPlayerNames(match)}
         </CardTitle>
@@ -135,15 +135,15 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        {/* Blue bar with court name and match number */}
-        <div className="mb-3 p-2 bg-blue-100 border border-blue-200 rounded text-center">
-          <div className="text-sm font-medium text-blue-800">
+        {/* Orange bar with court name and match number */}
+        <div className="mb-3 p-2 bg-orange-100 border border-orange-200 rounded text-center">
+          <div className="text-sm font-medium text-orange-800">
             Baan: {match.court?.name || (match.court_number ? `Baan ${match.court_number}` : 'Onbekende baan')} - Wedstrijd {matchNumberInCourtRound}
           </div>
         </div>
 
         {match.notes && (
-          <div className="text-xs text-blue-600 mb-3 p-2 bg-blue-50 rounded">
+          <div className="text-xs text-orange-600 mb-3 p-2 bg-orange-50 rounded">
             {match.notes}
           </div>
         )}

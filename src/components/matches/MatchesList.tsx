@@ -14,22 +14,10 @@ interface MatchesListProps {
 }
 
 export default function MatchesList({ matches, editMode, selectedTournamentId }: MatchesListProps) {
-  const [selectedRound, setSelectedRound] = useState<string>('all');
+  const [selectedRound, setSelectedRound] = useState<string>('1');
 
-  // Filter matches by round if a specific round is selected
-  const filteredMatches = selectedRound === 'all' 
-    ? matches 
-    : matches.filter(match => match.round_number === parseInt(selectedRound));
-
-  // Group matches by round
-  const matchesByRound = filteredMatches.reduce((groups, match) => {
-    const round = match.round_number;
-    if (!groups[round]) {
-      groups[round] = [];
-    }
-    groups[round].push(match);
-    return groups;
-  }, {} as Record<number, Match[]>);
+  // Filter matches by selected round
+  const filteredMatches = matches.filter(match => match.round_number === parseInt(selectedRound));
 
   // Get unique rounds from all matches
   const availableRounds = [...new Set(matches.map(match => match.round_number))].sort();
@@ -38,19 +26,36 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
     return null;
   }
 
+  // Split matches into left and right columns for better layout
+  const splitMatches = (matches: Match[]) => {
+    const leftColumn = [];
+    const rightColumn = [];
+    
+    matches.forEach((match, index) => {
+      if (index % 2 === 0) {
+        leftColumn.push(match);
+      } else {
+        rightColumn.push(match);
+      }
+    });
+    
+    return { leftColumn, rightColumn };
+  };
+
+  const { leftColumn, rightColumn } = splitMatches(filteredMatches);
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Wedstrijden Overzicht</CardTitle>
           <div className="flex items-center gap-2">
-            <Label className="text-sm">Filter op ronde:</Label>
+            <Label className="text-sm">Ronde:</Label>
             <Select value={selectedRound} onValueChange={setSelectedRound}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Alle rondes" />
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Kies ronde" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Alle rondes</SelectItem>
                 {availableRounds.map(round => (
                   <SelectItem key={round} value={round.toString()}>
                     Ronde {round}
@@ -61,54 +66,40 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
           </div>
         </div>
         <p className="text-sm text-muted-foreground">
-          {filteredMatches.length} wedstrijd{filteredMatches.length !== 1 ? 'en' : ''} gevonden
-          {selectedRound !== 'all' && ` in ronde ${selectedRound}`}
+          {filteredMatches.length} wedstrijd{filteredMatches.length !== 1 ? 'en' : ''} in ronde {selectedRound}
         </p>
       </CardHeader>
       
-      <CardContent className="space-y-6">
-        {Object.keys(matchesByRound)
-          .sort((a, b) => parseInt(a) - parseInt(b))
-          .map(roundKey => {
-            const round = parseInt(roundKey);
-            const roundMatches = matchesByRound[round];
+      <CardContent>
+        {filteredMatches.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8">
+            <p>Geen wedstrijden gevonden voor ronde {selectedRound}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Left Column */}
+            <div className="space-y-4">
+              {leftColumn.map((match, index) => (
+                <MatchCard 
+                  key={match.id} 
+                  match={match} 
+                  matchNumberInCourtRound={index * 2 + 1}
+                />
+              ))}
+            </div>
             
-            // Group matches by court for better organization
-            const matchesByCourtInRound = roundMatches.reduce((courtGroups, match) => {
-              const courtKey = match.court?.name || match.court_number || 'Geen baan';
-              if (!courtGroups[courtKey]) {
-                courtGroups[courtKey] = [];
-              }
-              courtGroups[courtKey].push(match);
-              return courtGroups;
-            }, {} as Record<string, Match[]>);
-
-            return (
-              <div key={round} className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-lg">Ronde {round}</h3>
-                  <Badge variant="outline">{roundMatches.length} wedstrijd{roundMatches.length !== 1 ? 'en' : ''}</Badge>
-                </div>
-                
-                <div className="space-y-4">
-                  {Object.entries(matchesByCourtInRound).map(([courtName, courtMatches]) => (
-                    <div key={courtName} className="space-y-2">
-                      <h4 className="font-medium text-muted-foreground">{courtName}</h4>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        {courtMatches.map((match, index) => (
-                          <MatchCard 
-                            key={match.id} 
-                            match={match} 
-                            matchNumberInCourtRound={index + 1}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+            {/* Right Column */}
+            <div className="space-y-4">
+              {rightColumn.map((match, index) => (
+                <MatchCard 
+                  key={match.id} 
+                  match={match} 
+                  matchNumberInCourtRound={index * 2 + 2}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
