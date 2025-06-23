@@ -27,6 +27,7 @@ export interface Match {
   updated_at?: string;
   tournament?: {
     name: string;
+    start_date?: string;
   };
   player1?: {
     name: string;
