@@ -1,13 +1,31 @@
-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface TournamentPlayer {
   id: string;
   player: {
+    id: string; // ✅ toegevoegd voor doorklikken
     name: string;
     ranking_score?: number;
   };
@@ -22,13 +40,13 @@ interface PlayerGroupTableProps {
   emptyMessage: string;
 }
 
-export default function PlayerGroupTable({ 
-  title, 
-  players, 
-  groupName, 
-  onGroupChange, 
-  onRemovePlayer, 
-  emptyMessage 
+export default function PlayerGroupTable({
+  title,
+  players,
+  groupName,
+  onGroupChange,
+  onRemovePlayer,
+  emptyMessage,
 }: PlayerGroupTableProps) {
   const oppositeGroup = groupName === 'left' ? 'right' : 'left';
   const oppositeGroupLabel = groupName === 'left' ? 'Rechts' : 'Links';
@@ -43,54 +61,55 @@ export default function PlayerGroupTable({
       </CardHeader>
       <CardContent>
         {players.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            {emptyMessage}
-          </div>
+          <div className="text-gray-500 text-sm">{emptyMessage}</div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Naam</TableHead>
                 <TableHead>Ranking</TableHead>
-                <TableHead>Acties</TableHead>
+                <TableHead className="text-right">Acties</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {players.map((tournamentPlayer) => (
-                <TableRow key={tournamentPlayer.id}>
+              {players.map((player) => (
+                <TableRow key={player.id}>
                   <TableCell className="font-medium">
-                    {tournamentPlayer.player.name}
+                    <Link
+                      to={`/players/${player.player.id}`}
+                      className="text-blue-600 hover:text-orange-600 hover:underline transition-colors"
+                    >
+                      {player.player.name}
+                    </Link>
                   </TableCell>
-                  <TableCell>{tournamentPlayer.player.ranking_score || 0}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
+                  <TableCell>{player.player.ranking_score ?? '-'}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => onGroupChange(tournamentPlayer.id, oppositeGroup)}
-                        className="text-xs"
+                        onClick={() => onGroupChange(player.id, oppositeGroup)}
                       >
                         {moveButtonLabel}
                       </Button>
+
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm">
+                          <Button variant="destructive" size="sm">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Speler verwijderen</AlertDialogTitle>
+                            <AlertDialogTitle>Speler verwijderen?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Weet je zeker dat je {tournamentPlayer.player.name} wilt verwijderen uit dit toernooi?
+                              Weet je zeker dat je deze speler uit groep {groupName} wilt verwijderen?
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={() => onRemovePlayer(tournamentPlayer.id)}
-                            >
-                              Verwijderen
+                            <AlertDialogCancel>Annuleer</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => onRemovePlayer(player.id)}>
+                              Verwijder
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
