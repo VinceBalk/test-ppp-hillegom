@@ -1,12 +1,14 @@
 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Tournament {
   id: string;
   name: string;
-  status?: string;
+  status: string;
+  start_date: string;
+  end_date: string;
 }
 
 interface MatchesFilterProps {
@@ -25,27 +27,44 @@ export default function MatchesFilter({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Filter op Toernooi</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Filter Wedstrijden</CardTitle>
+          {selectedTournament && (
+            <Badge variant="outline">{selectedTournament.status}</Badge>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center gap-4">
-          <Select value={selectedTournamentId} onValueChange={onTournamentChange}>
-            <SelectTrigger className="w-[300px]">
-              <SelectValue placeholder="Selecteer een toernooi..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Alle toernooien</SelectItem>
-              {tournaments.map((tournament) => (
-                <SelectItem key={tournament.id} value={tournament.id}>
-                  {tournament.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              Selecteer Toernooi
+            </label>
+            <Select value={selectedTournamentId} onValueChange={onTournamentChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Kies een toernooi..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Alle toernooien</SelectItem>
+                {tournaments.map((tournament) => (
+                  <SelectItem key={tournament.id} value={tournament.id}>
+                    <div className="flex items-center justify-between w-full">
+                      <span>{tournament.name}</span>
+                      <Badge variant="outline" className="ml-2">
+                        {tournament.status}
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
           {selectedTournament && (
-            <Badge variant="outline">
-              {selectedTournament.name} - Status: {selectedTournament.status || 'Onbekend'}
-            </Badge>
+            <div className="text-sm text-muted-foreground">
+              <div>Status: {selectedTournament.status}</div>
+              <div>Periode: {new Date(selectedTournament.start_date).toLocaleDateString('nl-NL')} - {new Date(selectedTournament.end_date).toLocaleDateString('nl-NL')}</div>
+            </div>
           )}
         </div>
       </CardContent>
