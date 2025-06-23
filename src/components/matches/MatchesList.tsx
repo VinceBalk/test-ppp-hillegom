@@ -36,8 +36,8 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
     return groups;
   }, {} as Record<string, Match[]>);
 
-  // Split courts into left and right columns
-  const courtNames = Object.keys(matchesByCourt);
+  // Split courts into left and right columns - sort court names in ascending order
+  const courtNames = Object.keys(matchesByCourt).sort((a, b) => a.localeCompare(b));
   const leftCourts = [];
   const rightCourts = [];
   
