@@ -135,13 +135,6 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        {/* Orange bar with court name and match number */}
-        <div className="mb-3 p-2 bg-orange-100 border border-orange-200 rounded text-center">
-          <div className="text-sm font-medium text-orange-800">
-            Baan: {match.court?.name || (match.court_number ? `Baan ${match.court_number}` : 'Onbekende baan')} - Wedstrijd {matchNumberInCourtRound}
-          </div>
-        </div>
-
         {match.notes && (
           <div className="text-xs text-orange-600 mb-3 p-2 bg-orange-50 rounded">
             {match.notes}

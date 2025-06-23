@@ -26,23 +26,28 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
     return null;
   }
 
-  // Split matches into left and right columns for better layout
-  const splitMatches = (matches: Match[]) => {
-    const leftColumn = [];
-    const rightColumn = [];
-    
-    matches.forEach((match, index) => {
-      if (index % 2 === 0) {
-        leftColumn.push(match);
-      } else {
-        rightColumn.push(match);
-      }
-    });
-    
-    return { leftColumn, rightColumn };
-  };
+  // Group matches by court
+  const matchesByCourt = filteredMatches.reduce((groups, match) => {
+    const courtKey = match.court?.name || (match.court_number ? `Baan ${match.court_number}` : 'Onbekende baan');
+    if (!groups[courtKey]) {
+      groups[courtKey] = [];
+    }
+    groups[courtKey].push(match);
+    return groups;
+  }, {} as Record<string, Match[]>);
 
-  const { leftColumn, rightColumn } = splitMatches(filteredMatches);
+  // Split courts into left and right columns
+  const courtNames = Object.keys(matchesByCourt);
+  const leftCourts = [];
+  const rightCourts = [];
+  
+  courtNames.forEach((courtName, index) => {
+    if (index % 2 === 0) {
+      leftCourts.push(courtName);
+    } else {
+      rightCourts.push(courtName);
+    }
+  });
 
   return (
     <Card>
@@ -76,26 +81,48 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
             <p>Geen wedstrijden gevonden voor ronde {selectedRound}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Left Column */}
-            <div className="space-y-4">
-              {leftColumn.map((match, index) => (
-                <MatchCard 
-                  key={match.id} 
-                  match={match} 
-                  matchNumberInCourtRound={index * 2 + 1}
-                />
+            <div className="space-y-6">
+              {leftCourts.map((courtName) => (
+                <div key={courtName} className="space-y-4">
+                  <div className="p-3 bg-blue-100 border border-blue-200 rounded text-center">
+                    <div className="text-sm font-medium text-blue-800">
+                      {courtName}
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {matchesByCourt[courtName].map((match, index) => (
+                      <MatchCard 
+                        key={match.id} 
+                        match={match} 
+                        matchNumberInCourtRound={index + 1}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
             
             {/* Right Column */}
-            <div className="space-y-4">
-              {rightColumn.map((match, index) => (
-                <MatchCard 
-                  key={match.id} 
-                  match={match} 
-                  matchNumberInCourtRound={index * 2 + 2}
-                />
+            <div className="space-y-6">
+              {rightCourts.map((courtName) => (
+                <div key={courtName} className="space-y-4">
+                  <div className="p-3 bg-blue-100 border border-blue-200 rounded text-center">
+                    <div className="text-sm font-medium text-blue-800">
+                      {courtName}
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {matchesByCourt[courtName].map((match, index) => (
+                      <MatchCard 
+                        key={match.id} 
+                        match={match} 
+                        matchNumberInCourtRound={index + 1}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
