@@ -1,4 +1,3 @@
-
 import { Match } from '@/hooks/useMatches';
 
 export interface GroupedMatches {
@@ -59,25 +58,27 @@ export function splitCourtsByPosition(courtGroups: GroupedMatches[]): { leftCour
   return { leftCourts, rightCourts };
 }
 
-// Helper functie om namen in te korten
-export function shortenPlayerName(name: string): string {
+// Helper functie om namen proper te formatteren (alleen voor- en achternaam met hoofdletter)
+export function formatPlayerName(name: string): string {
   if (!name) return '';
   
-  const parts = name.split(' ');
-  if (parts.length === 1) return name;
-  
-  // Eerste naam volledig, rest alleen eerste letter
-  const firstName = parts[0];
-  const initials = parts.slice(1).map(part => part.charAt(0).toUpperCase()).join('.');
-  
-  return `${firstName} ${initials}`;
+  return name
+    .toLowerCase()
+    .split(' ')
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }
 
-// Helper functie voor team namen
+// Helper functie voor team namen - nu met volledige namen
 export function getShortTeamName(player1?: { name: string }, player2?: { name: string }): string {
   if (!player1) return 'Onbekend';
   
-  if (!player2) return shortenPlayerName(player1.name);
+  if (!player2) return formatPlayerName(player1.name);
   
-  return `${shortenPlayerName(player1.name)} & ${shortenPlayerName(player2.name)}`;
+  return `${formatPlayerName(player1.name)} & ${formatPlayerName(player2.name)}`;
+}
+
+// Deprecated functions - keeping for backward compatibility
+export function shortenPlayerName(name: string): string {
+  return formatPlayerName(name);
 }

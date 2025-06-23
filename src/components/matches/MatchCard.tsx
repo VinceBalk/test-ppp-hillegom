@@ -49,17 +49,6 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
     return 'Spelers nog niet toegewezen';
   };
 
-  const getTournamentDate = () => {
-    // Use tournament start_date if available, otherwise fall back to created_at
-    if (match.tournament?.start_date) {
-      return new Date(match.tournament.start_date).toLocaleDateString('nl-NL');
-    }
-    if (match.created_at) {
-      return new Date(match.created_at).toLocaleDateString('nl-NL');
-    }
-    return 'Geen datum';
-  };
-
   if (showSimulator) {
     return (
       <MatchSimulator 
@@ -89,11 +78,8 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
-        {/* Round badge and action buttons */}
-        <div className="flex items-start justify-between mb-2">
-          <Badge variant="default" className="bg-blue-600 text-white">
-            Ronde {match.round_number}
-          </Badge>
+        {/* Action buttons only */}
+        <div className="flex items-start justify-end mb-2">
           <div className="flex gap-1">
             <Button 
               size="sm" 
@@ -120,19 +106,6 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
         <CardTitle className="text-base leading-tight">
           {getPlayerNames(match)}
         </CardTitle>
-        
-        {/* Tournament info row */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center gap-3">
-            <span>{match.tournament?.name || 'Onbekend toernooi'}</span>
-            <span>•</span>
-            <span>Wedstrijd {matchNumberInCourtRound}</span>
-            <span>•</span>
-            <span>{getTournamentDate()}</span>
-            <span>•</span>
-            {getStatusBadge(match.status)}
-          </div>
-        </div>
       </CardHeader>
       <CardContent className="pt-0">
         {match.notes && (
