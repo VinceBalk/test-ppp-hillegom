@@ -2,8 +2,6 @@
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
 import { Match } from '@/hooks/useMatches';
 import MatchCard from './MatchCard';
 
@@ -70,21 +68,6 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Wedstrijden Overzicht</CardTitle>
-          <div className="flex items-center gap-2">
-            <Label className="text-sm">Ronde:</Label>
-            <Select value={selectedRound} onValueChange={setSelectedRound}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Kies ronde" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableRounds.map(round => (
-                  <SelectItem key={round} value={round.toString()}>
-                    Ronde {round}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
         <p className="text-sm text-muted-foreground">
           {filteredMatches.length} wedstrijd{filteredMatches.length !== 1 ? 'en' : ''} in ronde {selectedRound}
@@ -113,7 +96,7 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
                     }}
                   >
                     <div className="text-sm font-medium text-black">
-                      {court.name}
+                      Baan: {court.name} - Ronde {selectedRound}
                     </div>
                   </div>
                   <div className="space-y-3">
@@ -144,7 +127,7 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
                     }}
                   >
                     <div className="text-sm font-medium text-black">
-                      {court.name}
+                      Baan: {court.name} - Ronde {selectedRound}
                     </div>
                   </div>
                   <div className="space-y-3">
