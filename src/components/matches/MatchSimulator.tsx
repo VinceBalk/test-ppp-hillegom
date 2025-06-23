@@ -176,10 +176,10 @@ export default function MatchSimulator({ match, onClose }: MatchSimulatorProps) 
           </div>
         </div>
 
-        {/* Scores */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label>{team1Name}</Label>
+        {/* Scores - stacked layout with team names and scores side by side */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label className="flex-1">{team1Name}</Label>
             <Input
               type="number"
               min="0"
@@ -190,11 +190,11 @@ export default function MatchSimulator({ match, onClose }: MatchSimulatorProps) 
                 if (is2v2) handleTeam1ScoreChange(value);
                 else handlePlayer1ScoreChange(value);
               }}
-              className="mt-1"
+              className="w-16 ml-4"
             />
           </div>
-          <div>
-            <Label>{team2Name}</Label>
+          <div className="flex items-center justify-between">
+            <Label className="flex-1">{team2Name}</Label>
             <Input
               type="number"
               min="0"
@@ -205,7 +205,7 @@ export default function MatchSimulator({ match, onClose }: MatchSimulatorProps) 
                 if (is2v2) handleTeam2ScoreChange(value);
                 else handlePlayer2ScoreChange(value);
               }}
-              className="mt-1"
+              className="w-16 ml-4"
             />
           </div>
         </div>
