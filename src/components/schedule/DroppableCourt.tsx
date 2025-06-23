@@ -3,7 +3,7 @@ import React from 'react';
 import { useDrop } from 'react-dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ScheduleMatch } from '@/hooks/useSchedulePreview';
+import { ScheduleMatch } from '@/types/schedule';
 import DraggableMatch from './DraggableMatch';
 
 interface DroppableCourtProps {

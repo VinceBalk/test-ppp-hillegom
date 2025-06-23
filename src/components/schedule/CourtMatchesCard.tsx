@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ScheduleMatch } from '@/hooks/useSchedulePreview';
+import { ScheduleMatch } from '@/types/schedule';
 import MatchEditor from './MatchEditor';
 
 interface CourtMatchesCardProps {

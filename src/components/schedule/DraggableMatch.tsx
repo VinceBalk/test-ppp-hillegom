@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { useDrag } from 'react-dnd';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { GripVertical } from 'lucide-react';
-import { ScheduleMatch } from '@/hooks/useSchedulePreview';
+import { ScheduleMatch } from '@/types/schedule';
 
 interface DraggableMatchProps {
   match: ScheduleMatch;

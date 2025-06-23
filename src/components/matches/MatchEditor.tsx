@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { ScheduleMatch } from '@/hooks/useSchedulePreview';
+import { ScheduleMatch } from '@/types/schedule';
 import { useTournamentPlayers } from '@/hooks/useTournamentPlayers';
 import { useCourts } from '@/hooks/useCourts';
 import { useIndividualMatchSaveMutation } from '@/hooks/useIndividualMatchSaveMutation';
