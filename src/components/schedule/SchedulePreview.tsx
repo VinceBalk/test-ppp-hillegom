@@ -1,6 +1,6 @@
 
 import { Card, CardContent } from '@/components/ui/card';
-import { SchedulePreview as SchedulePreviewType } from '@/hooks/useSchedulePreview';
+import { SchedulePreview as SchedulePreviewType } from '@/types/schedule';
 import SchedulePreviewHeader from './SchedulePreviewHeader';
 import SchedulePreviewActions from './SchedulePreviewActions';
 import ScheduleGroupSection from './ScheduleGroupSection';

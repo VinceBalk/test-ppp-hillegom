@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Check, X } from 'lucide-react';
-import { ScheduleMatch } from '@/hooks/useSchedulePreview';
+import { ScheduleMatch } from '@/types/schedule';
 import CourtSelector from './CourtSelector';
 import TeamSelector from './TeamSelector';
 import RoundInput from './RoundInput';

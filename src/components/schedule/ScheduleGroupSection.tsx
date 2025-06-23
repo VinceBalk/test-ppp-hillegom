@@ -1,5 +1,5 @@
 
-import { ScheduleMatch } from '@/hooks/useSchedulePreview';
+import { ScheduleMatch } from '@/types/schedule';
 import DroppableCourt from './DroppableCourt';
 
 interface ScheduleGroupSectionProps {

@@ -1,7 +1,6 @@
-
 import { Button } from '@/components/ui/button';
 import { Edit } from 'lucide-react';
-import { ScheduleMatch } from '@/hooks/useSchedulePreview';
+import { ScheduleMatch } from '@/types/schedule';
 
 interface MatchEditorViewProps {
   match: ScheduleMatch;
