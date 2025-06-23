@@ -18,6 +18,7 @@ export default function Courts() {
     name: '',
     background_color: '#ffffff',
     logo_url: '',
+    menu_order: 0,
     is_active: true
   });
 
@@ -36,6 +37,7 @@ export default function Courts() {
       name: '',
       background_color: '#ffffff',
       logo_url: '',
+      menu_order: 0,
       is_active: true
     });
   };
@@ -46,6 +48,7 @@ export default function Courts() {
       name: court.name,
       background_color: court.background_color || '#ffffff',
       logo_url: court.logo_url || '',
+      menu_order: court.menu_order || 0,
       is_active: court.is_active
     });
     setDialogOpen(true);
@@ -104,6 +107,17 @@ export default function Courts() {
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="menu_order">Menu volgorde</Label>
+                <Input
+                  id="menu_order"
+                  type="number"
+                  value={formData.menu_order}
+                  onChange={(e) => setFormData(prev => ({ ...prev, menu_order: parseInt(e.target.value) || 0 }))}
+                  placeholder="Volgorde nummer"
+                  min="0"
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="background_color">Achtergrondkleur</Label>
                 <Input
                   id="background_color"
@@ -149,12 +163,17 @@ export default function Courts() {
               <div className="flex justify-between items-start">
                 <div>
                   <CardTitle>{court.name}</CardTitle>
-                  <CardDescription>
-                    {court.is_active ? (
-                      <Badge variant="default">Actief</Badge>
-                    ) : (
-                      <Badge variant="secondary">Inactief</Badge>
-                    )}
+                  <CardDescription className="space-y-1">
+                    <div>
+                      {court.is_active ? (
+                        <Badge variant="default">Actief</Badge>
+                      ) : (
+                        <Badge variant="secondary">Inactief</Badge>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Volgorde: {court.menu_order}
+                    </div>
                   </CardDescription>
                 </div>
                 <div className="flex space-x-1">

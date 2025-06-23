@@ -9,6 +9,7 @@ interface Court {
   background_color?: string;
   logo_url?: string;
   is_active: boolean;
+  menu_order: number;
   created_at: string;
   updated_at: string;
 }
@@ -23,6 +24,7 @@ export function useCourts() {
       const { data, error } = await supabase
         .from('courts')
         .select('*')
+        .order('menu_order', { ascending: true })
         .order('name', { ascending: true });
 
       if (error) {
@@ -66,7 +68,7 @@ export function useCourts() {
         return null;
       }
 
-      setCourts(prev => [...prev, data]);
+      setCourts(prev => [...prev, data].sort((a, b) => a.menu_order - b.menu_order || a.name.localeCompare(b.name)));
       toast({
         title: "Succes",
         description: "Baan succesvol aangemaakt",
@@ -102,7 +104,7 @@ export function useCourts() {
         return null;
       }
 
-      setCourts(prev => prev.map(court => court.id === id ? data : court));
+      setCourts(prev => prev.map(court => court.id === id ? data : court).sort((a, b) => a.menu_order - b.menu_order || a.name.localeCompare(b.name)));
       toast({
         title: "Succes",
         description: "Baan succesvol bijgewerkt",

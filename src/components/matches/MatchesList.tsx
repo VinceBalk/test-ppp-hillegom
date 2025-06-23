@@ -36,8 +36,22 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
     return groups;
   }, {} as Record<string, Match[]>);
 
-  // Split courts into left and right columns - sort court names in ascending order
-  const courtNames = Object.keys(matchesByCourt).sort((a, b) => a.localeCompare(b));
+  // Split courts into left and right columns - sort by court menu_order then name
+  const courtNames = Object.keys(matchesByCourt).sort((a, b) => {
+    // Try to get the court's menu_order for sorting
+    const courtA = filteredMatches.find(m => (m.court?.name || `Baan ${m.court_number}`) === a)?.court;
+    const courtB = filteredMatches.find(m => (m.court?.name || `Baan ${m.court_number}`) === b)?.court;
+    
+    const orderA = courtA?.menu_order ?? 999;
+    const orderB = courtB?.menu_order ?? 999;
+    
+    if (orderA !== orderB) {
+      return orderA - orderB;
+    }
+    
+    return a.localeCompare(b);
+  });
+  
   const leftCourts = [];
   const rightCourts = [];
   
