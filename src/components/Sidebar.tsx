@@ -1,118 +1,101 @@
-
+import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import { 
-  Calendar,
-  Users,
-  Trophy,
-  BarChart3,
-  Settings,
-  LogOut,
-  User,
-  FileText,
-  Target,
-  UserCheck,
-  Layout
+  Home, 
+  Users, 
+  Trophy, 
+  Calendar, 
+  Target, 
+  Award, 
+  Settings, 
+  UserCog,
+  User
 } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: BarChart3, roles: ['beheerder', 'organisator', 'speler'] },
-  { name: 'Toernooien', href: '/tournaments', icon: Trophy, roles: ['beheerder', 'organisator'] },
-  { name: 'Spelers', href: '/players', icon: Users, roles: ['beheerder', 'organisator'] },
-  { name: 'Wedstrijden', href: '/matches', icon: Calendar, roles: ['beheerder', 'organisator', 'speler'] },
-  { name: 'Schema', href: '/schedule', icon: Layout, roles: ['beheerder', 'organisator'] },
-  { name: 'Banen', href: '/courts', icon: Target, roles: ['beheerder', 'organisator'] },
-  { name: 'Specials', href: '/specials', icon: FileText, roles: ['beheerder', 'organisator'] },
-  { name: 'Scores', href: '/scores', icon: BarChart3, roles: ['beheerder', 'organisator'] },
-  { name: 'Gebruikers', href: '/users', icon: UserCheck, roles: ['beheerder'] },
-  { name: 'Instellingen', href: '/settings', icon: Settings, roles: ['beheerder'] },
+const navigationItems = [
+  { name: 'Dashboard', href: '/', icon: Home, roles: ['speler', 'organisator', 'beheerder'] },
+  { name: 'Spelers', href: '/players', icon: Users, roles: ['organisator', 'beheerder'] },
+  { name: 'Toernooien', href: '/tournaments', icon: Trophy, roles: ['organisator', 'beheerder'] },
+  { name: 'Wedstrijden', href: '/matches', icon: Target, roles: ['organisator', 'beheerder'] },
+  { name: 'Schema', href: '/schedule', icon: Calendar, roles: ['speler', 'organisator', 'beheerder'] },
+  { name: 'Scores', href: '/scores', icon: Award, roles: ['speler', 'organisator', 'beheerder'] },
+  { name: 'Specials', href: '/specials', icon: Award, roles: ['organisator', 'beheerder'] },
+  { name: 'Profiel', href: '/profile', icon: User, roles: ['speler', 'organisator', 'beheerder'] },
+  { name: 'Instellingen', href: '/settings', icon: Settings, roles: ['organisator', 'beheerder'] },
+  { name: 'Gebruikers', href: '/users', icon: UserCog, roles: ['beheerder'] },
 ];
 
 export function Sidebar() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { user, hasRole } = useAuth();
-  const { toast } = useToast();
+  const { user, hasRole, isSuperAdmin, profile, adminUser } = useAuth();
 
-  const handleSignOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      toast({
-        title: "Succesvol uitgelogd",
-        description: "Je bent succesvol uitgelogd.",
-      });
-      
-      navigate('/login');
-    } catch (error) {
-      console.error('Error signing out:', error);
-      toast({
-        title: "Fout bij uitloggen",
-        description: "Er is een fout opgetreden bij het uitloggen.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Filter navigation items based on user role
-  const filteredNavigation = navigation.filter(item => {
-    return item.roles.some(role => hasRole(role));
+  console.log('Sidebar render - Auth state:', {
+    user: user?.email,
+    profile: profile?.role,
+    adminUser: adminUser?.is_super_admin,
+    isSuperAdmin: isSuperAdmin()
   });
 
+  const filteredItems = navigationItems.filter(item => {
+    const isSuper = isSuperAdmin();
+    const hasRequiredRole = item.roles.some(role => hasRole(role));
+    const shouldShow = isSuper || hasRequiredRole;
+    
+    console.log(`Navigation item "${item.name}": required roles=[${item.roles.join(', ')}], hasRequiredRole=${hasRequiredRole}, isSuper=${isSuper}, shouldShow=${shouldShow}`);
+    
+    return shouldShow;
+  });
+
+  console.log('Filtered navigation items:', filteredItems.map(item => item.name));
+
   return (
-    <div className="flex h-full w-64 flex-col bg-white border-r border-gray-200">
-      <div className="flex flex-col flex-1 min-h-0">
-        <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-          <div className="flex items-center flex-shrink-0 px-4">
-            <Trophy className="h-8 w-8 text-primary" />
-            <span className="ml-2 text-xl font-bold text-gray-900">PPP Hillegom</span>
-          </div>
-          <nav className="mt-8 flex-1 px-2 space-y-1">
-            {filteredNavigation.map((item) => {
-              const isActive = location.pathname === item.href;
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={cn(
-                    isActive
-                      ? 'bg-primary text-white'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
-                    'group flex items-center px-2 py-2 text-sm font-medium rounded-md'
-                  )}
-                >
-                  <item.icon
-                    className={cn(
-                      isActive ? 'text-white' : 'text-gray-400 group-hover:text-gray-500',
-                      'mr-3 flex-shrink-0 h-6 w-6'
-                    )}
-                  />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </nav>
+    <div className="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-border">
+      <div className="flex h-full flex-col">
+        {/* Logo */}
+        <div className="flex h-16 items-center px-6 border-b border-border">
+          <h1 className="text-2xl font-bold gradient-primary bg-clip-text text-transparent">
+            PPP Hillegom
+          </h1>
         </div>
-        <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
-          <div className="flex items-center w-full">
-            <div className="flex-shrink-0">
-              <User className="h-8 w-8 text-gray-400" />
+
+        {/* Navigation */}
+        <nav className="flex-1 px-4 py-6 space-y-2">
+          {filteredItems.map((item) => (
+            <NavLink
+              key={item.name}
+              to={item.href}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200',
+                  isActive
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-foreground hover:bg-accent/50'
+                )
+              }
+            >
+              <item.icon className="h-5 w-5" />
+              {item.name}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* User Info */}
+        <div className="border-t border-border p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <span className="text-sm font-medium text-primary">
+                {user?.email?.charAt(0).toUpperCase()}
+              </span>
             </div>
-            <div className="ml-3 flex-1">
-              <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">
                 {user?.email}
               </p>
+              <p className="text-xs text-muted-foreground capitalize">
+                {profile?.role || 'Geen rol'}
+                {adminUser?.is_super_admin && ' (Super Admin)'}
+              </p>
             </div>
-            <button
-              onClick={handleSignOut}
-              className="ml-3 flex-shrink-0 p-1 text-gray-400 hover:text-gray-500"
-            >
-              <LogOut className="h-5 w-5" />
-            </button>
           </div>
         </div>
       </div>

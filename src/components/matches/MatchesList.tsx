@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Match } from '@/hooks/useMatches';
-import { useCourts } from '@/hooks/useCourts';
 import MatchCard from './MatchCard';
 
 interface MatchesListProps {
@@ -16,7 +15,6 @@ interface MatchesListProps {
 
 export default function MatchesList({ matches, editMode, selectedTournamentId }: MatchesListProps) {
   const [selectedRound, setSelectedRound] = useState<string>('1');
-  const { courts } = useCourts();
 
   // Filter matches by selected round
   const filteredMatches = matches.filter(match => match.round_number === parseInt(selectedRound));
@@ -38,29 +36,12 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
     return groups;
   }, {} as Record<string, Match[]>);
 
-  // Sort courts by the order they appear in the courts management system
-  const sortedCourtNames = Object.keys(matchesByCourt).sort((a, b) => {
-    const courtA = courts.find(court => court.name === a);
-    const courtB = courts.find(court => court.name === b);
-    
-    // If both courts exist in management system, sort by creation order
-    if (courtA && courtB) {
-      return new Date(courtA.created_at).getTime() - new Date(courtB.created_at).getTime();
-    }
-    
-    // If only one exists, prioritize the managed court
-    if (courtA && !courtB) return -1;
-    if (!courtA && courtB) return 1;
-    
-    // If neither exists in management, sort alphabetically
-    return a.localeCompare(b);
-  });
-
-  // Split courts into left and right columns
+  // Split courts into left and right columns - sort court names in ascending order
+  const courtNames = Object.keys(matchesByCourt).sort((a, b) => a.localeCompare(b));
   const leftCourts = [];
   const rightCourts = [];
   
-  sortedCourtNames.forEach((courtName, index) => {
+  courtNames.forEach((courtName, index) => {
     if (index % 2 === 0) {
       leftCourts.push(courtName);
     } else {
@@ -103,52 +84,46 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Left Column */}
             <div className="space-y-6">
-              {leftCourts.map((courtName) => {
-                const court = courts.find(c => c.name === courtName);
-                return (
-                  <div key={courtName} className="space-y-4">
-                    <div className="p-3 border rounded text-center bg-gray-50">
-                      <div className="text-sm font-medium text-gray-900">
-                        {courtName}
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      {matchesByCourt[courtName].map((match, index) => (
-                        <MatchCard 
-                          key={match.id} 
-                          match={match} 
-                          matchNumberInCourtRound={index + 1}
-                        />
-                      ))}
+              {leftCourts.map((courtName) => (
+                <div key={courtName} className="space-y-4">
+                  <div className="p-3 bg-blue-100 border border-blue-200 rounded text-center">
+                    <div className="text-sm font-medium text-blue-800">
+                      {courtName}
                     </div>
                   </div>
-                );
-              })}
+                  <div className="space-y-3">
+                    {matchesByCourt[courtName].map((match, index) => (
+                      <MatchCard 
+                        key={match.id} 
+                        match={match} 
+                        matchNumberInCourtRound={index + 1}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
             
             {/* Right Column */}
             <div className="space-y-6">
-              {rightCourts.map((courtName) => {
-                const court = courts.find(c => c.name === courtName);
-                return (
-                  <div key={courtName} className="space-y-4">
-                    <div className="p-3 border rounded text-center bg-gray-50">
-                      <div className="text-sm font-medium text-gray-900">
-                        {courtName}
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      {matchesByCourt[courtName].map((match, index) => (
-                        <MatchCard 
-                          key={match.id} 
-                          match={match} 
-                          matchNumberInCourtRound={index + 1}
-                        />
-                      ))}
+              {rightCourts.map((courtName) => (
+                <div key={courtName} className="space-y-4">
+                  <div className="p-3 bg-blue-100 border border-blue-200 rounded text-center">
+                    <div className="text-sm font-medium text-blue-800">
+                      {courtName}
                     </div>
                   </div>
-                );
-              })}
+                  <div className="space-y-3">
+                    {matchesByCourt[courtName].map((match, index) => (
+                      <MatchCard 
+                        key={match.id} 
+                        match={match} 
+                        matchNumberInCourtRound={index + 1}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

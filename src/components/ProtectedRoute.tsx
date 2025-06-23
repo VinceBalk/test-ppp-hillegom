@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
   requiredRole?: string;
 }
 
-export default function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
   const { user, loading, hasRole, isSuperAdmin } = useAuth();
   const location = useLocation();
 
