@@ -5,21 +5,29 @@ import { useMatches } from "@/hooks/useMatches";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Trash2, Plus } from "lucide-react";
 
 type Props = {
   tournamentId: string;
 };
 
-type Player = {
-  id: string;
-  name: string;
+type Match2v2 = {
+  courtId: string;
+  team1Player1: string;
+  team1Player2: string;
+  team2Player1: string;
+  team2Player2: string;
 };
 
 const ManualMatchBuilder: React.FC<Props> = ({ tournamentId }) => {
   const { tournamentPlayers, isLoading: loadingPlayers } = useTournamentPlayers(tournamentId);
   const { matches, isLoading: loadingMatches } = useMatches(tournamentId);
   const [round, setRound] = useState(1);
-  const [selectedPairs, setSelectedPairs] = useState<{ courtId: string; team1: string; team2: string }[]>([]);
+  const [selectedMatches, setSelectedMatches] = useState<Match2v2[]>([]);
   const [courts, setCourts] = useState<{ id: string; name: string }[]>([]);
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
@@ -52,31 +60,44 @@ const ManualMatchBuilder: React.FC<Props> = ({ tournamentId }) => {
 
       await supabase.from("matches").delete().eq("tournament_id", tournamentId).eq("round_number", round);
 
-      for (const match of selectedPairs) {
+      for (const match of selectedMatches) {
         await supabase.from("matches").insert({
           tournament_id: tournamentId,
           round_number: round,
           court_id: match.courtId,
-          team1_player1_id: match.team1,
-          team2_player1_id: match.team2,
+          team1_player1_id: match.team1Player1,
+          team1_player2_id: match.team1Player2,
+          team2_player1_id: match.team2Player1,
+          team2_player2_id: match.team2Player2,
           status: 'scheduled'
         });
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["matches", tournamentId] });
-      alert("Wedstrijden opgeslagen.");
+      alert("2v2 Wedstrijden opgeslagen.");
     },
   });
 
   const handleAddMatch = () => {
-    setSelectedPairs([...selectedPairs, { courtId: "", team1: "", team2: "" }]);
+    setSelectedMatches([...selectedMatches, { 
+      courtId: "", 
+      team1Player1: "", 
+      team1Player2: "", 
+      team2Player1: "", 
+      team2Player2: "" 
+    }]);
   };
 
-  const handleChange = (index: number, key: "courtId" | "team1" | "team2", value: string) => {
-    const updated = [...selectedPairs];
+  const handleRemoveMatch = (index: number) => {
+    const updated = selectedMatches.filter((_, i) => i !== index);
+    setSelectedMatches(updated);
+  };
+
+  const handleChange = (index: number, key: keyof Match2v2, value: string) => {
+    const updated = [...selectedMatches];
     updated[index][key] = value;
-    setSelectedPairs(updated);
+    setSelectedMatches(updated);
   };
 
   if (loadingPlayers || loadingMatches) return <p>Bezig met laden...</p>;
@@ -87,65 +108,170 @@ const ManualMatchBuilder: React.FC<Props> = ({ tournamentId }) => {
     name: tp.player.name
   }));
 
+  const isValidMatch = (match: Match2v2) => {
+    return match.courtId && match.team1Player1 && match.team1Player2 && 
+           match.team2Player1 && match.team2Player2;
+  };
+
+  const allMatchesValid = selectedMatches.length > 0 && selectedMatches.every(isValidMatch);
+
   return (
-    <div className="p-4 space-y-6">
-      <h2 className="text-2xl font-semibold">Handmatig schema bouwen – Ronde {round}</h2>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          Handmatig 2v2 Schema Bouwen – Ronde {round}
+          <div className="flex items-center gap-2">
+            <Label className="text-sm">Ronde:</Label>
+            <Select value={round.toString()} onValueChange={(value) => setRound(parseInt(value))}>
+              <SelectTrigger className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1</SelectItem>
+                <SelectItem value="2">2</SelectItem>
+                <SelectItem value="3">3</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {selectedMatches.map((match, index) => (
+          <Card key={index} className="p-4 bg-muted/30">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-medium">Wedstrijd {index + 1}</h4>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => handleRemoveMatch(index)}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="grid gap-4">
+              {/* Court Selection */}
+              <div>
+                <Label className="text-sm">Baan</Label>
+                <Select
+                  value={match.courtId}
+                  onValueChange={(value) => handleChange(index, "courtId", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Kies baan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courts.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-      {selectedPairs.map((match, index) => (
-        <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-2 items-center border p-2 rounded-lg bg-white shadow-sm">
-          <select
-            className="border rounded p-2"
-            value={match.courtId}
-            onChange={(e) => handleChange(index, "courtId", e.target.value)}
+              {/* Team 1 */}
+              <div>
+                <Label className="text-sm text-blue-600 font-medium">Team 1</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <Select
+                    value={match.team1Player1}
+                    onValueChange={(value) => handleChange(index, "team1Player1", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Speler 1" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {players.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={match.team1Player2}
+                    onValueChange={(value) => handleChange(index, "team1Player2", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Speler 2" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {players.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* VS */}
+              <div className="text-center font-bold text-muted-foreground">VS</div>
+
+              {/* Team 2 */}
+              <div>
+                <Label className="text-sm text-red-600 font-medium">Team 2</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <Select
+                    value={match.team2Player1}
+                    onValueChange={(value) => handleChange(index, "team2Player1", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Speler 1" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {players.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={match.team2Player2}
+                    onValueChange={(value) => handleChange(index, "team2Player2", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Speler 2" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {players.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+
+        <div className="flex gap-4">
+          <Button onClick={handleAddMatch} variant="outline" className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Voeg 2v2 Wedstrijd Toe
+          </Button>
+          <Button
+            onClick={() => mutation.mutate()}
+            disabled={!allMatchesValid || mutation.isPending}
+            className="bg-green-600 text-white hover:bg-green-700"
           >
-            <option value="">Kies baan</option>
-            {courts.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <select
-            className="border rounded p-2"
-            value={match.team1}
-            onChange={(e) => handleChange(index, "team1", e.target.value)}
-          >
-            <option value="">Speler 1</option>
-            {players.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-          <span className="text-center">vs</span>
-          <select
-            className="border rounded p-2"
-            value={match.team2}
-            onChange={(e) => handleChange(index, "team2", e.target.value)}
-          >
-            <option value="">Speler 2</option>
-            {players.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+            {mutation.isPending ? "Opslaan..." : "✅ Schema Opslaan"}
+          </Button>
         </div>
-      ))}
 
-      <div className="flex gap-4">
-        <button onClick={handleAddMatch} className="bg-gray-200 rounded px-4 py-2">
-          + Voeg wedstrijd toe
-        </button>
-        <button
-          onClick={() => mutation.mutate()}
-          disabled={selectedPairs.length === 0}
-          className="bg-green-600 text-white rounded px-4 py-2"
-        >
-          ✅ Opslaan
-        </button>
-      </div>
-    </div>
+        {selectedMatches.length > 0 && !allMatchesValid && (
+          <p className="text-sm text-yellow-600">
+            Zorg ervoor dat alle wedstrijden een baan en 4 spelers hebben voordat je opslaat.
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

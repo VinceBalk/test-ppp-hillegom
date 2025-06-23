@@ -3,18 +3,20 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Play } from 'lucide-react';
+import { Play, Edit } from 'lucide-react';
 import { Match } from '@/hooks/useMatches';
 import { getShortTeamName } from '@/utils/matchUtils';
 import MatchSimulator from './MatchSimulator';
+import SavedMatchEditor from './SavedMatchEditor';
 
 interface MatchCardProps {
   match: Match;
-  matchNumberInCourtRound: number; // New prop for correct numbering per court/round
+  matchNumberInCourtRound: number;
 }
 
 export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardProps) {
   const [showSimulator, setShowSimulator] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -67,6 +69,23 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
     );
   }
 
+  if (showEditor) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold">Wedstrijd Bewerken</h3>
+          <Button variant="outline" size="sm" onClick={() => setShowEditor(false)}>
+            Terug naar overzicht
+          </Button>
+        </div>
+        <SavedMatchEditor 
+          match={match} 
+          tournamentId={match.tournament_id} 
+        />
+      </div>
+    );
+  }
+
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
@@ -86,15 +105,26 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
             <span>•</span>
             {getStatusBadge(match.status)}
           </div>
-          <Button 
-            size="sm" 
-            variant="outline"
-            onClick={() => setShowSimulator(true)}
-            className="text-blue-600 border-blue-600 hover:bg-blue-50 ml-2"
-          >
-            <Play className="h-3 w-3 mr-1" />
-            Simuleren
-          </Button>
+          <div className="flex gap-1">
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => setShowEditor(true)}
+              className="text-orange-600 border-orange-600 hover:bg-orange-50"
+            >
+              <Edit className="h-3 w-3 mr-1" />
+              Bewerken
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => setShowSimulator(true)}
+              className="text-blue-600 border-blue-600 hover:bg-blue-50"
+            >
+              <Play className="h-3 w-3 mr-1" />
+              Simuleren
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="pt-0">

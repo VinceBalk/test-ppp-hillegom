@@ -14,7 +14,7 @@ interface MatchEditorProps {
   showSaveButton?: boolean;
 }
 
-export default function MatchEditor({ match, tournamentId, onUpdate, showSaveButton = false }: MatchEditorProps) {
+export default function MatchEditor({ match, tournamentId, onUpdate, showSaveButton = true }: MatchEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedMatch, setEditedMatch] = useState<ScheduleMatch>(match);
   const { tournamentPlayers } = useTournamentPlayers(tournamentId);
@@ -50,6 +50,9 @@ export default function MatchEditor({ match, tournamentId, onUpdate, showSaveBut
         roundWithinGroup: editedMatch.round_within_group
       });
       setIsEditing(false);
+      
+      // Also update the local state
+      onUpdate(match.id, editedMatch);
     } catch (error) {
       console.error('Failed to save match to database:', error);
     }
