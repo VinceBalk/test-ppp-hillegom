@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { usePasswordSecurity } from '@/hooks/usePasswordSecurity';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,6 +12,7 @@ export const usePasswordResetForm = (isValidLink: boolean) => {
   const [isResetting, setIsResetting] = useState(false);
   const [resetCompleted, setResetCompleted] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { updatePassword, loading, validatePassword } = usePasswordSecurity();
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -51,30 +53,48 @@ export const usePasswordResetForm = (isValidLink: boolean) => {
       return;
     }
 
-    const { error } = await updatePassword(sanitizedPassword, false);
+    try {
+      console.log('Starting password update...');
+      const { error } = await supabase.auth.updateUser({
+        password: sanitizedPassword
+      });
 
-    if (error) {
+      if (error) {
+        console.error('Password update error:', error);
+        toast({
+          title: 'Wachtwoord niet gewijzigd',
+          description: error.message || 'Er is een fout opgetreden. Probeer het opnieuw.',
+          variant: 'destructive',
+        });
+        setIsResetting(false);
+        return;
+      }
+
+      console.log('Password updated successfully');
+      toast({
+        title: 'Wachtwoord gewijzigd',
+        description: 'Je wachtwoord is succesvol gewijzigd. Je wordt nu uitgelogd.',
+      });
+
+      setResetCompleted(true);
+      
+      // Wacht even en log dan uit + redirect
+      setTimeout(async () => {
+        console.log('Signing out user and redirecting...');
+        await supabase.auth.signOut();
+        navigate('/login');
+      }, 2000);
+
+    } catch (error: any) {
+      console.error('Password reset exception:', error);
       toast({
         title: 'Wachtwoord niet gewijzigd',
-        description: error.message || 'Probeer het opnieuw. Mogelijk is de link verlopen.',
+        description: 'Er is een onverwachte fout opgetreden. Probeer het opnieuw.',
         variant: 'destructive',
       });
+    } finally {
       setIsResetting(false);
-      return;
     }
-
-    toast({
-      title: 'Wachtwoord gewijzigd',
-      description: 'Je wordt nu uitgelogd. Log opnieuw in met je nieuwe wachtwoord.',
-    });
-
-    setResetCompleted(true);
-    setTimeout(async () => {
-      console.log('Password reset successful, signing out user');
-      await supabase.auth.signOut();
-    }, 2000);
-
-    setIsResetting(false);
   };
 
   return {

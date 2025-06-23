@@ -15,17 +15,74 @@ export const useResetLinkValidation = () => {
   const accessToken = searchParams.get('access_token');
   const refreshToken = searchParams.get('refresh_token');
   const type = searchParams.get('type');
+  const token = searchParams.get('token'); // voor de nieuwe link format
 
   useEffect(() => {
     console.log('Reset password page loaded with params:', {
       accessToken: accessToken ? 'present' : 'missing',
       refreshToken: refreshToken ? 'present' : 'missing',
-      type: type,
-      accessTokenLength: accessToken?.length || 0
+      token: token ? 'present' : 'missing',
+      type: type
     });
 
     const validateResetLink = async () => {
-      // Validate the link parameters
+      // Check voor nieuwe link format (met alleen token parameter)
+      if (token && type === 'recovery') {
+        console.log('Using new token format');
+        try {
+          // Verwerk de token via de Supabase verify endpoint
+          const response = await fetch(`https://bkubwrtneoraktuwopuy.supabase.co/auth/v1/verify?token=${token}&type=recovery&redirect_to=${window.location.origin}/reset-password`, {
+            method: 'GET',
+            credentials: 'include'
+          });
+          
+          if (response.ok) {
+            // Check of we nu een geldige sessie hebben
+            const { data: { session }, error } = await supabase.auth.getSession();
+            
+            if (session && !error) {
+              console.log('Session established successfully');
+              setIsValidLink(true);
+              toast({
+                title: "Reset link geldig",
+                description: "Je kunt nu een nieuw wachtwoord instellen.",
+              });
+            } else {
+              console.error('No session after token verification');
+              setIsValidLink(false);
+              toast({
+                title: "Sessie probleem",
+                description: "Er is een probleem met de reset link. Vraag een nieuwe aan.",
+                variant: "destructive",
+              });
+              setTimeout(() => navigate('/login'), 3000);
+            }
+          } else {
+            console.error('Token verification failed');
+            setIsValidLink(false);
+            toast({
+              title: "Ongeldige reset link",
+              description: "De reset link is ongeldig of verlopen. Vraag een nieuwe aan.",
+              variant: "destructive",
+            });
+            setTimeout(() => navigate('/login'), 3000);
+          }
+        } catch (error) {
+          console.error('Error verifying token:', error);
+          setIsValidLink(false);
+          toast({
+            title: "Verificatie fout",
+            description: "Er is een probleem opgetreden bij het verifiëren van de link.",
+            variant: "destructive",
+          });
+          setTimeout(() => navigate('/login'), 3000);
+        } finally {
+          setLinkValidated(true);
+        }
+        return;
+      }
+
+      // Fallback naar oude method met access_token en refresh_token
       if (type !== 'recovery') {
         console.error('Invalid type parameter:', type);
         toast({
@@ -34,6 +91,7 @@ export const useResetLinkValidation = () => {
           variant: "destructive",
         });
         setTimeout(() => navigate('/login'), 3000);
+        setLinkValidated(true);
         return;
       }
 
@@ -41,22 +99,11 @@ export const useResetLinkValidation = () => {
         console.error('Missing access_token parameter');
         toast({
           title: "Ongeldige reset link",
-          description: "De reset link is onvolledig (access token ontbreekt). Vraag een nieuwe reset link aan.",
+          description: "De reset link is onvolledig. Vraag een nieuwe reset link aan.",
           variant: "destructive",
         });
         setTimeout(() => navigate('/login'), 3000);
-        return;
-      }
-
-      // Check if access token looks valid (should be much longer than a few digits)
-      if (accessToken.length < 20) {
-        console.error('Invalid access_token format - too short:', accessToken.length);
-        toast({
-          title: "Ongeldige reset link",
-          description: "De reset link is beschadigd. Vraag een nieuwe reset link aan.",
-          variant: "destructive",
-        });
-        setTimeout(() => navigate('/login'), 3000);
+        setLinkValidated(true);
         return;
       }
 
@@ -64,14 +111,15 @@ export const useResetLinkValidation = () => {
         console.error('Missing refresh_token parameter');
         toast({
           title: "Ongeldige reset link",  
-          description: "De reset link is onvolledig (refresh token ontbreekt). Dit kan komen door een verkeerd geconfigureerde email template in Supabase. Vraag een nieuwe reset link aan.",
+          description: "De reset link is onvolledig. Vraag een nieuwe reset link aan.",
           variant: "destructive",
         });
         setTimeout(() => navigate('/login'), 3000);
+        setLinkValidated(true);
         return;
       }
 
-      // If we get here, the link has all required parameters
+      // Voor links met access_token en refresh_token
       try {
         console.log('Setting session with tokens...');
         const { data, error } = await supabase.auth.setSession({
@@ -109,7 +157,7 @@ export const useResetLinkValidation = () => {
     };
 
     validateResetLink();
-  }, [accessToken, refreshToken, type, navigate, toast]);
+  }, [accessToken, refreshToken, type, token, navigate, toast]);
 
   return {
     isValidLink,
