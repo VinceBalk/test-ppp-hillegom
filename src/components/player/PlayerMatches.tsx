@@ -57,6 +57,9 @@ export default function PlayerMatches({ playerId, playerName }: PlayerMatchesPro
     return null;
   };
 
+  // Get all unique rounds from ALL matches (not filtered)
+  const allAvailableRounds = [...new Set(matches?.map(match => match.round_number) || [])].sort();
+
   // Filter matches based on selected tournament and round
   const filteredMatches = matches?.filter(match => {
     const tournamentFilter = selectedTournamentId === 'all' || match.tournament_id === selectedTournamentId;
@@ -78,9 +81,6 @@ export default function PlayerMatches({ playerId, playerName }: PlayerMatchesPro
   const playerTournaments = tournaments?.filter(tournament => 
     matches?.some(match => match.tournament_id === tournament.id)
   ) || [];
-
-  // Get unique rounds from filtered matches
-  const availableRounds = [...new Set(filteredMatches.map(match => match.round_number))].sort();
 
   if (isLoading) return <p>Bezig met laden...</p>;
   if (error) return <p>Fout bij laden van wedstrijden.</p>;
@@ -118,7 +118,7 @@ export default function PlayerMatches({ playerId, playerName }: PlayerMatchesPro
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Alle rondes</SelectItem>
-                {availableRounds.map(round => (
+                {allAvailableRounds.map(round => (
                   <SelectItem key={round} value={round.toString()}>
                     Ronde {round}
                   </SelectItem>
