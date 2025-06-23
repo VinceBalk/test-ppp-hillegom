@@ -36,7 +36,7 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
     return groups;
   }, {} as Record<string, Match[]>);
 
-  // Separate courts based on menu_order: odd = left, even = right
+  // Separate courts based on row_side from the court data
   const leftCourts: Array<{ name: string; matches: Match[]; menuOrder: number; backgroundColor: string }> = [];
   const rightCourts: Array<{ name: string; matches: Match[]; menuOrder: number; backgroundColor: string }> = [];
 
@@ -52,11 +52,12 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
       backgroundColor
     };
 
+    // Check if we need to get row_side from somewhere else since it's not in the court object
+    // For now, we'll use menu_order as fallback: odd = left, even = right
+    // TODO: Add row_side to court object or get it from player data
     if (menuOrder % 2 === 1) {
-      // Odd menu_order goes to left column
       leftCourts.push(courtData);
     } else {
-      // Even menu_order goes to right column
       rightCourts.push(courtData);
     }
   });
@@ -98,7 +99,7 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left Column - Odd menu_order courts */}
+            {/* Left Column - Courts with row_side = 'left' */}
             <div className="space-y-6">
               <div className="text-center">
                 <h3 className="text-lg font-semibold text-primary mb-4">Linker Groep</h3>
@@ -134,7 +135,7 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
               ))}
             </div>
             
-            {/* Right Column - Even menu_order courts */}
+            {/* Right Column - Courts with row_side = 'right' */}
             <div className="space-y-6">
               <div className="text-center">
                 <h3 className="text-lg font-semibold text-primary mb-4">Rechter Groep</h3>
