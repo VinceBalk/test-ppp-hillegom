@@ -682,6 +682,47 @@ export type Database = {
           },
         ]
       }
+      tournament_schedule_previews: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_approved: boolean | null
+          is_locked: boolean | null
+          preview_data: Json
+          round_number: number
+          tournament_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_approved?: boolean | null
+          is_locked?: boolean | null
+          preview_data: Json
+          round_number: number
+          tournament_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_approved?: boolean | null
+          is_locked?: boolean | null
+          preview_data?: Json
+          round_number?: number
+          tournament_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_schedule_previews_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournaments: {
         Row: {
           created_at: string | null
@@ -694,8 +735,11 @@ export type Database = {
           max_players: number | null
           name: string
           round_1_generated: boolean | null
+          round_1_schedule_generated: boolean | null
           round_2_generated: boolean | null
+          round_2_schedule_generated: boolean | null
           round_3_generated: boolean | null
+          round_3_schedule_generated: boolean | null
           schedule_type: string | null
           start_date: string
           status: string | null
@@ -713,8 +757,11 @@ export type Database = {
           max_players?: number | null
           name: string
           round_1_generated?: boolean | null
+          round_1_schedule_generated?: boolean | null
           round_2_generated?: boolean | null
+          round_2_schedule_generated?: boolean | null
           round_3_generated?: boolean | null
+          round_3_schedule_generated?: boolean | null
           schedule_type?: string | null
           start_date: string
           status?: string | null
@@ -732,8 +779,11 @@ export type Database = {
           max_players?: number | null
           name?: string
           round_1_generated?: boolean | null
+          round_1_schedule_generated?: boolean | null
           round_2_generated?: boolean | null
+          round_2_schedule_generated?: boolean | null
           round_3_generated?: boolean | null
+          round_3_schedule_generated?: boolean | null
           schedule_type?: string | null
           start_date?: string
           status?: string | null

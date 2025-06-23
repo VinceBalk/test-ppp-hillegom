@@ -65,11 +65,12 @@ export const useScheduleGeneration = () => {
         console.log('=== MATCHES CREATED SUCCESSFULLY ===');
         console.log('Created matches:', createdMatches);
 
-        // Update toernooi status
+        // Update toernooi status en markeer de ronde als gegenereerd
+        const roundKey = `round_${roundNumber}_schedule_generated`;
         const { error: tournamentError } = await supabase
           .from('tournaments')
           .update({
-            [`round_${roundNumber}_generated`]: true,
+            [roundKey]: true,
             status: 'in_progress',
             updated_at: new Date().toISOString()
           })
@@ -81,6 +82,23 @@ export const useScheduleGeneration = () => {
         }
 
         console.log('Tournament status updated successfully');
+
+        // Mark the preview as approved in the database
+        const { error: previewError } = await supabase
+          .from('tournament_schedule_previews')
+          .update({
+            is_approved: true,
+            is_locked: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('tournament_id', tournamentId)
+          .eq('round_number', roundNumber);
+
+        if (previewError) {
+          console.error('Error updating preview status:', previewError);
+          // Don't throw here as the main operation succeeded
+        }
+
         return createdMatches;
       }
 

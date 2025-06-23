@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useTournamentPlayers } from './useTournamentPlayers';
 import { useCourts } from './useCourts';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ScheduleMatch {
   id: string;
@@ -32,13 +33,70 @@ export const useSchedulePreview = (tournamentId?: string) => {
   const { tournamentPlayers } = useTournamentPlayers(tournamentId);
   const { courts } = useCourts();
 
-  const generatePreview = async () => {
+  const checkIfScheduleExists = async (tournamentId: string, roundNumber: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('tournament_schedule_previews')
+        .select('*')
+        .eq('tournament_id', tournamentId)
+        .eq('round_number', roundNumber)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error checking existing schedule:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in checkIfScheduleExists:', error);
+      return null;
+    }
+  };
+
+  const savePreviewToDatabase = async (tournamentId: string, roundNumber: number, previewData: SchedulePreview) => {
+    try {
+      const { data, error } = await supabase
+        .from('tournament_schedule_previews')
+        .upsert({
+          tournament_id: tournamentId,
+          round_number: roundNumber,
+          preview_data: previewData,
+          is_approved: false,
+          is_locked: false,
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error saving preview to database:', error);
+        throw error;
+      }
+
+      console.log('Preview saved to database:', data);
+      return data;
+    } catch (error) {
+      console.error('Error in savePreviewToDatabase:', error);
+      throw error;
+    }
+  };
+
+  const generatePreview = async (roundNumber: number = 1) => {
     if (!tournamentId) return;
     
     setIsGenerating(true);
-    console.log('Generating 2v2 preview for tournament:', tournamentId);
+    console.log('Generating 2v2 preview for tournament:', tournamentId, 'round:', roundNumber);
     
     try {
+      // Check if schedule already exists
+      const existingSchedule = await checkIfScheduleExists(tournamentId, roundNumber);
+      if (existingSchedule && existingSchedule.preview_data) {
+        console.log('Loading existing schedule from database');
+        setPreview(existingSchedule.preview_data as SchedulePreview);
+        return existingSchedule.preview_data as SchedulePreview;
+      }
+
       const leftPlayers = tournamentPlayers.filter(tp => tp.group === 'left');
       const rightPlayers = tournamentPlayers.filter(tp => tp.group === 'right');
       
@@ -136,6 +194,9 @@ export const useSchedulePreview = (tournamentId?: string) => {
         rightGroupMatches: rightMatches,
       };
 
+      // Save to database
+      await savePreviewToDatabase(tournamentId, roundNumber, schedulePreview);
+
       setPreview(schedulePreview);
       return schedulePreview;
     } catch (error) {
@@ -160,15 +221,39 @@ export const useSchedulePreview = (tournamentId?: string) => {
       m.court_name?.includes('Rechts') || m.id.includes('rechts')
     );
     
-    setPreview({
+    const updatedPreview = {
       matches: updatedMatches,
       totalMatches: updatedMatches.length,
       leftGroupMatches: updatedLeftMatches,
       rightGroupMatches: updatedRightMatches,
-    });
+    };
+
+    setPreview(updatedPreview);
+
+    // Auto-save changes to database
+    if (tournamentId) {
+      savePreviewToDatabase(tournamentId, 1, updatedPreview).catch(error => {
+        console.error('Error auto-saving preview changes:', error);
+      });
+    }
   };
 
-  const clearPreview = () => {
+  const clearPreview = async () => {
+    if (tournamentId && preview) {
+      try {
+        // Delete from database
+        await supabase
+          .from('tournament_schedule_previews')
+          .delete()
+          .eq('tournament_id', tournamentId)
+          .eq('round_number', 1);
+        
+        console.log('Preview cleared from database');
+      } catch (error) {
+        console.error('Error clearing preview from database:', error);
+      }
+    }
+    
     setPreview(null);
   };
 
