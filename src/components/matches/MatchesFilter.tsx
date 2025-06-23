@@ -24,6 +24,11 @@ export default function MatchesFilter({
   onTournamentChange,
   selectedTournament 
 }: MatchesFilterProps) {
+  const handleTournamentChange = (value: string) => {
+    // Convert "all" back to empty string for the parent component
+    onTournamentChange(value === "all" ? "" : value);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -40,12 +45,15 @@ export default function MatchesFilter({
             <label className="text-sm font-medium mb-2 block">
               Selecteer Toernooi
             </label>
-            <Select value={selectedTournamentId} onValueChange={onTournamentChange}>
+            <Select 
+              value={selectedTournamentId || "all"} 
+              onValueChange={handleTournamentChange}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Kies een toernooi..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Alle toernooien</SelectItem>
+                <SelectItem value="all">Alle toernooien</SelectItem>
                 {tournaments.map((tournament) => (
                   <SelectItem key={tournament.id} value={tournament.id}>
                     <div className="flex items-center justify-between w-full">
