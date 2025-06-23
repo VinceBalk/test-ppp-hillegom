@@ -1,5 +1,5 @@
-
 import { ScheduleMatch } from '@/types/schedule';
+import { Badge } from '@/components/ui/badge';
 import CourtMatchesCard from './CourtMatchesCard';
 
 interface ScheduleGroupSectionProps {

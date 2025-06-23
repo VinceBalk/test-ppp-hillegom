@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTournaments } from '@/hooks/useTournaments';
@@ -132,7 +131,7 @@ export default function Schedule() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Bestaande Wedstrijden - Ronde {selectedRound}</CardTitle>
-              <Badge variant="success">{roundMatches.length} wedstrijden</Badge>
+              <Badge variant="secondary">{roundMatches.length} wedstrijden</Badge>
             </div>
           </CardHeader>
           <CardContent>
