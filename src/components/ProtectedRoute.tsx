@@ -1,3 +1,4 @@
+
 import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,7 +8,7 @@ interface ProtectedRouteProps {
   requiredRole?: string;
 }
 
-function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
+export default function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
   const { user, loading, hasRole, isSuperAdmin } = useAuth();
   const location = useLocation();
 
@@ -60,6 +61,3 @@ function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
   console.log('ProtectedRoute: Access granted to:', location.pathname);
   return <>{children}</>;
 }
-
-// Default export for compatibility
-export default ProtectedRoute;
