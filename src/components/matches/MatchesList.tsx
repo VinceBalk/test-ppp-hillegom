@@ -36,47 +36,34 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
     return groups;
   }, {} as Record<string, Match[]>);
 
-  // Group courts by left/right based on menu_order
-  const leftCourts: string[] = [];
-  const rightCourts: string[] = [];
+  // Separate courts based on menu_order: odd = left, even = right
+  const leftCourts: Array<{ name: string; matches: Match[]; menuOrder: number; backgroundColor: string }> = [];
+  const rightCourts: Array<{ name: string; matches: Match[]; menuOrder: number; backgroundColor: string }> = [];
 
-  // Get all court names and sort them by menu_order
-  const courtNames = Object.keys(matchesByCourt);
-  
-  // Sort courts by menu_order
-  const sortedCourtNames = courtNames.sort((a, b) => {
-    const courtA = filteredMatches.find(m => (m.court?.name || `Baan ${m.court_number}`) === a)?.court;
-    const courtB = filteredMatches.find(m => (m.court?.name || `Baan ${m.court_number}`) === b)?.court;
-    
-    const orderA = courtA?.menu_order ?? 999;
-    const orderB = courtB?.menu_order ?? 999;
-    
-    if (orderA !== orderB) {
-      return orderA - orderB;
-    }
-    
-    return a.localeCompare(b);
-  });
-
-  // Distribute courts based on menu_order: odd numbers go left, even numbers go right
-  sortedCourtNames.forEach((courtName) => {
-    const court = filteredMatches.find(m => (m.court?.name || `Baan ${m.court_number}`) === courtName)?.court;
+  Object.entries(matchesByCourt).forEach(([courtName, courtMatches]) => {
+    const court = courtMatches[0]?.court;
     const menuOrder = court?.menu_order ?? 999;
+    const backgroundColor = court?.background_color || '#ffffff';
     
+    const courtData = {
+      name: courtName,
+      matches: courtMatches,
+      menuOrder,
+      backgroundColor
+    };
+
     if (menuOrder % 2 === 1) {
       // Odd menu_order goes to left column
-      leftCourts.push(courtName);
+      leftCourts.push(courtData);
     } else {
       // Even menu_order goes to right column
-      rightCourts.push(courtName);
+      rightCourts.push(courtData);
     }
   });
 
-  // Helper function to get court background color
-  const getCourtBackgroundColor = (courtName: string) => {
-    const court = filteredMatches.find(m => (m.court?.name || `Baan ${m.court_number}`) === courtName)?.court;
-    return court?.background_color || '#ffffff';
-  };
+  // Sort courts within each column by menu_order (ascending)
+  leftCourts.sort((a, b) => a.menuOrder - b.menuOrder);
+  rightCourts.sort((a, b) => a.menuOrder - b.menuOrder);
 
   return (
     <Card>
@@ -116,26 +103,26 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
               <div className="text-center">
                 <h3 className="text-lg font-semibold text-primary mb-4">Linker Groep</h3>
               </div>
-              {leftCourts.map((courtName) => (
-                <div key={courtName} className="space-y-4">
+              {leftCourts.map((court) => (
+                <div key={court.name} className="space-y-4">
                   <div 
                     className="p-3 border rounded text-center"
                     style={{ 
-                      backgroundColor: getCourtBackgroundColor(courtName),
-                      borderColor: getCourtBackgroundColor(courtName)
+                      backgroundColor: court.backgroundColor,
+                      borderColor: court.backgroundColor
                     }}
                   >
                     <div 
                       className="text-sm font-medium"
                       style={{ 
-                        color: getCourtBackgroundColor(courtName) === '#ffffff' || getCourtBackgroundColor(courtName) === '#FFFFFF' ? '#000000' : '#ffffff'
+                        color: court.backgroundColor === '#ffffff' || court.backgroundColor === '#FFFFFF' ? '#000000' : '#ffffff'
                       }}
                     >
-                      {courtName}
+                      {court.name} (Volgorde: {court.menuOrder})
                     </div>
                   </div>
                   <div className="space-y-3">
-                    {matchesByCourt[courtName].map((match, index) => (
+                    {court.matches.map((match, index) => (
                       <MatchCard 
                         key={match.id} 
                         match={match} 
@@ -152,26 +139,26 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
               <div className="text-center">
                 <h3 className="text-lg font-semibold text-primary mb-4">Rechter Groep</h3>
               </div>
-              {rightCourts.map((courtName) => (
-                <div key={courtName} className="space-y-4">
+              {rightCourts.map((court) => (
+                <div key={court.name} className="space-y-4">
                   <div 
                     className="p-3 border rounded text-center"
                     style={{ 
-                      backgroundColor: getCourtBackgroundColor(courtName),
-                      borderColor: getCourtBackgroundColor(courtName)
+                      backgroundColor: court.backgroundColor,
+                      borderColor: court.backgroundColor
                     }}
                   >
                     <div 
                       className="text-sm font-medium"
                       style={{ 
-                        color: getCourtBackgroundColor(courtName) === '#ffffff' || getCourtBackgroundColor(courtName) === '#FFFFFF' ? '#000000' : '#ffffff'
+                        color: court.backgroundColor === '#ffffff' || court.backgroundColor === '#FFFFFF' ? '#000000' : '#ffffff'
                       }}
                     >
-                      {courtName}
+                      {court.name} (Volgorde: {court.menuOrder})
                     </div>
                   </div>
                   <div className="space-y-3">
-                    {matchesByCourt[courtName].map((match, index) => (
+                    {court.matches.map((match, index) => (
                       <MatchCard 
                         key={match.id} 
                         match={match} 
