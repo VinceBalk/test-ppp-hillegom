@@ -1,10 +1,9 @@
 
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { usePlayerMatches } from '@/hooks/usePlayerMatches';
-import { useTournaments } from '@/hooks/useTournaments';
+import { usePlayerMatchesLogic } from '@/hooks/usePlayerMatchesLogic';
 import PlayerMatchesFilters from './PlayerMatchesFilters';
 import PlayerMatchesList from './PlayerMatchesList';
+import PlayerMatchesStats from './PlayerMatchesStats';
 
 interface PlayerMatchesProps {
   playerId: string;
@@ -12,25 +11,18 @@ interface PlayerMatchesProps {
 }
 
 export default function PlayerMatches({ playerId, playerName }: PlayerMatchesProps) {
-  const { matches, isLoading, error } = usePlayerMatches(playerId);
-  const { tournaments } = useTournaments();
-  const [selectedTournamentId, setSelectedTournamentId] = useState<string>('all');
-  const [selectedRound, setSelectedRound] = useState<string>('all');
-
-  // Get all unique rounds from ALL matches (not filtered)
-  const allAvailableRounds = [...new Set(matches?.map(match => match.round_number) || [])].sort();
-
-  // Filter matches based on selected tournament and round
-  const filteredMatches = matches?.filter(match => {
-    const tournamentFilter = selectedTournamentId === 'all' || match.tournament_id === selectedTournamentId;
-    const roundFilter = selectedRound === 'all' || match.round_number === parseInt(selectedRound);
-    return tournamentFilter && roundFilter;
-  }) || [];
-
-  // Get unique tournaments from player's matches
-  const playerTournaments = tournaments?.filter(tournament => 
-    matches?.some(match => match.tournament_id === tournament.id)
-  ) || [];
+  const {
+    matches,
+    isLoading,
+    error,
+    selectedTournamentId,
+    selectedRound,
+    setSelectedTournamentId,
+    setSelectedRound,
+    allAvailableRounds,
+    filteredMatches,
+    playerTournaments,
+  } = usePlayerMatchesLogic(playerId);
 
   if (isLoading) return <p>Bezig met laden...</p>;
   if (error) return <p>Fout bij laden van wedstrijden.</p>;
@@ -48,6 +40,13 @@ export default function PlayerMatches({ playerId, playerName }: PlayerMatchesPro
           onRoundChange={setSelectedRound}
           playerTournaments={playerTournaments}
           allAvailableRounds={allAvailableRounds}
+        />
+
+        <PlayerMatchesStats
+          totalMatches={matches.length}
+          filteredMatches={filteredMatches.length}
+          selectedTournamentId={selectedTournamentId}
+          selectedRound={selectedRound}
         />
       </CardHeader>
       
