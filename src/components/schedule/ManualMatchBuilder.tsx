@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Trash2, Plus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 type Props = {
   tournamentId: string;
@@ -32,6 +33,7 @@ const ManualMatchBuilder: React.FC<Props> = ({ tournamentId, initialRound = 1 })
   const [courts, setCourts] = useState<{ id: string; name: string }[]>([]);
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // Update round when initialRound changes
   useEffect(() => {
@@ -48,14 +50,18 @@ const ManualMatchBuilder: React.FC<Props> = ({ tournamentId, initialRound = 1 })
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const { data: prev } = await supabase
+      console.log('Adding matches to existing round instead of overwriting...');
+      
+      // Check if tournament round exists, create if not
+      const { data: existingRound } = await supabase
         .from("tournament_rounds")
         .select("*")
         .eq("tournament_id", tournamentId)
         .eq("round_number", round)
         .maybeSingle();
 
-      if (!prev) {
+      if (!existingRound) {
+        console.log('Creating new tournament round...');
         await supabase.from("tournament_rounds").insert({
           tournament_id: tournamentId,
           round_number: round,
@@ -64,24 +70,48 @@ const ManualMatchBuilder: React.FC<Props> = ({ tournamentId, initialRound = 1 })
         });
       }
 
-      await supabase.from("matches").delete().eq("tournament_id", tournamentId).eq("round_number", round);
+      // Add new matches WITHOUT deleting existing ones
+      const newMatches = selectedMatches.map(match => ({
+        tournament_id: tournamentId,
+        round_number: round,
+        court_id: match.courtId,
+        team1_player1_id: match.team1Player1,
+        team1_player2_id: match.team1Player2,
+        team2_player1_id: match.team2Player1,
+        team2_player2_id: match.team2Player2,
+        status: 'scheduled' as const
+      }));
 
-      for (const match of selectedMatches) {
-        await supabase.from("matches").insert({
-          tournament_id: tournamentId,
-          round_number: round,
-          court_id: match.courtId,
-          team1_player1_id: match.team1Player1,
-          team1_player2_id: match.team1Player2,
-          team2_player1_id: match.team2Player1,
-          team2_player2_id: match.team2Player2,
-          status: 'scheduled'
-        });
+      console.log('Inserting new matches:', newMatches);
+      
+      const { data: insertedMatches, error } = await supabase
+        .from("matches")
+        .insert(newMatches)
+        .select();
+
+      if (error) {
+        console.error('Error inserting matches:', error);
+        throw error;
       }
+
+      console.log('Successfully added matches:', insertedMatches);
+      return insertedMatches;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["matches", tournamentId] });
-      alert("2v2 Wedstrijden opgeslagen.");
+      setSelectedMatches([]); // Clear the form after successful submission
+      toast({
+        title: "Wedstrijden toegevoegd",
+        description: `${data.length} nieuwe 2v2 wedstrijden zijn toegevoegd aan ronde ${round}.`,
+      });
+    },
+    onError: (error) => {
+      console.error('Mutation error:', error);
+      toast({
+        title: "Fout bij toevoegen",
+        description: "Er is een fout opgetreden bij het toevoegen van de wedstrijden.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -121,11 +151,14 @@ const ManualMatchBuilder: React.FC<Props> = ({ tournamentId, initialRound = 1 })
 
   const allMatchesValid = selectedMatches.length > 0 && selectedMatches.every(isValidMatch);
 
+  // Get existing matches for current round
+  const existingRoundMatches = matches.filter(match => match.round_number === round);
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          Handmatig 2v2 Schema Bouwen – Ronde {round}
+          Handmatig 2v2 Wedstrijden Toevoegen – Ronde {round}
           <div className="flex items-center gap-2">
             <Label className="text-sm">Ronde:</Label>
             <Select value={round.toString()} onValueChange={(value) => setRound(parseInt(value))}>
@@ -141,10 +174,21 @@ const ManualMatchBuilder: React.FC<Props> = ({ tournamentId, initialRound = 1 })
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {existingRoundMatches.length > 0 && (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h4 className="font-medium text-blue-900 mb-2">
+              Bestaande wedstrijden in ronde {round}: {existingRoundMatches.length}
+            </h4>
+            <p className="text-sm text-blue-700">
+              Nieuwe wedstrijden worden toegevoegd aan de bestaande wedstrijden.
+            </p>
+          </div>
+        )}
+
         {selectedMatches.map((match, index) => (
           <Card key={index} className="p-4 bg-muted/30">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="font-medium">Wedstrijd {index + 1}</h4>
+              <h4 className="font-medium">Nieuwe Wedstrijd {index + 1}</h4>
               <Button 
                 variant="ghost" 
                 size="sm" 
@@ -266,13 +310,19 @@ const ManualMatchBuilder: React.FC<Props> = ({ tournamentId, initialRound = 1 })
             disabled={!allMatchesValid || mutation.isPending}
             className="bg-green-600 text-white hover:bg-green-700"
           >
-            {mutation.isPending ? "Opslaan..." : "✅ Schema Opslaan"}
+            {mutation.isPending ? "Toevoegen..." : "✅ Wedstrijden Toevoegen"}
           </Button>
         </div>
 
         {selectedMatches.length > 0 && !allMatchesValid && (
           <p className="text-sm text-yellow-600">
             Zorg ervoor dat alle wedstrijden een baan en 4 spelers hebben voordat je opslaat.
+          </p>
+        )}
+
+        {selectedMatches.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            Klik op "Voeg 2v2 Wedstrijd Toe" om een nieuwe wedstrijd aan ronde {round} toe te voegen.
           </p>
         )}
       </CardContent>
