@@ -47,10 +47,10 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
     return 'Spelers nog niet toegewezen';
   };
 
-  const getMatchDate = () => {
-    // Use match_date if available, otherwise fall back to tournament date or created_at
-    if (match.match_date) {
-      return new Date(match.match_date).toLocaleDateString('nl-NL');
+  const getTournamentDate = () => {
+    // Use tournament start_date if available, otherwise fall back to created_at
+    if (match.tournament?.start_date) {
+      return new Date(match.tournament.start_date).toLocaleDateString('nl-NL');
     }
     if (match.created_at) {
       return new Date(match.created_at).toLocaleDateString('nl-NL');
@@ -75,14 +75,14 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
           {getPlayerNames(match)}
         </CardTitle>
         
-        {/* Tournament info row WITHOUT match number */}
+        {/* Tournament info row with match number instead of round */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-3">
             <span>{match.tournament?.name || 'Onbekend toernooi'}</span>
             <span>•</span>
-            <span>Ronde {match.round_number}</span>
+            <span>Wedstrijd {matchNumberInCourtRound}</span>
             <span>•</span>
-            <span>{getMatchDate()}</span>
+            <span>{getTournamentDate()}</span>
             <span>•</span>
             {getStatusBadge(match.status)}
           </div>
@@ -98,10 +98,10 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        {/* Blue bar with match number */}
+        {/* Blue bar with court name and match number */}
         <div className="mb-3 p-2 bg-blue-100 border border-blue-200 rounded text-center">
           <div className="text-sm font-medium text-blue-800">
-            Wedstrijd {matchNumberInCourtRound}
+            Baan: {match.court?.name || (match.court_number ? `Baan ${match.court_number}` : 'Onbekende baan')} - Wedstrijd {matchNumberInCourtRound}
           </div>
         </div>
 
