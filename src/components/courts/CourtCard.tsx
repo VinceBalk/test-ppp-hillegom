@@ -11,6 +11,7 @@ interface Court {
   logo_url?: string;
   is_active: boolean;
   menu_order: number;
+  row_side?: string;
   created_at: string;
   updated_at: string;
 }
@@ -21,8 +22,8 @@ interface CourtCardProps {
   onDelete: (courtId: string) => void;
 }
 
-const getColumnFromMenuOrder = (menuOrder: number) => {
-  if (menuOrder % 2 === 1) {
+const getColumnFromRowSide = (rowSide?: string) => {
+  if (rowSide === 'left') {
     return { name: 'Links', color: 'bg-green-100 text-green-800' };
   } else {
     return { name: 'Rechts', color: 'bg-purple-100 text-purple-800' };
@@ -30,7 +31,7 @@ const getColumnFromMenuOrder = (menuOrder: number) => {
 };
 
 export default function CourtCard({ court, onEdit, onDelete }: CourtCardProps) {
-  const column = getColumnFromMenuOrder(court.menu_order);
+  const column = getColumnFromRowSide(court.row_side);
 
   const handleDelete = () => {
     if (confirm('Weet je zeker dat je deze baan wilt verwijderen?')) {

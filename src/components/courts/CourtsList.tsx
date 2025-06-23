@@ -9,6 +9,7 @@ interface Court {
   logo_url?: string;
   is_active: boolean;
   menu_order: number;
+  row_side?: string;
   created_at: string;
   updated_at: string;
 }

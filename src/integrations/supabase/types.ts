@@ -46,6 +46,7 @@ export type Database = {
           logo_url: string | null
           menu_order: number | null
           name: string
+          row_side: string
           updated_at: string | null
         }
         Insert: {
@@ -57,6 +58,7 @@ export type Database = {
           logo_url?: string | null
           menu_order?: number | null
           name: string
+          row_side?: string
           updated_at?: string | null
         }
         Update: {
@@ -68,6 +70,7 @@ export type Database = {
           logo_url?: string | null
           menu_order?: number | null
           name?: string
+          row_side?: string
           updated_at?: string | null
         }
         Relationships: []

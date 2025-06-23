@@ -44,6 +44,7 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
     const court = courtMatches[0]?.court;
     const menuOrder = court?.menu_order ?? 999;
     const backgroundColor = court?.background_color || '#ffffff';
+    const rowSide = court?.row_side || 'left'; // Default to left if not specified
     
     const courtData = {
       name: courtName,
@@ -52,10 +53,8 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
       backgroundColor
     };
 
-    // Check if we need to get row_side from somewhere else since it's not in the court object
-    // For now, we'll use menu_order as fallback: odd = left, even = right
-    // TODO: Add row_side to court object or get it from player data
-    if (menuOrder % 2 === 1) {
+    // Use the actual row_side from the database
+    if (rowSide === 'left') {
       leftCourts.push(courtData);
     } else {
       rightCourts.push(courtData);

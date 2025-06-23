@@ -51,6 +51,7 @@ export interface Match {
     name: string;
     menu_order?: number;
     background_color?: string;
+    row_side?: string;
   };
 }
 

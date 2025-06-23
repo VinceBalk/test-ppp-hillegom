@@ -36,7 +36,7 @@ export const useMatchesFetch = (tournamentId?: string) => {
           team1_player2:players!matches_team1_player2_id_fkey(name),
           team2_player1:players!matches_team2_player1_id_fkey(name),
           team2_player2:players!matches_team2_player2_id_fkey(name),
-          court:courts(name)
+          court:courts(name, menu_order, background_color, row_side)
         `);
 
       if (tournamentId) {
@@ -73,6 +73,7 @@ export const useMatchesFetch = (tournamentId?: string) => {
             team2_player2: match.team2_player2?.name,
             court: match.court?.name,
             court_number: match.court_number,
+            court_row_side: match.court?.row_side,
             status: match.status,
             created_at: match.created_at
           });
