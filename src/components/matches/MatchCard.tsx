@@ -1,14 +1,19 @@
 
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, MapPin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Calendar, Clock, MapPin, Play } from 'lucide-react';
 import { Match } from '@/hooks/useMatches';
+import MatchSimulator from './MatchSimulator';
 
 interface MatchCardProps {
   match: Match;
 }
 
 export default function MatchCard({ match }: MatchCardProps) {
+  const [showSimulator, setShowSimulator] = useState(false);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'scheduled':
@@ -63,6 +68,15 @@ export default function MatchCard({ match }: MatchCardProps) {
     return 'Geen baan toegewezen';
   };
 
+  if (showSimulator) {
+    return (
+      <MatchSimulator 
+        match={match} 
+        onClose={() => setShowSimulator(false)} 
+      />
+    );
+  }
+
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader>
@@ -77,6 +91,15 @@ export default function MatchCard({ match }: MatchCardProps) {
           </div>
           <div className="flex items-center gap-2">
             {getStatusBadge(match.status)}
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => setShowSimulator(true)}
+              className="text-blue-600 border-blue-600 hover:bg-blue-50"
+            >
+              <Play className="h-3 w-3 mr-1" />
+              Simuleren
+            </Button>
           </div>
         </div>
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
