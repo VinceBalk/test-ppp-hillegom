@@ -1,6 +1,5 @@
 
 import MatchCard from './MatchCard';
-import SavedMatchEditor from './SavedMatchEditor';
 import { Match } from '@/hooks/useMatches';
 
 interface MatchesCourtGroupProps {
@@ -17,21 +16,17 @@ export default function MatchesCourtGroup({
   selectedTournamentId 
 }: MatchesCourtGroupProps) {
   return (
-    <div className="mb-6">
-      <h3 className="text-lg font-semibold mb-3 text-muted-foreground border-b pb-1">
+    <div className="mb-8">
+      <h3 className="text-lg font-semibold mb-4 text-primary">
         {courtName}
       </h3>
-      <div className="flex flex-col gap-3">
-        {matches.map((match) => (
-          editMode ? (
-            <SavedMatchEditor 
-              key={match.id} 
-              match={match} 
-              tournamentId={selectedTournamentId || match.tournament_id} 
-            />
-          ) : (
-            <MatchCard key={match.id} match={match} />
-          )
+      <div className="space-y-4">
+        {matches.map((match, index) => (
+          <MatchCard 
+            key={match.id} 
+            match={match} 
+            index={index}
+          />
         ))}
       </div>
     </div>

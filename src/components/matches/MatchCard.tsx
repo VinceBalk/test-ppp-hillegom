@@ -10,9 +10,10 @@ import MatchSimulator from './MatchSimulator';
 
 interface MatchCardProps {
   match: Match;
+  index: number;
 }
 
-export default function MatchCard({ match }: MatchCardProps) {
+export default function MatchCard({ match, index }: MatchCardProps) {
   const [showSimulator, setShowSimulator] = useState(false);
 
   const getStatusBadge = (status: string) => {
@@ -46,17 +47,6 @@ export default function MatchCard({ match }: MatchCardProps) {
     return 'Spelers nog niet toegewezen';
   };
 
-  // Get court name for header
-  const getCourtName = (match: Match) => {
-    if (match.court?.name) {
-      return match.court.name;
-    }
-    if (match.court_number) {
-      return `Baan ${match.court_number}`;
-    }
-    return 'Onbekende baan';
-  };
-
   if (showSimulator) {
     return (
       <MatchSimulator 
@@ -69,22 +59,16 @@ export default function MatchCard({ match }: MatchCardProps) {
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
-        {/* Blue background row with court and match number */}
-        <div className="flex items-center justify-between mb-3 p-2 bg-blue-50 rounded">
-          <div className="text-sm font-medium text-blue-800">
-            {getCourtName(match)} - Wedstrijd {match.round_number}
-          </div>
-          {getStatusBadge(match.status)}
-        </div>
-        
         {/* Player names - full width */}
         <CardTitle className="text-base leading-tight">
           {getPlayerNames(match)}
         </CardTitle>
         
-        {/* Tournament info row with Simuleren button */}
+        {/* Tournament info row with status badge and simulate button */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-3">
+            <span>Wedstrijd {index + 1}</span>
+            <span>•</span>
             <span>{match.tournament?.name || 'Onbekend toernooi'}</span>
             <span>•</span>
             <span>Ronde {match.round_number}</span>
@@ -94,6 +78,8 @@ export default function MatchCard({ match }: MatchCardProps) {
                 <span>{new Date(match.created_at).toLocaleDateString('nl-NL')}</span>
               </>
             )}
+            <span>•</span>
+            {getStatusBadge(match.status)}
           </div>
           <Button 
             size="sm" 
