@@ -18,36 +18,28 @@ export default function PlayerMatches({ playerId, playerName }: PlayerMatchesPro
     return 'Onbekend';
   };
 
-  const getOpponentNames = (match: Match, playerId: string) => {
+  const getOpponentNames = (match: Match) => {
     if (match.team1_player1 && match.team2_player1) {
-      const isInTeam1 = match.team1_player1_id === playerId || match.team1_player2_id === playerId;
-      if (isInTeam1) {
-        return match.team2_player2
-          ? `${match.team2_player1.name} & ${match.team2_player2.name}`
-          : match.team2_player1.name;
-      } else {
-        return match.team1_player2
-          ? `${match.team1_player1.name} & ${match.team1_player2.name}`
-          : match.team1_player1.name;
-      }
+      return `${match.team2_player1.name} & ${match.team2_player2?.name ?? '...'}`;
     }
-
     if (match.player1 && match.player2) {
-      return match.player1_id === playerId ? match.player2.name : match.player1.name;
+      return match.player1.name === playerName ? match.player2.name : match.player1.name;
     }
-
     return 'Onbekend';
   };
 
   const getPartnerName = (match: Match, playerId: string) => {
     if (match.team1_player1 && match.team2_player1) {
-      if (match.team1_player1_id === playerId) return match.team1_player2?.name ?? 'geen';
-      if (match.team1_player2_id === playerId) return match.team1_player1?.name ?? 'geen';
-      if (match.team2_player1_id === playerId) return match.team2_player2?.name ?? 'geen';
-      if (match.team2_player2_id === playerId) return match.team2_player1?.name ?? 'geen';
+      if (match.team1_player1_id === playerId) return match.team1_player2?.name ?? '—';
+      if (match.team1_player2_id === playerId) return match.team1_player1?.name ?? '—';
+      if (match.team2_player1_id === playerId) return match.team2_player2?.name ?? '—';
+      if (match.team2_player2_id === playerId) return match.team2_player1?.name ?? '—';
     }
     return null;
   };
+
+  const getRound = (match: Match) => match.round_within_group ?? '—';
+  const getCourt = (match: Match) => match.court_name ?? '—';
 
   if (isLoading) return <p>Bezig met laden...</p>;
   if (error) return <p>Fout bij laden van wedstrijden.</p>;
@@ -60,37 +52,14 @@ export default function PlayerMatches({ playerId, playerName }: PlayerMatchesPro
       </CardHeader>
       <CardContent className="space-y-4">
         {matches.map((match) => {
-          const opponents = getOpponentNames(match, playerId);
-          const partner = getPartnerName(match, playerId);
           const type = getMatchType(match);
+          const opponents = getOpponentNames(match);
+          const partner = getPartnerName(match, playerId);
+          const round = getRound(match);
+          const court = getCourt(match);
 
           return (
-            <div key={match.id} className="border p-4 rounded-lg shadow-sm">
-              <div className="text-sm text-muted-foreground mb-1">
-                <Calendar className="inline w-4 h-4 mr-1" />
-                Ronde {match.round_within_group} — {type}
-              </div>
-
-              {partner && (
-                <div className="text-sm mb-1">
-                  <span className="font-medium">Met:</span> {partner}
-                </div>
-              )}
-
-              <div className="text-sm">
-                <span className="font-medium">Tegen:</span> {opponents}
-              </div>
-
-              {match.court_name && (
-                <div className="text-xs text-gray-500 mt-1">
-                  <MapPin className="inline w-3 h-3 mr-1" />
-                  Baan: {match.court_name}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </CardContent>
-    </Card>
-  );
-}
+            <div key={match.id} className="border p-4 rounded-lg shadow-sm text-sm space-y-1">
+              <div className="flex items-center gap-4 text-muted-foreground text-xs mb-1">
+                <span><Calendar className="inline w-4 h-4 mr-1" /> Ronde {round}</span>
+                <span><MapPin className="inline w-4 h-
