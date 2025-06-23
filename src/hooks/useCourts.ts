@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -23,7 +22,7 @@ export function useCourts() {
       const { data, error } = await supabase
         .from('courts')
         .select('*')
-        .order('name', { ascending: true });
+        .order('created_at', { ascending: true }); // Sort by creation order
 
       if (error) {
         console.error('Error fetching courts:', error);

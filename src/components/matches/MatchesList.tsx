@@ -39,14 +39,13 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
   }, {} as Record<string, Match[]>);
 
   // Sort courts by the order they appear in the courts management system
-  // Active courts first, then by name if court is not found in management system
   const sortedCourtNames = Object.keys(matchesByCourt).sort((a, b) => {
     const courtA = courts.find(court => court.name === a);
     const courtB = courts.find(court => court.name === b);
     
-    // If both courts exist in management system, sort by their order (by name alphabetically for now)
+    // If both courts exist in management system, sort by creation order
     if (courtA && courtB) {
-      return courtA.name.localeCompare(courtB.name);
+      return new Date(courtA.created_at).getTime() - new Date(courtB.created_at).getTime();
     }
     
     // If only one exists, prioritize the managed court
@@ -68,16 +67,6 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
       rightCourts.push(courtName);
     }
   });
-
-  // Get court styling from courts management
-  const getCourtStyling = (courtName: string) => {
-    const court = courts.find(c => c.name === courtName);
-    return {
-      backgroundColor: court?.background_color || '#e3f2fd',
-      borderColor: court?.background_color || '#2196f3',
-      logoUrl: court?.logo_url
-    };
-  };
 
   return (
     <Card>
@@ -115,27 +104,12 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
             {/* Left Column */}
             <div className="space-y-6">
               {leftCourts.map((courtName) => {
-                const styling = getCourtStyling(courtName);
+                const court = courts.find(c => c.name === courtName);
                 return (
                   <div key={courtName} className="space-y-4">
-                    <div 
-                      className="p-3 border rounded text-center"
-                      style={{ 
-                        backgroundColor: styling.backgroundColor,
-                        borderColor: styling.borderColor 
-                      }}
-                    >
-                      <div className="flex items-center justify-center gap-2">
-                        {styling.logoUrl && (
-                          <img 
-                            src={styling.logoUrl} 
-                            alt={`${courtName} logo`}
-                            className="w-6 h-6 object-contain"
-                          />
-                        )}
-                        <div className="text-sm font-medium" style={{ color: styling.borderColor }}>
-                          {courtName}
-                        </div>
+                    <div className="p-3 border rounded text-center bg-gray-50">
+                      <div className="text-sm font-medium text-gray-900">
+                        {courtName}
                       </div>
                     </div>
                     <div className="space-y-3">
@@ -155,27 +129,12 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
             {/* Right Column */}
             <div className="space-y-6">
               {rightCourts.map((courtName) => {
-                const styling = getCourtStyling(courtName);
+                const court = courts.find(c => c.name === courtName);
                 return (
                   <div key={courtName} className="space-y-4">
-                    <div 
-                      className="p-3 border rounded text-center"
-                      style={{ 
-                        backgroundColor: styling.backgroundColor,
-                        borderColor: styling.borderColor 
-                      }}
-                    >
-                      <div className="flex items-center justify-center gap-2">
-                        {styling.logoUrl && (
-                          <img 
-                            src={styling.logoUrl} 
-                            alt={`${courtName} logo`}
-                            className="w-6 h-6 object-contain"
-                          />
-                        )}
-                        <div className="text-sm font-medium" style={{ color: styling.borderColor }}>
-                          {courtName}
-                        </div>
+                    <div className="p-3 border rounded text-center bg-gray-50">
+                      <div className="text-sm font-medium text-gray-900">
+                        {courtName}
                       </div>
                     </div>
                     <div className="space-y-3">
