@@ -72,6 +72,12 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
     }
   });
 
+  // Helper function to get court background color
+  const getCourtBackgroundColor = (courtName: string) => {
+    const court = filteredMatches.find(m => (m.court?.name || `Baan ${m.court_number}`) === courtName)?.court;
+    return court?.background_color || '#ffffff';
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -112,8 +118,19 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
               </div>
               {leftCourts.map((courtName) => (
                 <div key={courtName} className="space-y-4">
-                  <div className="p-3 bg-green-100 border border-green-200 rounded text-center">
-                    <div className="text-sm font-medium text-green-800">
+                  <div 
+                    className="p-3 border rounded text-center"
+                    style={{ 
+                      backgroundColor: getCourtBackgroundColor(courtName),
+                      borderColor: getCourtBackgroundColor(courtName)
+                    }}
+                  >
+                    <div 
+                      className="text-sm font-medium"
+                      style={{ 
+                        color: getCourtBackgroundColor(courtName) === '#ffffff' || getCourtBackgroundColor(courtName) === '#FFFFFF' ? '#000000' : '#ffffff'
+                      }}
+                    >
                       {courtName}
                     </div>
                   </div>
@@ -137,8 +154,19 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
               </div>
               {rightCourts.map((courtName) => (
                 <div key={courtName} className="space-y-4">
-                  <div className="p-3 bg-purple-100 border border-purple-200 rounded text-center">
-                    <div className="text-sm font-medium text-purple-800">
+                  <div 
+                    className="p-3 border rounded text-center"
+                    style={{ 
+                      backgroundColor: getCourtBackgroundColor(courtName),
+                      borderColor: getCourtBackgroundColor(courtName)
+                    }}
+                  >
+                    <div 
+                      className="text-sm font-medium"
+                      style={{ 
+                        color: getCourtBackgroundColor(courtName) === '#ffffff' || getCourtBackgroundColor(courtName) === '#FFFFFF' ? '#000000' : '#ffffff'
+                      }}
+                    >
                       {courtName}
                     </div>
                   </div>
