@@ -49,6 +49,17 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
     return 'Spelers nog niet toegewezen';
   };
 
+  const getTournamentDate = () => {
+    // Use tournament start_date if available, otherwise fall back to created_at
+    if (match.tournament?.start_date) {
+      return new Date(match.tournament.start_date).toLocaleDateString('nl-NL');
+    }
+    if (match.created_at) {
+      return new Date(match.created_at).toLocaleDateString('nl-NL');
+    }
+    return 'Geen datum';
+  };
+
   if (showSimulator) {
     return (
       <MatchSimulator 
@@ -106,6 +117,19 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
         <CardTitle className="text-base leading-tight">
           {getPlayerNames(match)}
         </CardTitle>
+        
+        {/* Tournament info row */}
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center gap-3">
+            <span>{match.tournament?.name || 'Onbekend toernooi'}</span>
+            <span>•</span>
+            <span>Wedstrijd {matchNumberInCourtRound}</span>
+            <span>•</span>
+            <span>{getTournamentDate()}</span>
+            <span>•</span>
+            {getStatusBadge(match.status)}
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="pt-0">
         {match.notes && (
