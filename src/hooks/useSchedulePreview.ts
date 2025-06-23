@@ -56,12 +56,15 @@ export const useSchedulePreview = (tournamentId?: string) => {
 
   const savePreviewToDatabase = async (tournamentId: string, roundNumber: number, previewData: SchedulePreview) => {
     try {
+      // Convert SchedulePreview to a plain object that's compatible with Json type
+      const previewJson = JSON.parse(JSON.stringify(previewData));
+      
       const { data, error } = await supabase
         .from('tournament_schedule_previews')
         .upsert({
           tournament_id: tournamentId,
           round_number: roundNumber,
-          preview_data: previewData,
+          preview_data: previewJson,
           is_approved: false,
           is_locked: false,
           updated_at: new Date().toISOString()
@@ -93,8 +96,10 @@ export const useSchedulePreview = (tournamentId?: string) => {
       const existingSchedule = await checkIfScheduleExists(tournamentId, roundNumber);
       if (existingSchedule && existingSchedule.preview_data) {
         console.log('Loading existing schedule from database');
-        setPreview(existingSchedule.preview_data as SchedulePreview);
-        return existingSchedule.preview_data as SchedulePreview;
+        // Safely cast the Json data back to SchedulePreview
+        const existingPreview = existingSchedule.preview_data as unknown as SchedulePreview;
+        setPreview(existingPreview);
+        return existingPreview;
       }
 
       const leftPlayers = tournamentPlayers.filter(tp => tp.group === 'left');
