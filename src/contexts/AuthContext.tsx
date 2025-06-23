@@ -17,7 +17,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { profile, adminUser, fetchUserProfile, fetchAdminUser, clearProfile } = userProfile;
 
   useEffect(() => {
-    console.log('AuthProvider initializing...');
+    console.log('=== AuthProvider initializing ===');
     
     const initializeAuth = async () => {
       try {
@@ -28,19 +28,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.error('Session fetch error:', error);
         }
         
-        console.log('Initial session:', session ? 'exists' : 'null');
+        console.log('Initial session check:', session ? `User: ${session.user?.email}` : 'No session');
         
         setSession(session);
         setUser(session?.user ?? null);
         
         // Only fetch profile data if we have a user
         if (session?.user) {
+          console.log('Fetching user profile for:', session.user.email);
           // Use setTimeout to defer these calls and prevent blocking
           setTimeout(() => {
             fetchUserProfile(session.user.id).catch(console.error);
             fetchAdminUser(session.user.id).catch(console.error);
           }, 0);
         } else {
+          console.log('No session found, clearing profile');
           clearProfile();
         }
         
@@ -48,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('Auth initialization error:', error);
       } finally {
         setLoading(false);
+        console.log('=== Auth initialization complete ===');
       }
     };
 
@@ -56,7 +59,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session ? 'session exists' : 'no session');
+        console.log('=== Auth state changed ===');
+        console.log('Event:', event);
+        console.log('Session:', session ? `User: ${session.user?.email}` : 'No session');
         
         setSession(session);
         setUser(session?.user ?? null);
@@ -93,12 +98,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Enhanced sign in with security logging
   const enhancedSignIn = async (email: string, password: string) => {
+    console.log('=== Enhanced sign in attempt for:', email);
     const result = await signIn(email, password);
     
     if (result.error) {
+      console.error('Sign in failed:', result.error.message);
       setTimeout(() => {
         logSecurityEvent(user?.id, 'failed_sign_in_attempt', 'auth', null, { email, error: result.error.message }).catch(console.error);
       }, 100);
+    } else {
+      console.log('Sign in successful for:', email);
     }
     
     return result;
@@ -146,7 +155,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logSecurityEvent(user?.id, action, resourceType, resourceId, details)
   };
 
-  console.log('AuthProvider render - user:', user?.id, 'loading:', loading, 'profile:', profile?.role);
+  console.log('AuthProvider render state:', {
+    user: user?.email || 'No user',
+    loading,
+    profile: profile?.role || 'No profile',
+    adminUser: adminUser?.is_super_admin || 'No admin data'
+  });
 
   return (
     <AuthContext.Provider value={contextValue}>

@@ -12,12 +12,14 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   const { user, loading, hasRole, isSuperAdmin } = useAuth();
   const location = useLocation();
 
-  console.log('ProtectedRoute check:', { 
-    user: user?.id, 
-    loading, 
-    requiredRole, 
-    pathname: location.pathname 
-  });
+  console.log('=== PROTECTED ROUTE CHECK ===');
+  console.log('Current path:', location.pathname);
+  console.log('User:', user?.email || 'No user');
+  console.log('User ID:', user?.id || 'No user ID');
+  console.log('Loading:', loading);
+  console.log('Required role:', requiredRole);
+  console.log('Has required role:', requiredRole ? hasRole(requiredRole) : 'No role required');
+  console.log('Is super admin:', isSuperAdmin());
 
   // Show loading spinner while checking authentication
   if (loading) {
@@ -43,12 +45,19 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     const hasRequiredRole = hasRole(requiredRole);
     const isSuper = isSuperAdmin();
     
+    console.log('Role check details:', {
+      requiredRole,
+      hasRequiredRole,
+      isSuper,
+      userRole: user?.email
+    });
+    
     if (!hasRequiredRole && !isSuper) {
       console.log('ProtectedRoute: Insufficient permissions for role:', requiredRole);
       return <Navigate to="/" replace />;
     }
   }
 
-  console.log('ProtectedRoute: Access granted');
+  console.log('ProtectedRoute: Access granted to:', location.pathname);
   return <>{children}</>;
 }

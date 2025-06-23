@@ -7,9 +7,24 @@ export const useMatchesFetch = (tournamentId?: string) => {
   return useQuery({
     queryKey: ['matches', tournamentId],
     queryFn: async () => {
-      console.log('=== FETCHING MATCHES ===');
+      console.log('=== FETCHING MATCHES START ===');
       console.log('Tournament ID:', tournamentId);
       
+      // Check current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      console.log('Current user in fetch:', user?.email || 'No user');
+      console.log('User error:', userError);
+      
+      if (userError) {
+        console.error('User authentication error:', userError);
+        throw new Error('Authentication required');
+      }
+      
+      if (!user) {
+        console.error('No user found in matches fetch');
+        throw new Error('User not authenticated');
+      }
+
       let query = supabase
         .from('matches')
         .select(`
@@ -30,11 +45,15 @@ export const useMatchesFetch = (tournamentId?: string) => {
       
       query = query.order('created_at', { ascending: false });
       
+      console.log('Executing matches query...');
       const { data, error } = await query;
       
       if (error) {
         console.error('=== MATCHES QUERY ERROR ===');
-        console.error('Error details:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        console.error('Error details:', error.details);
+        console.error('Error hint:', error.hint);
         throw error;
       }
       

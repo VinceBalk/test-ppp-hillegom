@@ -22,13 +22,17 @@ export default function Matches() {
   const [editMode, setEditMode] = useState(false);
   
   const { user, isSuperAdmin, hasRole } = useAuth();
+  
+  console.log('=== MATCHES PAGE RENDER START ===');
+  console.log('Current user:', user?.email || 'No user');
+  console.log('User ID:', user?.id || 'No user ID');
+  console.log('Is super admin:', isSuperAdmin());
+  console.log('Has organisator role:', hasRole('organisator'));
+  console.log('Auth loading state:', !user ? 'No user found' : 'User authenticated');
+
   const { tournaments, isLoading: tournamentsLoading, error: tournamentsError } = useTournaments();
   const { matches, isLoading: matchesLoading, error: matchesError, refetch } = useMatches(selectedTournamentId || undefined);
 
-  console.log('=== MATCHES PAGE DEBUG ===');
-  console.log('Current user:', user?.email);
-  console.log('Is super admin:', isSuperAdmin());
-  console.log('Has organisator role:', hasRole('organisator'));
   console.log('Tournament from URL:', tournamentId);
   console.log('Selected tournament:', selectedTournamentId);
   console.log('All tournaments:', tournaments);
@@ -38,6 +42,26 @@ export default function Matches() {
   console.log('Matches data:', matches);
   console.log('Matches loading:', matchesLoading);
   console.log('Matches error:', matchesError);
+
+  // Show authentication debug info
+  if (!user) {
+    console.error('=== NO USER FOUND - AUTHENTICATION ISSUE ===');
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Wedstrijden</h1>
+          <p className="text-muted-foreground">Overzicht van alle wedstrijden en resultaten</p>
+        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Geen gebruiker gevonden. Er lijkt een authenticatie probleem te zijn.
+            Probeer opnieuw in te loggen.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   // Update URL when tournament selection changes
   useEffect(() => {
@@ -69,15 +93,18 @@ export default function Matches() {
   const error = tournamentsError || matchesError;
 
   if (isLoading) {
+    console.log('=== SHOWING LOADING STATE ===');
     return <MatchesLoading />;
   }
 
   if (error) {
+    console.log('=== SHOWING ERROR STATE ===', error);
     return <MatchesError error={error} onRetry={handleRefresh} />;
   }
 
   // Show message if no tournaments exist
   if (!tournaments || tournaments.length === 0) {
+    console.log('=== NO TOURNAMENTS FOUND ===');
     return (
       <div className="space-y-6">
         <MatchesHeader
@@ -126,6 +153,8 @@ export default function Matches() {
     }
     return null;
   };
+
+  console.log('=== RENDERING MATCHES PAGE CONTENT ===');
 
   return (
     <div className="space-y-6">
