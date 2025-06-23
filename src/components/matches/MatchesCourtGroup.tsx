@@ -25,7 +25,7 @@ export default function MatchesCourtGroup({
           <MatchCard 
             key={match.id} 
             match={match} 
-            index={index}
+            matchNumberInCourtRound={index + 1} // This gives 1, 2, 3... per court/round
           />
         ))}
       </div>

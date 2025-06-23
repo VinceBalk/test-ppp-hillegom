@@ -10,10 +10,10 @@ import MatchSimulator from './MatchSimulator';
 
 interface MatchCardProps {
   match: Match;
-  index: number;
+  matchNumberInCourtRound: number; // New prop for correct numbering per court/round
 }
 
-export default function MatchCard({ match, index }: MatchCardProps) {
+export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardProps) {
   const [showSimulator, setShowSimulator] = useState(false);
 
   const getStatusBadge = (status: string) => {
@@ -47,6 +47,17 @@ export default function MatchCard({ match, index }: MatchCardProps) {
     return 'Spelers nog niet toegewezen';
   };
 
+  const getMatchDate = () => {
+    // Use match_date if available, otherwise fall back to tournament date or created_at
+    if (match.match_date) {
+      return new Date(match.match_date).toLocaleDateString('nl-NL');
+    }
+    if (match.created_at) {
+      return new Date(match.created_at).toLocaleDateString('nl-NL');
+    }
+    return 'Geen datum';
+  };
+
   if (showSimulator) {
     return (
       <MatchSimulator 
@@ -67,17 +78,13 @@ export default function MatchCard({ match, index }: MatchCardProps) {
         {/* Tournament info row with status badge and simulate button */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-3">
-            <span>Wedstrijd {index + 1}</span>
+            <span>Wedstrijd {matchNumberInCourtRound}</span>
             <span>•</span>
             <span>{match.tournament?.name || 'Onbekend toernooi'}</span>
             <span>•</span>
             <span>Ronde {match.round_number}</span>
-            {match.created_at && (
-              <>
-                <span>•</span>
-                <span>{new Date(match.created_at).toLocaleDateString('nl-NL')}</span>
-              </>
-            )}
+            <span>•</span>
+            <span>{getMatchDate()}</span>
             <span>•</span>
             {getStatusBadge(match.status)}
           </div>
