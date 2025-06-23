@@ -1,9 +1,10 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTournaments } from '@/hooks/useTournaments';
 import { useMatches } from '@/hooks/useMatches';
 import MatchesHeader from './MatchesHeader';
 import MatchesFilter from './MatchesFilter';
+import MatchesRoundFilter from './MatchesRoundFilter';
 import MatchesEmptyState from './MatchesEmptyState';
 import MatchesList from './MatchesList';
 import MatchesResultsCount from './MatchesResultsCount';
@@ -33,6 +34,7 @@ export default function MatchesContent({
 }: MatchesContentProps) {
   const { tournaments, isLoading: tournamentsLoading, error: tournamentsError } = useTournaments();
   const { matches, isLoading: matchesLoading, error: matchesError, refetch } = useMatches(selectedTournamentId || undefined);
+  const [selectedRound, setSelectedRound] = useState<string>('all');
 
   console.log('Tournament from URL:', selectedTournamentId);
   console.log('Selected tournament:', selectedTournamentId);
@@ -43,6 +45,11 @@ export default function MatchesContent({
   console.log('Matches data:', matches);
   console.log('Matches loading:', matchesLoading);
   console.log('Matches error:', matchesError);
+
+  // Reset round filter when tournament changes
+  useEffect(() => {
+    setSelectedRound('all');
+  }, [selectedTournamentId]);
 
   // Handle browser back button properly
   useEffect(() => {
@@ -63,6 +70,14 @@ export default function MatchesContent({
 
   const isLoading = tournamentsLoading || matchesLoading;
   const error = tournamentsError || matchesError;
+
+  // Get available rounds from matches
+  const availableRounds = [...new Set(matches?.map(match => match.round_number) || [])].sort();
+
+  // Filter matches by selected round
+  const filteredMatches = selectedRound === 'all' 
+    ? matches 
+    : matches?.filter(match => match.round_number === parseInt(selectedRound)) || [];
 
   if (isLoading) {
     console.log('=== SHOWING LOADING STATE ===');
@@ -120,6 +135,15 @@ export default function MatchesContent({
         selectedTournament={selectedTournament}
       />
 
+      {/* Round Filter - only show when tournament is selected and has matches */}
+      {selectedTournamentId && matches.length > 0 && availableRounds.length > 1 && (
+        <MatchesRoundFilter
+          availableRounds={availableRounds}
+          selectedRound={selectedRound}
+          onRoundChange={setSelectedRound}
+        />
+      )}
+
       {/* No matches alert */}
       {selectedTournamentId && matches.length === 0 && (
         <MatchesEmptyState type="no-matches" selectedTournamentId={selectedTournamentId} />
@@ -130,20 +154,25 @@ export default function MatchesContent({
         <MatchesEmptyState type="no-selection" />
       ) : (
         <MatchesList
-          matches={matches}
+          matches={filteredMatches}
           editMode={editMode}
           selectedTournamentId={selectedTournamentId}
         />
       )}
 
       {/* Results count */}
-      <MatchesResultsCount matchCount={matches.length} selectedTournament={selectedTournament} />
+      <MatchesResultsCount 
+        matchCount={filteredMatches.length} 
+        selectedTournament={selectedTournament}
+        selectedRound={selectedRound}
+        totalMatches={matches.length}
+      />
 
       {/* Debug Info - only show for super admins */}
       {isSuperAdmin && (
         <MatchesDebug
           selectedTournamentId={selectedTournamentId}
-          matches={matches}
+          matches={filteredMatches}
           tournaments={tournaments}
           selectedTournament={selectedTournament}
         />
