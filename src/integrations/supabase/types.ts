@@ -871,7 +871,7 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: {
-        Args: Record<PropertyKey, never> | { user_id: string }
+        Args: { user_id: string }
         Returns: boolean
       }
       log_comprehensive_security_event: {

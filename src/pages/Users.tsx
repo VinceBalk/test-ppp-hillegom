@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shield, Activity, AlertTriangle, UserCheck, Clock } from 'lucide-react';
+import { Shield, Activity, AlertTriangle, UserCheck, Clock, Loader2 } from 'lucide-react';
 import { useSecurityValidation } from '@/hooks/useSecurityValidation';
 
 interface UserProfile {
@@ -38,7 +38,7 @@ interface AuditLog {
 }
 
 export default function Users() {
-  const { isSuperAdmin, logSecurityEvent, hasRole } = useAuth();
+  const { isSuperAdmin, logSecurityEvent, hasRole, user } = useAuth();
   const { validateRoleChange } = useSecurityValidation();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -202,8 +202,11 @@ export default function Users() {
       setLoading(false);
     };
     
-    loadData();
-  }, []);
+    // Only load data if user is authenticated
+    if (user) {
+      loadData();
+    }
+  }, [user, isSuperAdmin]);
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
@@ -235,6 +238,42 @@ export default function Users() {
     return action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto" />
+              <h3 className="text-lg font-semibold">Inloggen vereist</h3>
+              <p className="text-muted-foreground">
+                Je moet ingelogd zijn om gebruikersbeheer te bekijken.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!hasRole('beheerder')) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <Shield className="h-12 w-12 text-muted-foreground mx-auto" />
+              <h3 className="text-lg font-semibold">Toegang geweigerd</h3>
+              <p className="text-muted-foreground">
+                Je hebt geen toestemming om gebruikersbeheer te bekijken.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -247,7 +286,7 @@ export default function Users() {
         
         <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
           <div className="flex items-center space-x-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+            <Loader2 className="h-4 w-4 animate-spin" />
             <p className="text-muted-foreground">
               Gegevens worden geladen...
             </p>
@@ -330,7 +369,7 @@ export default function Users() {
                 </TableHeader>
                 <TableBody>
                   {users.map((user) => {
-                    const isAdmin = adminUsers.find(admin => admin.user_id === user.id);
+                    const isAdmin = adminUsers.find(admin => admin.email === user.email);
                     const canModifyUser = hasRole('beheerder') && (!isAdmin?.is_super_admin || isSuperAdmin());
                     
                     return (
