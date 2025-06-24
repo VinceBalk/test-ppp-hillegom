@@ -16,6 +16,7 @@ import ManualMatchBuilder from '@/components/schedule/ManualMatchBuilder';
 import ScheduleDebug from '@/components/schedule/ScheduleDebug';
 import ScheduleLoadingState from '@/components/schedule/ScheduleLoadingState';
 import ScheduleErrorState from '@/components/schedule/ScheduleErrorState';
+import MatchCard from '@/components/matches/MatchCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
@@ -146,6 +147,49 @@ export default function Schedule() {
   const roundMatches = matches.filter(match => match.round_number === selectedRound);
   const hasExistingMatches = roundMatches.length > 0;
 
+  // Group matches by court and row_side for display, matching MatchesList component
+  const groupMatchesByCourt = (matches: typeof roundMatches) => {
+    return matches.reduce((groups, match) => {
+      const courtKey = match.court?.name || (match.court_number ? `Baan ${match.court_number}` : 'Onbekende baan');
+      if (!groups[courtKey]) {
+        groups[courtKey] = [];
+      }
+      groups[courtKey].push(match);
+      return groups;
+    }, {} as Record<string, typeof roundMatches>);
+  };
+
+  const matchesByCourt = groupMatchesByCourt(roundMatches);
+
+  // Separate courts based on row_side from the court data
+  const leftCourts: Array<{ name: string; matches: typeof roundMatches; menuOrder: number; backgroundColor: string }> = [];
+  const rightCourts: Array<{ name: string; matches: typeof roundMatches; menuOrder: number; backgroundColor: string }> = [];
+
+  Object.entries(matchesByCourt).forEach(([courtName, courtMatches]) => {
+    const court = courtMatches[0]?.court;
+    const menuOrder = court?.menu_order ?? 999;
+    const backgroundColor = court?.background_color || '#ffffff';
+    const rowSide = court?.row_side || 'left'; // Default to left if not specified
+    
+    const courtData = {
+      name: courtName,
+      matches: courtMatches,
+      menuOrder,
+      backgroundColor
+    };
+
+    // Use the actual row_side from the database
+    if (rowSide === 'left') {
+      leftCourts.push(courtData);
+    } else {
+      rightCourts.push(courtData);
+    }
+  });
+
+  // Sort courts within each column by menu_order (ascending)
+  leftCourts.sort((a, b) => a.menuOrder - b.menuOrder);
+  rightCourts.sort((a, b) => a.menuOrder - b.menuOrder);
+
   return (
     <div className="space-y-6">
       <ScheduleHeader tournamentName={tournament?.name || "Schema Generatie"} />
@@ -166,37 +210,81 @@ export default function Schedule() {
             onRoundChange={setSelectedRound}
           />
 
-          {/* Show existing matches if they exist */}
+          {/* Show existing matches with same styling as matches page */}
           {hasExistingMatches && (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>Bestaande Wedstrijden - Ronde {selectedRound}</CardTitle>
-                  <Badge variant="secondary">{roundMatches.length} wedstrijden</Badge>
+                  <CardTitle>Wedstrijden Overzicht</CardTitle>
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  {roundMatches.length} wedstrijd{roundMatches.length !== 1 ? 'en' : ''} in ronde {selectedRound}
+                </p>
               </CardHeader>
+              
               <CardContent>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {roundMatches.map((match) => (
-                    <div key={match.id} className="p-4 border rounded-lg bg-muted/30">
-                      <div className="font-medium text-center">
-                        <div className="text-blue-600">
-                          {match.team1_player1?.name} & {match.team1_player2?.name}
-                        </div>
-                        <div className="text-sm text-muted-foreground my-1">vs</div>
-                        <div className="text-red-600">
-                          {match.team2_player1?.name} & {match.team2_player2?.name}
-                        </div>
-                      </div>
-                      <div className="text-sm text-muted-foreground text-center mt-2">
-                        <div>{match.court?.name || match.court_number}</div>
-                        <div>Status: {match.status}</div>
-                        {match.team1_score !== undefined && match.team2_score !== undefined && (
-                          <div>Score: {match.team1_score} - {match.team2_score}</div>
-                        )}
-                      </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Left Column - Courts with row_side = 'left' */}
+                  <div className="space-y-6">
+                    <div className="text-center">
+                      <h3 className="text-lg font-semibold text-primary mb-4">Linker Groep</h3>
                     </div>
-                  ))}
+                    {leftCourts.map((court) => (
+                      <div key={court.name} className="space-y-4">
+                        <div 
+                          className="p-3 border rounded text-center"
+                          style={{ 
+                            backgroundColor: court.backgroundColor,
+                            borderColor: court.backgroundColor
+                          }}
+                        >
+                          <div className="text-sm font-medium text-black">
+                            Baan: {court.name}
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          {court.matches.map((match, index) => (
+                            <MatchCard 
+                              key={match.id} 
+                              match={match} 
+                              matchNumberInCourtRound={index + 1}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Right Column - Courts with row_side = 'right' */}
+                  <div className="space-y-6">
+                    <div className="text-center">
+                      <h3 className="text-lg font-semibold text-primary mb-4">Rechter Groep</h3>
+                    </div>
+                    {rightCourts.map((court) => (
+                      <div key={court.name} className="space-y-4">
+                        <div 
+                          className="p-3 border rounded text-center"
+                          style={{ 
+                            backgroundColor: court.backgroundColor,
+                            borderColor: court.backgroundColor
+                          }}
+                        >
+                          <div className="text-sm font-medium text-black">
+                            Baan: {court.name}
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          {court.matches.map((match, index) => (
+                            <MatchCard 
+                              key={match.id} 
+                              match={match} 
+                              matchNumberInCourtRound={index + 1}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>
