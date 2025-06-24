@@ -16,6 +16,7 @@ export interface Match {
   court_number?: string;
   match_date?: string;
   round_number: number;
+  match_number?: number;
   status: 'scheduled' | 'in_progress' | 'completed';
   team1_score?: number;
   team2_score?: number;
@@ -60,8 +61,18 @@ export const useMatches = (tournamentId?: string) => {
   const matchMutations = useMatchMutations();
   const individualMatchSave = useIndividualMatchSaveMutation();
 
-  // Sort matches by created_at to maintain creation order
+  // Sort matches by match_number when available, fallback to created_at
   const sortedMatches = matches.sort((a, b) => {
+    // If both have match numbers, sort by match number
+    if (a.match_number !== null && b.match_number !== null) {
+      return a.match_number - b.match_number;
+    }
+    
+    // If only one has match number, prioritize it
+    if (a.match_number !== null && b.match_number === null) return -1;
+    if (a.match_number === null && b.match_number !== null) return 1;
+    
+    // Fallback to creation time
     if (a.created_at && b.created_at) {
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     }

@@ -11,7 +11,7 @@ import SavedMatchEditor from './SavedMatchEditor';
 
 interface MatchCardProps {
   match: Match;
-  matchNumberInCourtRound: number;
+  matchNumberInCourtRound?: number;
 }
 
 export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardProps) {
@@ -60,6 +60,9 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
     return 'Geen datum';
   };
 
+  // Determine which match number to display
+  const displayMatchNumber = match.match_number || matchNumberInCourtRound;
+
   if (showSimulator) {
     return (
       <MatchSimulator 
@@ -91,7 +94,16 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
-        {/* Action buttons only */}
+        {/* Match number badge */}
+        {displayMatchNumber && (
+          <div className="flex justify-start mb-2">
+            <Badge variant="secondary" className="text-xs">
+              Wedstrijd #{displayMatchNumber}
+            </Badge>
+          </div>
+        )}
+        
+        {/* Action buttons */}
         <div className="flex items-start justify-end mb-2">
           <div className="flex gap-1">
             <Button 
@@ -132,8 +144,6 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-3">
             <span>{match.tournament?.name || 'Onbekend toernooi'}</span>
-            <span>•</span>
-            <span>Wedstrijd {matchNumberInCourtRound}</span>
             <span>•</span>
             <span>{getTournamentDate()}</span>
             <span>•</span>

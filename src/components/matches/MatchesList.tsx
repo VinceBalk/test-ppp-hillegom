@@ -1,8 +1,12 @@
 
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Hash } from 'lucide-react';
 import { Match } from '@/hooks/useMatches';
 import MatchCard from './MatchCard';
+import MatchNumberManager from './MatchNumberManager';
 
 interface MatchesListProps {
   matches: Match[];
@@ -11,6 +15,9 @@ interface MatchesListProps {
 }
 
 export default function MatchesList({ matches, editMode, selectedTournamentId }: MatchesListProps) {
+  const [showNumberManager, setShowNumberManager] = useState(false);
+  const [selectedRound, setSelectedRound] = useState<number | null>(null);
+
   if (!matches || matches.length === 0) {
     return null;
   }
@@ -35,8 +42,18 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
     const backgroundColor = court?.background_color || '#ffffff';
     const rowSide = court?.row_side || 'left'; // Default to left if not specified
     
-    // Sort matches within each court by creation order (earliest first)
+    // Sort matches within each court by match_number first, then creation order
     const sortedMatches = courtMatches.sort((a, b) => {
+      // If both have match numbers, sort by match number
+      if (a.match_number !== null && b.match_number !== null) {
+        return a.match_number - b.match_number;
+      }
+      
+      // If only one has match number, prioritize it
+      if (a.match_number !== null && b.match_number === null) return -1;
+      if (a.match_number === null && b.match_number !== null) return 1;
+      
+      // Fallback to creation time
       if (a.created_at && b.created_at) {
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       }
@@ -66,11 +83,48 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
   const rounds = [...new Set(matches.map(match => match.round_number))].sort();
   const roundText = rounds.length === 1 ? `ronde ${rounds[0]}` : `${rounds.length} rondes`;
 
+  const handleManageNumbers = (roundNumber: number) => {
+    setSelectedRound(roundNumber);
+    setShowNumberManager(true);
+  };
+
+  if (showNumberManager && selectedRound) {
+    const roundMatches = matches.filter(match => match.round_number === selectedRound);
+    return (
+      <MatchNumberManager
+        matches={roundMatches}
+        tournamentId={selectedTournamentId}
+        roundNumber={selectedRound}
+        onClose={() => {
+          setShowNumberManager(false);
+          setSelectedRound(null);
+        }}
+      />
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Wedstrijden Overzicht</CardTitle>
+          {editMode && rounds.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Nummers beheren:</span>
+              {rounds.map(round => (
+                <Button
+                  key={round}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleManageNumbers(round)}
+                  className="text-xs"
+                >
+                  <Hash className="h-3 w-3 mr-1" />
+                  Ronde {round}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
         <p className="text-sm text-muted-foreground">
           {matches.length} wedstrijd{matches.length !== 1 ? 'en' : ''} in {roundText}
@@ -101,7 +155,7 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
                   {court.matches.map((match, index) => (
                     <MatchCard 
                       key={match.id} 
-                      match={match} 
+                      match={match}
                       matchNumberInCourtRound={index + 1}
                     />
                   ))}
@@ -132,7 +186,7 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
                   {court.matches.map((match, index) => (
                     <MatchCard 
                       key={match.id} 
-                      match={match} 
+                      match={match}
                       matchNumberInCourtRound={index + 1}
                     />
                   ))}

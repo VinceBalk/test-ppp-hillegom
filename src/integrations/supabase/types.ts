@@ -158,6 +158,7 @@ export type Database = {
           created_at: string | null
           id: string
           match_date: string | null
+          match_number: number | null
           notes: string | null
           player1_id: string | null
           player1_score: number | null
@@ -181,6 +182,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           match_date?: string | null
+          match_number?: number | null
           notes?: string | null
           player1_id?: string | null
           player1_score?: number | null
@@ -204,6 +206,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           match_date?: string | null
+          match_number?: number | null
           notes?: string | null
           player1_id?: string | null
           player1_score?: number | null
@@ -928,6 +931,15 @@ export type Database = {
           p_round_within_group?: number
         }
         Returns: Json
+      }
+      update_match_numbers: {
+        Args: {
+          p_tournament_id: string
+          p_round_number: number
+          p_match_ids: string[]
+          p_match_numbers: number[]
+        }
+        Returns: undefined
       }
       validate_email_format: {
         Args: { email: string }
