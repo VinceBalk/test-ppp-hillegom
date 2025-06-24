@@ -33,9 +33,17 @@ export default function ScheduleMatchesDisplay({ matches, roundNumber }: Schedul
     const backgroundColor = court?.background_color || '#ffffff';
     const rowSide = court?.row_side || 'left'; // Default to left if not specified
     
+    // Sort matches within each court by creation order (earliest first)
+    const sortedMatches = courtMatches.sort((a, b) => {
+      if (a.created_at && b.created_at) {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+      return 0;
+    });
+    
     const courtData = {
       name: courtName,
-      matches: courtMatches,
+      matches: sortedMatches,
       menuOrder,
       backgroundColor
     };

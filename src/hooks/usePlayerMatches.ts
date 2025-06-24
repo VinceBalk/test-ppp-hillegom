@@ -26,7 +26,7 @@ export const usePlayerMatches = (playerId?: string) => {
           court:courts(name)
         `)
         .or(`player1_id.eq.${playerId},player2_id.eq.${playerId},team1_player1_id.eq.${playerId},team1_player2_id.eq.${playerId},team2_player1_id.eq.${playerId},team2_player2_id.eq.${playerId}`)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: true }); // Sort by creation order (earliest first)
       
       if (error) {
         console.error('Error fetching player matches:', error);

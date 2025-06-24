@@ -60,8 +60,16 @@ export const useMatches = (tournamentId?: string) => {
   const matchMutations = useMatchMutations();
   const individualMatchSave = useIndividualMatchSaveMutation();
 
+  // Sort matches by created_at to maintain creation order
+  const sortedMatches = matches.sort((a, b) => {
+    if (a.created_at && b.created_at) {
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    }
+    return 0;
+  });
+
   return {
-    matches,
+    matches: sortedMatches,
     isLoading,
     error,
     refetch,
