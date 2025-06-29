@@ -1,0 +1,50 @@
+.player-card {
+  display: block;
+  padding: var(--space-m);
+  border-radius: var(--card-radius);
+  background-color: #fff;
+  box-shadow: var(--shadow-s);
+  text-decoration: none;
+  transition: box-shadow 0.2s ease;
+}
+
+.player-card:hover {
+  box-shadow: var(--shadow-m);
+}
+
+.player-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.player-card__name {
+  font-size: var(--text-m);
+  font-weight: 600;
+  margin: 0;
+}
+
+.player-card__rating {
+  font-size: var(--text-s);
+  color: var(--color-info);
+  margin: 0;
+}
+
+.player-card__status {
+  font-size: var(--text-xs);
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--btn-radius);
+  text-transform: uppercase;
+  font-weight: 500;
+  width: fit-content;
+}
+
+.player-card__status--actief {
+  background-color: var(--color-success);
+  color: #fff;
+}
+
+.player-card__status--inactief {
+  background-color: var(--color-error);
+  color: #fff;
+}
