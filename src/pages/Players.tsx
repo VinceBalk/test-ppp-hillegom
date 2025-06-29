@@ -47,11 +47,11 @@ export default function PlayersPage() {
     .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
 
   return (
-    <div className="section space-xl">
+    <div className="section stack-l">
       <h1 className="h1">Spelers</h1>
 
-      <div className="grid-two-columns">
-        <section className="block">
+      <div className="players-columns">
+        <section className="stack-m">
           <h2 className="h2">Linker rij</h2>
           <ul className="stack-s">
             {leftSidePlayers.map((player: Player) => (
@@ -62,7 +62,7 @@ export default function PlayersPage() {
           </ul>
         </section>
 
-        <section className="block">
+        <section className="stack-m">
           <h2 className="h2">Rechter rij</h2>
           <ul className="stack-s">
             {rightSidePlayers.map((player: Player) => (
