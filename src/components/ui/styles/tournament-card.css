@@ -1,0 +1,32 @@
+.tournament-card {
+  display: block;
+  background-color: var(--color-secondary);
+  color: #fff;
+  padding: var(--space-m);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow-m);
+  text-decoration: none;
+  transition: transform 0.2s ease;
+}
+
+.tournament-card:hover {
+  transform: translateY(-0.4rem);
+}
+
+.tournament-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.tournament-card__title {
+  font-size: var(--text-l);
+  font-weight: 600;
+  margin: 0;
+}
+
+.tournament-card__date {
+  font-size: var(--text-s);
+  opacity: 0.9;
+  margin: 0;
+}
