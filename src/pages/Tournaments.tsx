@@ -3,44 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import { useTournaments, Tournament } from '@/hooks/useTournaments';
 import { TournamentHeader } from '@/components/tournaments/TournamentHeader';
 import { TournamentTable } from '@/components/tournaments/TournamentTable';
-import TournamentCard from '@/components/tournaments/TournamentCardDebug';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
 export default function Tournaments() {
   const navigate = useNavigate();
-  const {
-    tournaments,
-    isLoading,
-    error,
-    createTournament,
-    updateTournament,
-    deleteTournament,
-    isCreating,
-    isUpdating,
-    isDeleting,
-  } = useTournaments();
-
+  const { tournaments, isLoading, error, createTournament, updateTournament, deleteTournament, isCreating, isUpdating, isDeleting } = useTournaments();
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
   const [showForm, setShowForm] = useState(false);
 
-  console.log('=== TOURNAMENTS PAGE DEBUG ===');
-  console.log('Tournaments loaded:', tournaments?.length || 0);
-  console.log('Loading state:', isLoading);
-  console.log('Error state:', error);
-  console.log('Tournaments data:', tournaments);
-
-  const handleCreateTournament = (
-    tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at' | 'created_by'>
-  ) => {
+  const handleCreateTournament = (tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => {
     createTournament(tournamentData);
     setShowForm(false);
   };
 
-  const handleUpdateTournament = (
-    tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at' | 'created_by'>
-  ) => {
+  const handleUpdateTournament = (tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => {
     if (editingTournament) {
       updateTournament({ id: editingTournament.id, ...tournamentData });
       setEditingTournament(null);
@@ -116,14 +94,6 @@ export default function Tournaments() {
         isCreating={isCreating}
       />
 
-      {/* ✅ NIEUW: visuele weergave van TournamentCards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {tournaments.map((tournament) => (
-          <TournamentCard key={tournament.id} tournament={tournament} />
-        ))}
-      </div>
-
-      {/* ✅ Bestaande tabel blijft behouden */}
       <TournamentTable
         tournaments={tournaments}
         searchTerm={searchTerm}
