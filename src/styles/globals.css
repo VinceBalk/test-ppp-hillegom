@@ -1,0 +1,48 @@
+html {
+  font-size: 62.5%; /* 1rem = 10px */
+}
+
+:root {
+  /* Typography */
+  --text-xs: clamp(1.1rem, 1vw, 1.2rem);
+  --text-s: clamp(1.2rem, 1.1vw, 1.4rem);
+  --text-m: clamp(1.4rem, 1.3vw, 1.6rem);
+  --text-l: clamp(1.6rem, 1.6vw, 2rem);
+  --text-xl: clamp(2rem, 2vw, 2.4rem);
+
+  --heading-h1: clamp(3.2rem, 4vw, 4.8rem);
+  --heading-h2: clamp(2.4rem, 3.2vw, 3.6rem);
+  --heading-h3: clamp(2rem, 2.4vw, 3rem);
+  --paragraph: var(--text-m);
+
+  /* Spacing */
+  --space-xs: clamp(0.4rem, 0.8vw, 0.8rem);
+  --space-s: clamp(0.8rem, 1vw, 1.2rem);
+  --space-m: clamp(1.2rem, 1.5vw, 1.6rem);
+  --space-l: clamp(1.6rem, 2vw, 2.4rem);
+  --space-xl: clamp(2.4rem, 3vw, 3.6rem);
+
+  /* Colors */
+  --color-primary: #f28b00;
+  --color-secondary: #2c3b8d;
+  --color-action: #0055ff;
+  --color-success: #2ecc71;
+  --color-error: #e74c3c;
+  --color-warning: #f39c12;
+  --color-info: #3498db;
+
+  /* Radius */
+  --card-radius: 1.2rem;
+  --btn-radius: 0.6rem;
+  --input-radius: 0.4rem;
+
+  /* Shadows */
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --shadow-s: 0 1px 2px var(--shadow-color);
+  --shadow-m: 0 2px 4px var(--shadow-color);
+  --shadow-l: 0 4px 8px var(--shadow-color);
+
+  /* Layout */
+  --section-gap: var(--space-xl);
+  --container-max-width: 120rem;
+}
