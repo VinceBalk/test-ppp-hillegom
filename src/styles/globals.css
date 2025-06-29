@@ -65,6 +65,12 @@ html {
   /* Layout */
   --section-gap: var(--space-xl);
   --container-max-width: 120rem;
+
+  /* Breakpoints */
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
 }
 
 /* ===== TYPOGRAFIE UTILITY CLASSES ===== */
@@ -90,13 +96,13 @@ html {
 }
 
 .text-xs { font-size: var(--text-xs); }
-.text-s { font-size: var(--text-s); }
-.text-m {
+.text-s  { font-size: var(--text-s); }
+.text-m  {
   font-size: var(--text-m);
   line-height: var(--line-height-base);
   color: var(--color-paragraph);
 }
-.text-l { font-size: var(--text-l); }
+.text-l  { font-size: var(--text-l); }
 .text-xl { font-size: var(--text-xl); }
 
 /* ===== LAYOUT UTILITY CLASSES ===== */
@@ -126,8 +132,14 @@ html {
 
 .grid-two-columns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: var(--space-l);
+}
+
+@media (min-width: var(--breakpoint-md)) {
+  .grid-two-columns {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .icon-s {
