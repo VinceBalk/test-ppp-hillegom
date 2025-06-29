@@ -8,19 +8,19 @@ export default function PlayersPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Spelers</h1>
-        <p>Bezig met laden...</p>
+      <div className="section">
+        <h1 className="h1">Spelers</h1>
+        <p className="text-m">Bezig met laden...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Spelers</h1>
+      <div className="section">
+        <h1 className="h1">Spelers</h1>
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
+          <AlertCircle className="icon-s" />
           <AlertDescription>
             Fout bij het laden van spelers: {error.message}
           </AlertDescription>
@@ -31,14 +31,13 @@ export default function PlayersPage() {
 
   if (!players || players.length === 0) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Spelers</h1>
-        <p>Er zijn nog geen spelers toegevoegd.</p>
+      <div className="section">
+        <h1 className="h1">Spelers</h1>
+        <p className="text-m">Er zijn nog geen spelers toegevoegd.</p>
       </div>
     );
   }
 
-  // Groepeer en sorteer spelers
   const leftSidePlayers = players
     .filter((p) => p.group_side === 'left')
     .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
@@ -48,14 +47,13 @@ export default function PlayersPage() {
     .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
 
   return (
-    <div className="space-y-10">
-      <h1 className="text-3xl font-bold tracking-tight">Spelers</h1>
+    <div className="section space-xl">
+      <h1 className="h1">Spelers</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Linker rij */}
-        <section>
-          <h2 className="text-xl font-semibold mb-4">Linker rij</h2>
-          <ul className="space-y-4">
+      <div className="grid-two-columns">
+        <section className="block">
+          <h2 className="h2">Linker rij</h2>
+          <ul className="stack-s">
             {leftSidePlayers.map((player: Player) => (
               <li key={player.id}>
                 <PlayerCard player={player} />
@@ -64,10 +62,9 @@ export default function PlayersPage() {
           </ul>
         </section>
 
-        {/* Rechter rij */}
-        <section>
-          <h2 className="text-xl font-semibold mb-4">Rechter rij</h2>
-          <ul className="space-y-4">
+        <section className="block">
+          <h2 className="h2">Rechter rij</h2>
+          <ul className="stack-s">
             {rightSidePlayers.map((player: Player) => (
               <li key={player.id}>
                 <PlayerCard player={player} />
