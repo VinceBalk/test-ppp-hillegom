@@ -1,7 +1,13 @@
+/* ===== BASIS ===== */
 html {
   font-size: 62.5%; /* 1rem = 10px */
+  box-sizing: border-box;
+}
+*, *::before, *::after {
+  box-sizing: inherit;
 }
 
+/* ===== DESIGN TOKENS :root ===== */
 :root {
   /* Typography */
   --text-xs: clamp(1.1rem, 1vw, 1.2rem);
@@ -15,6 +21,16 @@ html {
   --heading-h3: clamp(2rem, 2.4vw, 3rem);
   --paragraph: var(--text-m);
 
+  /* Font weights */
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  /* Line heights */
+  --line-height-base: 1.6;
+  --line-height-heading: 1.2;
+
   /* Spacing */
   --space-xs: clamp(0.4rem, 0.8vw, 0.8rem);
   --space-s: clamp(0.8rem, 1vw, 1.2rem);
@@ -26,10 +42,14 @@ html {
   --color-primary: #f28b00;
   --color-secondary: #2c3b8d;
   --color-action: #0055ff;
+
   --color-success: #2ecc71;
   --color-error: #e74c3c;
   --color-warning: #f39c12;
   --color-info: #3498db;
+
+  --color-heading: #111111;
+  --color-paragraph: #444444;
 
   /* Radius */
   --card-radius: 1.2rem;
@@ -45,4 +65,79 @@ html {
   /* Layout */
   --section-gap: var(--space-xl);
   --container-max-width: 120rem;
+}
+
+/* ===== TYPOGRAFIE UTILITY CLASSES ===== */
+.h1 {
+  font-size: var(--heading-h1);
+  font-weight: var(--font-bold);
+  line-height: var(--line-height-heading);
+  color: var(--color-heading);
+}
+
+.h2 {
+  font-size: var(--heading-h2);
+  font-weight: var(--font-semibold);
+  line-height: var(--line-height-heading);
+  color: var(--color-heading);
+}
+
+.h3 {
+  font-size: var(--heading-h3);
+  font-weight: var(--font-medium);
+  line-height: var(--line-height-heading);
+  color: var(--color-heading);
+}
+
+.text-xs { font-size: var(--text-xs); }
+.text-s { font-size: var(--text-s); }
+.text-m {
+  font-size: var(--text-m);
+  line-height: var(--line-height-base);
+  color: var(--color-paragraph);
+}
+.text-l { font-size: var(--text-l); }
+.text-xl { font-size: var(--text-xl); }
+
+/* ===== LAYOUT UTILITY CLASSES ===== */
+.section {
+  padding: var(--space-l);
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+}
+
+.stack-s {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+}
+
+.stack-m {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-m);
+}
+
+.stack-l {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-l);
+}
+
+.grid-two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-l);
+}
+
+.icon-s {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+/* ===== RESET ===== */
+ul, ol {
+  padding: 0;
+  margin: 0;
+  list-style: none;
 }
