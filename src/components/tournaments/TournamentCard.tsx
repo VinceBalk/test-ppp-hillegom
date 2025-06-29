@@ -1,4 +1,5 @@
-import Link from 'next/link';
+
+import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -32,7 +33,7 @@ export default function TournamentCard({ tournament }: Props) {
   };
 
   return (
-    <Link href={`/tournaments/${tournament.id}`} className="block">
+    <Link to={`/tournaments/${tournament.id}`} className="block">
       <Card className="tournament-card">
         <CardHeader>
           <div className="tournament-card__header">
