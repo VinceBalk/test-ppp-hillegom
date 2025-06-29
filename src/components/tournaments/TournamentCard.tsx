@@ -1,7 +1,13 @@
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { Tournament } from '@/types'; // pas aan indien nodig
 import '../ui/styles/tournament-card.css';
+
+// Tijdelijk local type gebruiken om publish error te voorkomen
+type Tournament = {
+  id: string;
+  name: string;
+  date: string;
+};
 
 type Props = {
   tournament: Tournament;
