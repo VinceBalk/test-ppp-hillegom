@@ -1,8 +1,21 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, TrendingUp, TrendingDown, Minus, Trophy, Target, Calendar } from 'lucide-react';
+import {
+  ArrowLeft,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Trophy,
+  Target
+} from 'lucide-react';
 import { usePlayers } from '@/hooks/usePlayers';
 import PlayerMatches from '@/components/player/PlayerMatches';
 
@@ -11,14 +24,14 @@ export default function PlayerDetail() {
   const navigate = useNavigate();
   const { players, isLoading } = usePlayers();
 
-  const player = players.find(p => p.id === id);
+  const player = players.find((p) => p.id === id);
 
   const getRowSideBadge = (side?: string) => {
     const variants = {
       left: 'default',
       right: 'secondary'
     } as const;
-    
+
     const labels = {
       left: 'Links',
       right: 'Rechts'
@@ -32,15 +45,18 @@ export default function PlayerDetail() {
   };
 
   const getRankChangeIcon = (change?: number) => {
-    if (!change || change === 0) return <Minus className="h-4 w-4 text-gray-400" />;
-    if (change > 0) return <TrendingUp className="h-4 w-4 text-green-500" />;
+    if (!change || change === 0)
+      return <Minus className="h-4 w-4 text-gray-400" />;
+    if (change > 0)
+      return <TrendingUp className="h-4 w-4 text-green-500" />;
     return <TrendingDown className="h-4 w-4 text-red-500" />;
   };
 
   const formatSpecials = (specials?: any) => {
     if (!specials || typeof specials !== 'object') return [];
-    const specialsObj = typeof specials === 'string' ? JSON.parse(specials) : specials;
-    return Object.keys(specialsObj).filter(key => specialsObj[key]);
+    const specialsObj =
+      typeof specials === 'string' ? JSON.parse(specials) : specials;
+    return Object.keys(specialsObj).filter((key) => specialsObj[key]);
   };
 
   if (isLoading) {
@@ -54,7 +70,7 @@ export default function PlayerDetail() {
           <h1 className="text-3xl font-bold tracking-tight">Speler Details</h1>
         </div>
         <div className="flex items-center justify-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
         </div>
       </div>
     );
@@ -68,11 +84,15 @@ export default function PlayerDetail() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Terug
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight">Speler niet gevonden</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Speler niet gevonden
+          </h1>
         </div>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-muted-foreground">De opgevraagde speler kon niet worden gevonden.</p>
+            <p className="text-muted-foreground">
+              De opgevraagde speler kon niet worden gevonden.
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -80,7 +100,7 @@ export default function PlayerDetail() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       <div className="flex items-center space-x-4">
         <Button variant="outline" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -93,6 +113,7 @@ export default function PlayerDetail() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
+        {/* Algemene info */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -100,26 +121,27 @@ export default function PlayerDetail() {
               Algemene Informatie
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center">
+          <CardContent className="space-y-3">
+            <div className="flex justify-between">
               <span className="font-medium">Email:</span>
               <span>{player.email || 'Niet opgegeven'}</span>
             </div>
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between">
               <span className="font-medium">Telefoon:</span>
               <span>{player.phone || 'Niet opgegeven'}</span>
             </div>
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between">
               <span className="font-medium">Rij:</span>
               {getRowSideBadge(player.row_side)}
             </div>
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between">
               <span className="font-medium">Positie:</span>
               <span>#{player.position || 0}</span>
             </div>
           </CardContent>
         </Card>
 
+        {/* Statistieken */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -127,26 +149,30 @@ export default function PlayerDetail() {
               Prestaties
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center">
+          <CardContent className="space-y-3">
+            <div className="flex justify-between">
               <span className="font-medium">Ranking Score:</span>
-              <span className="text-lg font-bold">{player.ranking_score || 0}</span>
+              <span className="text-lg font-bold">
+                {player.ranking_score || 0}
+              </span>
             </div>
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between">
               <span className="font-medium">Totaal Toernooien:</span>
               <span>{player.total_tournaments || 0}</span>
             </div>
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between">
               <span className="font-medium">Totaal Gewonnen:</span>
               <span>{player.total_games_won || 0}</span>
             </div>
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between">
               <span className="font-medium">Gem. per Toernooi:</span>
-              <span>{player.avg_games_per_tournament?.toFixed(1) || '0.0'}</span>
+              <span>
+                {player.avg_games_per_tournament?.toFixed(1) || '0.0'}
+              </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="font-medium">Trend:</span>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 {getRankChangeIcon(player.rank_change)}
                 <span>{Math.abs(player.rank_change || 0)}</span>
               </div>
@@ -155,6 +181,7 @@ export default function PlayerDetail() {
         </Card>
       </div>
 
+      {/* Specials */}
       {formatSpecials(player.specials).length > 0 && (
         <Card>
           <CardHeader>
@@ -173,7 +200,11 @@ export default function PlayerDetail() {
         </Card>
       )}
 
-      <PlayerMatches playerId={player.id} playerName={player.name} />
+      {/* Matches */}
+      <PlayerMatches
+        playerId={player.id}
+        playerName={player.name}
+      />
     </div>
   );
 }
