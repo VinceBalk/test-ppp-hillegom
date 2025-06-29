@@ -1,8 +1,6 @@
 import Link from 'next/link';
 import { format } from 'date-fns';
-import '../ui/styles/tournament-card.css';
 
-// Tijdelijk local type gebruiken om publish error te voorkomen
 type Tournament = {
   id: string;
   name: string;
@@ -15,10 +13,22 @@ type Props = {
 
 export default function TournamentCard({ tournament }: Props) {
   return (
-    <Link href={`/tournaments/${tournament.id}`} className="tournament-card">
-      <div className="tournament-card__body">
-        <h3 className="tournament-card__title">{tournament.name}</h3>
-        <p className="tournament-card__date">
+    <Link
+      href={`/tournaments/${tournament.id}`}
+      style={{
+        display: 'block',
+        backgroundColor: '#2c3b8d',
+        color: '#fff',
+        padding: '16px',
+        borderRadius: '12px',
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+        textDecoration: 'none',
+        marginBottom: '12px',
+      }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <h3 style={{ fontSize: '18px', fontWeight: 600, margin: 0 }}>{tournament.name}</h3>
+        <p style={{ fontSize: '14px', margin: 0, opacity: 0.9 }}>
           {format(new Date(tournament.date), 'dd MMMM yyyy')}
         </p>
       </div>
