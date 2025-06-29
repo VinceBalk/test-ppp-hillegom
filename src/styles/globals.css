@@ -136,6 +136,12 @@ html {
   gap: var(--space-l);
 }
 
+.players-columns {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
 @media (min-width: var(--breakpoint-md)) {
   .grid-two-columns {
     grid-template-columns: 1fr 1fr;
