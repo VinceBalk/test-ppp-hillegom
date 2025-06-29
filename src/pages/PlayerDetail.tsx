@@ -1,3 +1,5 @@
+<p style={{ color: 'red' }}>DEBUG: Nieuwe versie geladen</p>
+
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Card,
