@@ -1,8 +1,10 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTournaments, Tournament } from '@/hooks/useTournaments';
 import { TournamentHeader } from '@/components/tournaments/TournamentHeader';
 import { TournamentTable } from '@/components/tournaments/TournamentTable';
+import TournamentCard from '@/components/tournaments/TournamentCard';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 

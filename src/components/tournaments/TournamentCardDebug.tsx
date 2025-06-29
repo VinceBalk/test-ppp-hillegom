@@ -1,4 +1,5 @@
-import Link from 'next/link';
+
+import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 
 type Tournament = {
@@ -11,10 +12,10 @@ type Props = {
   tournament: Tournament;
 };
 
-export default function TournamentCard({ tournament }: Props) {
+export default function TournamentCardDebug({ tournament }: Props) {
   return (
     <Link
-      href={`/tournaments/${tournament.id}`}
+      to={`/tournaments/${tournament.id}`}
       style={{
         display: 'block',
         backgroundColor: '#2c3b8d',

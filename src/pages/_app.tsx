@@ -1,6 +1,7 @@
 import '@/styles/globals.css';
-import type { AppProps } from 'next/app';
 
-export default function MyApp({ Component, pageProps }: AppProps) {
-  return <Component {...pageProps} />;
+// Note: This file is not used in a React Router project
+// but keeping it for potential future compatibility
+export default function MyApp() {
+  return null;
 }
