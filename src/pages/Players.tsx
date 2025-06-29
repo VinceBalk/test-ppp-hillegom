@@ -1,4 +1,3 @@
-
 import { usePlayers, Player } from '@/hooks/usePlayers';
 import PlayerCard from '@/components/players/PlayerCard';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -52,23 +51,31 @@ export default function PlayersPage() {
     <div className="space-y-10">
       <h1 className="text-3xl font-bold tracking-tight">Spelers</h1>
 
-      <section>
-        <h2 className="text-xl font-semibold mb-4">Linker rij</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {leftSidePlayers.map((player: Player) => (
-            <PlayerCard key={player.id} player={player} />
-          ))}
-        </div>
-      </section>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Linker rij */}
+        <section>
+          <h2 className="text-xl font-semibold mb-4">Linker rij</h2>
+          <ul className="space-y-4">
+            {leftSidePlayers.map((player: Player) => (
+              <li key={player.id}>
+                <PlayerCard player={player} />
+              </li>
+            ))}
+          </ul>
+        </section>
 
-      <section>
-        <h2 className="text-xl font-semibold mb-4">Rechter rij</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {rightSidePlayers.map((player: Player) => (
-            <PlayerCard key={player.id} player={player} />
-          ))}
-        </div>
-      </section>
+        {/* Rechter rij */}
+        <section>
+          <h2 className="text-xl font-semibold mb-4">Rechter rij</h2>
+          <ul className="space-y-4">
+            {rightSidePlayers.map((player: Player) => (
+              <li key={player.id}>
+                <PlayerCard player={player} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
     </div>
   );
 }
