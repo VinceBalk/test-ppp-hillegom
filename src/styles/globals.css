@@ -70,18 +70,31 @@ html {
   --breakpoint-lg: 1024px;
   --breakpoint-xl: 1280px;
 
-  /* Grid tokens per layout variant */
-  --grid-cols-2-sm: 1;
-  --grid-cols-2-md: 2;
+  /* Auto Grid Kolommen */
+  --grid-2-cols: 1;
+  --grid-3-cols: 1;
+  --grid-4-cols: 1;
+}
 
-  --grid-cols-3-sm: 1;
-  --grid-cols-3-md: 2;
-  --grid-cols-3-lg: 3;
+@media (min-width: 768px) {
+  :root {
+    --grid-2-cols: 2;
+    --grid-3-cols: 2;
+    --grid-4-cols: 2;
+  }
+}
 
-  --grid-cols-4-sm: 1;
-  --grid-cols-4-md: 2;
-  --grid-cols-4-lg: 3;
-  --grid-cols-4-xl: 4;
+@media (min-width: 1024px) {
+  :root {
+    --grid-3-cols: 3;
+    --grid-4-cols: 3;
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --grid-4-cols: 4;
+  }
 }
 
 /* ===== TYPOGRAFIE UTILITY CLASSES ===== */
@@ -146,53 +159,23 @@ html {
   height: 1.6rem;
 }
 
-/* ===== AUTO GRID SYSTEM ===== */
+/* ===== GRID SYSTEM (auto scaling) ===== */
 .grid-2 {
   display: grid;
-  grid-template-columns: repeat(var(--grid-cols-2-sm), 1fr);
+  grid-template-columns: repeat(var(--grid-2-cols), 1fr);
   gap: var(--space-l);
-}
-@media (min-width: var(--breakpoint-md)) {
-  .grid-2 {
-    grid-template-columns: repeat(var(--grid-cols-2-md), 1fr);
-  }
 }
 
 .grid-3 {
   display: grid;
-  grid-template-columns: repeat(var(--grid-cols-3-sm), 1fr);
+  grid-template-columns: repeat(var(--grid-3-cols), 1fr);
   gap: var(--space-l);
-}
-@media (min-width: var(--breakpoint-md)) {
-  .grid-3 {
-    grid-template-columns: repeat(var(--grid-cols-3-md), 1fr);
-  }
-}
-@media (min-width: var(--breakpoint-lg)) {
-  .grid-3 {
-    grid-template-columns: repeat(var(--grid-cols-3-lg), 1fr);
-  }
 }
 
 .grid-4 {
   display: grid;
-  grid-template-columns: repeat(var(--grid-cols-4-sm), 1fr);
+  grid-template-columns: repeat(var(--grid-4-cols), 1fr);
   gap: var(--space-l);
-}
-@media (min-width: var(--breakpoint-md)) {
-  .grid-4 {
-    grid-template-columns: repeat(var(--grid-cols-4-md), 1fr);
-  }
-}
-@media (min-width: var(--breakpoint-lg)) {
-  .grid-4 {
-    grid-template-columns: repeat(var(--grid-cols-4-lg), 1fr);
-  }
-}
-@media (min-width: var(--breakpoint-xl)) {
-  .grid-4 {
-    grid-template-columns: repeat(var(--grid-cols-4-xl), 1fr);
-  }
 }
 
 /* ===== RESET ===== */
