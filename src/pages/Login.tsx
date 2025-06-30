@@ -31,12 +31,9 @@ export default function Login() {
   };
 
   return (
-    <main className="login-wrapper">
-      <div className="login-box stack-l">
-        <header className="stack-s">
-          <h1 className="h1 text-center">PPP Hillegom</h1>
-          <p className="text-m text-center">Log in om je dashboard te openen</p>
-        </header>
+    <main className="section stack-l" style={{ minHeight: '100vh', justifyContent: 'center' }}>
+      <div className="stack-l" style={{ maxWidth: '40rem', margin: '0 auto' }}>
+        <h1 className="h1 text-center">Inloggen</h1>
 
         {error && (
           <Alert variant="destructive">
