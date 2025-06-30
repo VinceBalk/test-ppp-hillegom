@@ -1,76 +1,81 @@
-
 import { useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LoginHeader } from '@/components/LoginHeader';
-import { LoginForm } from '@/components/LoginForm';
-import { SignUpForm } from '@/components/SignUpForm';
-import { ForgotPasswordForm } from '@/components/ForgotPasswordForm';
+import { useNavigate } from 'react-router-dom';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 export default function Login() {
-  const { user, loading } = useAuth();
-  const [showResetForm, setShowResetForm] = useState(false);
-  const location = useLocation();
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  console.log('Login page render:', { user: user?.id, loading });
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-  // Show loading while checking auth status
-  if (loading) {
-    console.log('Login: showing loading spinner');
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Laden...</p>
-        </div>
-      </div>
-    );
-  }
+    const { error } = await login(email, password);
 
-  // Redirect authenticated users
-  if (user) {
-    const from = location.state?.from?.pathname || '/';
-    console.log('Login: User is authenticated, redirecting to:', from);
-    return <Navigate to={from} replace />;
-  }
+    if (error) {
+      setError(error.message || 'Er is iets misgegaan.');
+    } else {
+      navigate('/');
+    }
 
-  const handleForgotPassword = () => {
-    setShowResetForm(true);
+    setLoading(false);
   };
-
-  const handleBackToLogin = () => {
-    setShowResetForm(false);
-  };
-
-  console.log('Login: Rendering login form');
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5 px-4">
-      <Card className="w-full max-w-md gradient-card border-0 shadow-xl">
-        <LoginHeader />
-        <CardContent>
-          {showResetForm ? (
-            <ForgotPasswordForm onBack={handleBackToLogin} />
-          ) : (
-            <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Inloggen</TabsTrigger>
-                <TabsTrigger value="signup">Registreren</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="signin">
-                <LoginForm onForgotPassword={handleForgotPassword} />
-              </TabsContent>
-              
-              <TabsContent value="signup">
-                <SignUpForm />
-              </TabsContent>
-            </Tabs>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <main className="section stack-l" style={{ minHeight: '100vh', justifyContent: 'center' }}>
+      <div className="stack-l" style={{ maxWidth: '40rem', margin: '0 auto' }}>
+        <h1 className="h1 text-center">Inloggen</h1>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="icon-s" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleLogin} className="stack-m">
+          <div className="stack-s">
+            <label htmlFor="email" className="text-m font-medium">E-mailadres</label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+            />
+          </div>
+
+          <div className="stack-s">
+            <label htmlFor="password" className="text-m font-medium">Wachtwoord</label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+            />
+          </div>
+
+          <Button type="submit" disabled={loading}>
+            {loading ? 'Even geduld...' : 'Inloggen'}
+          </Button>
+        </form>
+
+        <p className="text-s text-center text-muted-foreground">
+          Wachtwoord vergeten? <a href="/reset-password">Reset hier</a>
+        </p>
+      </div>
+    </main>
   );
 }
