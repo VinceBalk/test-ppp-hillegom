@@ -34,7 +34,7 @@ export default function Login() {
         <LoginHeader />
         <CardContent className="space-y-6">
           {showForgotPassword ? (
-            <ForgotPasswordForm onBackToLogin={() => setShowForgotPassword(false)} />
+            <ForgotPasswordForm onBack={() => setShowForgotPassword(false)} />
           ) : (
             <LoginForm onForgotPassword={() => setShowForgotPassword(true)} />
           )}
