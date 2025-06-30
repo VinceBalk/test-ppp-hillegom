@@ -1,59 +1,45 @@
+
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent } from '@/components/ui/card';
+import { LoginHeader } from '@/components/LoginHeader';
+import { LoginForm } from '@/components/LoginForm';
+import { ForgotPasswordForm } from '@/components/ForgotPasswordForm';
 
 export default function Login() {
-  const navigate = useNavigate();
-  const { login } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const { user, loading } = useAuth();
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Laden...</p>
+        </div>
+      </div>
+    );
+  }
 
-    const { error } = await login(email, password);
-
-    if (error) {
-      setError(error.message || 'Inloggen mislukt');
-    } else {
-      navigate('/');
-    }
-  };
+  // Redirect to home if already authenticated
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
-    <div style={{ maxWidth: 400, margin: '4rem auto', padding: '2rem', border: '1px solid #ccc' }}>
-      <h1>Inloggen</h1>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '1rem' }}>
-          <label>E-mail</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{ width: '100%', padding: '0.5rem' }}
-          />
-        </div>
-
-        <div style={{ marginBottom: '1rem' }}>
-          <label>Wachtwoord</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{ width: '100%', padding: '0.5rem' }}
-          />
-        </div>
-
-        <button type="submit" style={{ padding: '0.75rem 1.5rem' }}>
-          Inloggen
-        </button>
-      </form>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20 p-4">
+      <Card className="w-full max-w-md shadow-lg">
+        <LoginHeader />
+        <CardContent className="space-y-6">
+          {showForgotPassword ? (
+            <ForgotPasswordForm onBackToLogin={() => setShowForgotPassword(false)} />
+          ) : (
+            <LoginForm onForgotPassword={() => setShowForgotPassword(true)} />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
