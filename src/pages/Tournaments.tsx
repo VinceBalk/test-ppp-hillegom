@@ -1,30 +1,30 @@
+
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTournaments, Tournament } from '@/hooks/useTournaments';
 import { TournamentHeader } from '@/components/tournaments/TournamentHeader';
 import { TournamentTable } from '@/components/tournaments/TournamentTable';
+import TournamentCard from '@/components/tournaments/TournamentCard';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
 export default function Tournaments() {
   const navigate = useNavigate();
-  const {
-    tournaments,
-    isLoading,
-    error,
-    createTournament,
-    updateTournament,
-    deleteTournament,
-    isCreating,
-    isUpdating,
-    isDeleting
-  } = useTournaments();
+  const { tournaments, isLoading, error, createTournament, updateTournament, deleteTournament, isCreating, isUpdating, isDeleting } = useTournaments();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
+  const [showForm, setShowForm] = useState(false);
 
-  const handleCreateTournament = (t: Omit<Tournament, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => {
-    createTournament(t);
+  const handleCreateTournament = (tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => {
+    createTournament(tournamentData);
+    setShowForm(false);
   };
 
-  const handleUpdateTournament = (t: Omit<Tournament, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => {
-    updateTournament({ id: t.id, ...t });
+  const handleUpdateTournament = (tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => {
+    if (editingTournament) {
+      updateTournament({ id: editingTournament.id, ...tournamentData });
+      setEditingTournament(null);
+    }
   };
 
   const handleDeleteTournament = (id: string) => {
@@ -37,19 +37,27 @@ export default function Tournaments() {
 
   if (isLoading) {
     return (
-      <div className="section stack-l">
-        <h1 className="h1">Toernooien</h1>
-        <p className="text-m">Bezig met laden...</p>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Toernooien</h1>
+          <p className="text-muted-foreground">Beheer alle toernooien en competities</p>
+        </div>
+        <div className="flex items-center justify-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="section stack-l">
-        <h1 className="h1">Toernooien</h1>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Toernooien</h1>
+          <p className="text-muted-foreground">Beheer alle toernooien en competities</p>
+        </div>
         <Alert variant="destructive">
-          <AlertCircle className="icon-s" />
+          <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             Fout bij het laden van toernooien: {error.message}
           </AlertDescription>
@@ -60,16 +68,16 @@ export default function Tournaments() {
 
   if (!tournaments || tournaments.length === 0) {
     return (
-      <div className="section stack-l">
+      <div className="space-y-6">
         <TournamentHeader
           tournamentCount={0}
-          showForm={true}
-          setShowForm={() => {}}
+          showForm={showForm}
+          setShowForm={setShowForm}
           onCreateTournament={handleCreateTournament}
           isCreating={isCreating}
         />
         <Alert>
-          <AlertCircle className="icon-s" />
+          <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             Nog geen toernooien aangemaakt. Maak je eerste toernooi aan met de knop hierboven.
           </AlertDescription>
@@ -79,21 +87,21 @@ export default function Tournaments() {
   }
 
   return (
-    <div className="section stack-l">
+    <div className="space-y-6">
       <TournamentHeader
         tournamentCount={tournaments.length}
-        showForm={false}
-        setShowForm={() => {}}
+        showForm={showForm}
+        setShowForm={setShowForm}
         onCreateTournament={handleCreateTournament}
         isCreating={isCreating}
       />
 
       <TournamentTable
         tournaments={tournaments}
-        searchTerm=""
-        onSearchChange={() => {}}
-        editingTournament={null}
-        setEditingTournament={() => {}}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        editingTournament={editingTournament}
+        setEditingTournament={setEditingTournament}
         onAssignPlayers={handleAssignPlayers}
         onUpdateTournament={handleUpdateTournament}
         onDeleteTournament={handleDeleteTournament}
