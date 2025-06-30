@@ -50,7 +50,7 @@ export default function PlayersPage() {
     <div className="section stack-l">
       <h1 className="h1">Spelers</h1>
 
-      <div className="grid-two-columns">
+      <div className="grid-2">
         <section className="stack-m">
           <h2 className="h2">Linker rij</h2>
           <ul className="stack-s">
