@@ -1,12 +1,10 @@
-<p style={{ color: 'red' }}>DEBUG: Nieuwe versie geladen</p>
-
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +14,7 @@ import {
   TrendingDown,
   Minus,
   Trophy,
-  Target
+  Target,
 } from 'lucide-react';
 import { usePlayers } from '@/hooks/usePlayers';
 import PlayerMatches from '@/components/player/PlayerMatches';
@@ -31,12 +29,12 @@ export default function PlayerDetail() {
   const getRowSideBadge = (side?: string) => {
     const variants = {
       left: 'default',
-      right: 'secondary'
+      right: 'secondary',
     } as const;
 
     const labels = {
       left: 'Links',
-      right: 'Rechts'
+      right: 'Rechts',
     };
 
     return (
@@ -48,10 +46,10 @@ export default function PlayerDetail() {
 
   const getRankChangeIcon = (change?: number) => {
     if (!change || change === 0)
-      return <Minus className="h-4 w-4 text-gray-400" />;
+      return <Minus className="icon-s text-muted-foreground" />;
     if (change > 0)
-      return <TrendingUp className="h-4 w-4 text-green-500" />;
-    return <TrendingDown className="h-4 w-4 text-red-500" />;
+      return <TrendingUp className="icon-s text-green-500" />;
+    return <TrendingDown className="icon-s text-red-500" />;
   };
 
   const formatSpecials = (specials?: any) => {
@@ -63,13 +61,13 @@ export default function PlayerDetail() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center space-x-4">
+      <div className="section stack-l">
+        <div className="stack-s">
           <Button variant="outline" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="icon-s mr-2" />
             Terug
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight">Speler Details</h1>
+          <h1 className="h1">Speler Details</h1>
         </div>
         <div className="flex items-center justify-center h-32">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -80,19 +78,17 @@ export default function PlayerDetail() {
 
   if (!player) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center space-x-4">
+      <div className="section stack-l">
+        <div className="stack-s">
           <Button variant="outline" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="icon-s mr-2" />
             Terug
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Speler niet gevonden
-          </h1>
+          <h1 className="h1">Speler niet gevonden</h1>
         </div>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-muted-foreground">
+            <p className="text-m text-muted-foreground">
               De opgevraagde speler kon niet worden gevonden.
             </p>
           </CardContent>
@@ -102,28 +98,27 @@ export default function PlayerDetail() {
   }
 
   return (
-    <div className="space-y-10">
-      <div className="flex items-center space-x-4">
+    <div className="section stack-l">
+      <div className="stack-s">
         <Button variant="outline" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
+          <ArrowLeft className="icon-s mr-2" />
           Terug
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{player.name}</h1>
-          <p className="text-muted-foreground">Speler Details</p>
+          <h1 className="h1">{player.name}</h1>
+          <p className="text-m text-muted-foreground">Speler Details</p>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Algemene info */}
+      <div className="grid-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
+              <Target className="icon-s" />
               Algemene Informatie
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="stack-s">
             <div className="flex justify-between">
               <span className="font-medium">Email:</span>
               <span>{player.email || 'Niet opgegeven'}</span>
@@ -143,20 +138,17 @@ export default function PlayerDetail() {
           </CardContent>
         </Card>
 
-        {/* Statistieken */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Trophy className="h-5 w-5" />
+              <Trophy className="icon-s" />
               Prestaties
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="stack-s">
             <div className="flex justify-between">
               <span className="font-medium">Ranking Score:</span>
-              <span className="text-lg font-bold">
-                {player.ranking_score || 0}
-              </span>
+              <span className="text-l font-bold">{player.ranking_score || 0}</span>
             </div>
             <div className="flex justify-between">
               <span className="font-medium">Totaal Toernooien:</span>
@@ -168,11 +160,9 @@ export default function PlayerDetail() {
             </div>
             <div className="flex justify-between">
               <span className="font-medium">Gem. per Toernooi:</span>
-              <span>
-                {player.avg_games_per_tournament?.toFixed(1) || '0.0'}
-              </span>
+              <span>{player.avg_games_per_tournament?.toFixed(1) || '0.0'}</span>
             </div>
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between">
               <span className="font-medium">Trend:</span>
               <div className="flex items-center gap-2">
                 {getRankChangeIcon(player.rank_change)}
@@ -183,7 +173,6 @@ export default function PlayerDetail() {
         </Card>
       </div>
 
-      {/* Specials */}
       {formatSpecials(player.specials).length > 0 && (
         <Card>
           <CardHeader>
@@ -202,11 +191,7 @@ export default function PlayerDetail() {
         </Card>
       )}
 
-      {/* Matches */}
-      <PlayerMatches
-        playerId={player.id}
-        playerName={player.name}
-      />
+      <PlayerMatches playerId={player.id} playerName={player.name} />
     </div>
   );
 }
