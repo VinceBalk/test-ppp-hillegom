@@ -132,21 +132,11 @@ html {
 
 .grid-two-columns {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: var(--space-l);
 }
 
-.players-columns {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xl);
-}
 
-@media (min-width: var(--breakpoint-md)) {
-  .grid-two-columns {
-    grid-template-columns: 1fr 1fr;
-  }
-}
 
 .icon-s {
   width: 1.6rem;
