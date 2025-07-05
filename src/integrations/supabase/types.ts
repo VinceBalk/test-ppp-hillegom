@@ -741,6 +741,7 @@ export type Database = {
           end_date: string
           entry_fee: number | null
           id: string
+          live_scoring_enabled: boolean | null
           max_players: number | null
           name: string
           round_1_generated: boolean | null
@@ -763,6 +764,7 @@ export type Database = {
           end_date: string
           entry_fee?: number | null
           id?: string
+          live_scoring_enabled?: boolean | null
           max_players?: number | null
           name: string
           round_1_generated?: boolean | null
@@ -785,6 +787,7 @@ export type Database = {
           end_date?: string
           entry_fee?: number | null
           id?: string
+          live_scoring_enabled?: boolean | null
           max_players?: number | null
           name?: string
           round_1_generated?: boolean | null

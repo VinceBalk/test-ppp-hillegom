@@ -51,18 +51,10 @@ const App = () => (
               <Route path="schedule/:tournamentId" element={<Schedule />} />
               <Route path="scores" element={<Scores />} />
               <Route path="specials" element={<Specials />} />
-              <Route path="courts" element={
-                <ProtectedRoute requiredRole="organisator">
-                  <Courts />
-                </ProtectedRoute>
-              } />
+              <Route path="courts" element={<Courts />} />
               <Route path="settings" element={<Settings />} />
               <Route path="profile" element={<Profile />} />
-              <Route path="users" element={
-                <ProtectedRoute requiredRole="beheerder">
-                  <Users />
-                </ProtectedRoute>
-              } />
+              <Route path="users" element={<Users />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
