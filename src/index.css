@@ -6,9 +6,6 @@
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. */
 
 @layer base {
-  html {
-    font-size: 62.5%; /* 1rem = 10px */
-  }
 
   :root {
     --background: 0 0% 100%;
@@ -89,7 +86,6 @@
 
   body {
     @apply bg-background text-foreground text-base leading-relaxed;
-    font-size: 1.6rem; /* 16px with html at 62.5% */
   }
 
   .mobile-menu-item {
