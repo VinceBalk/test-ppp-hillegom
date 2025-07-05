@@ -8,8 +8,11 @@ import { LoginForm } from '@/components/LoginForm';
 import { ForgotPasswordForm } from '@/components/ForgotPasswordForm';
 
 export default function Login() {
+  console.log('=== LOGIN COMPONENT RENDERING ===');
   const { user, loading } = useAuth();
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+
+  console.log('Login state:', { user: user?.email, loading });
 
   // Show loading while checking authentication
   if (loading) {
