@@ -30,6 +30,7 @@ const App = () => {
   console.log('=== APP COMPONENT RENDERING ===');
   console.log('Current URL:', window.location.href);
   console.log('Pathname:', window.location.pathname);
+  console.log('React is working - this should appear first');
   
   return (
   <QueryClientProvider client={queryClient}>

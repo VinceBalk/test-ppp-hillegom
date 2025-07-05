@@ -10,11 +10,19 @@ import { supabase } from '@/integrations/supabase/client';
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  console.log('=== AUTHPROVIDER INITIALIZING START ===');
   const authService = useAuthService();
   const userProfile = useUserProfile();
 
   const { user, session, loading, signIn, signUp, signOut, setUser, setSession, setLoading } = authService;
   const { profile, adminUser, fetchUserProfile, fetchAdminUser, clearProfile } = userProfile;
+
+  console.log('AuthProvider render state BEFORE useEffect:', {
+    user: user?.email || 'No user',
+    loading,
+    profile: profile?.role || 'No profile',
+    adminUser: adminUser?.is_super_admin || 'No admin data'
+  });
 
   useEffect(() => {
     console.log('=== AuthProvider initializing ===');
