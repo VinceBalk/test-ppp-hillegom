@@ -47,6 +47,7 @@ const App = () => {
               </ProtectedRoute>
             }>
               <Route index element={<Dashboard />} />
+              <Route path="dashboard" element={<Dashboard />} />
               <Route path="players" element={<Players />} />
               <Route path="players/:id" element={<PlayerDetail />} />
               <Route path="tournaments" element={<Tournaments />} />

@@ -11,6 +11,7 @@ import {
   Sliders,
   Shield
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -27,6 +28,20 @@ const navItems = [
 ];
 
 export function Sidebar() {
+  const { user, profile, adminUser, loading } = useAuth();
+
+  // Show loading state
+  if (loading) {
+    return (
+      <aside className="w-64 min-h-screen bg-background border-r border-border flex flex-col justify-center">
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Bezig met laden...</p>
+        </div>
+      </aside>
+    );
+  }
+
   return (
     <aside className="w-64 min-h-screen bg-background border-r border-border flex flex-col justify-between">
       {/* Logo */}
@@ -61,8 +76,10 @@ export function Sidebar() {
 
       {/* Footer met e-mailadres of user info */}
       <div className="border-t border-border p-4 text-xs text-muted-foreground">
-        <div className="text-[13px] font-medium">vincebalk@gmail.com</div>
-        <div className="text-[12px]">Beheerder (Super Admin)</div>
+        <div className="text-[13px] font-medium">{user?.email || 'Gebruiker'}</div>
+        <div className="text-[12px]">
+          {adminUser?.is_super_admin ? 'Super Admin' : (profile?.role || 'Speler')}
+        </div>
       </div>
     </aside>
   );

@@ -40,7 +40,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  // Check role-based access - be more defensive
+  // Check role-based access - Super admin can access everything
   if (requiredRole) {
     const hasRequiredRole = hasRole(requiredRole);
     const isSuper = isSuperAdmin();
@@ -52,7 +52,8 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
       userRole: user?.email
     });
     
-    if (!hasRequiredRole && !isSuper) {
+    // Super admin bypasses all role requirements
+    if (!isSuper && !hasRequiredRole) {
       console.log('ProtectedRoute: Insufficient permissions for role:', requiredRole);
       return <Navigate to="/" replace />;
     }
