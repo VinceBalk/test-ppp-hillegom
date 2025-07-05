@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, ReactNode } from 'react';
 import { AuthContextType } from '@/types/auth';
 import { useAuthService } from '@/hooks/useAuthService';
@@ -10,75 +9,81 @@ import { supabase } from '@/integrations/supabase/client';
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  console.log('=== AUTHPROVIDER INITIALIZING START ===');
   const authService = useAuthService();
   const userProfile = useUserProfile();
 
   const { user, session, loading, signIn, signUp, signOut, setUser, setSession, setLoading } = authService;
   const { profile, adminUser, fetchUserProfile, fetchAdminUser, clearProfile } = userProfile;
 
+  console.log('AuthProvider render state BEFORE useEffect:', {
+    user: user?.email || 'No user',
+    loading,
+    profile: profile?.role || 'No profile',
+    adminUser: adminUser?.is_super_admin || 'No admin data'
+  });
+
   useEffect(() => {
-    let mounted = true;
+    console.log('=== AuthProvider initializing ===');
     
     const initializeAuth = async () => {
       try {
-        setLoading(true);
-        
         // Get the current session
         const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (!mounted) return;
-        
         if (error) {
           console.error('Session fetch error:', error);
-          setLoading(false);
-          return;
         }
+        
+        console.log('Initial session check:', session ? `User: ${session.user?.email}` : 'No session');
         
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Defer profile fetching to prevent blocking
+        // Only fetch profile data if we have a user
         if (session?.user) {
+          console.log('Fetching user profile for:', session.user.email);
+          // Use setTimeout to defer these calls and prevent blocking
           setTimeout(() => {
-            if (mounted) {
-              fetchUserProfile(session.user.id).catch(console.error);
-              fetchAdminUser(session.user.id).catch(console.error);
-            }
-          }, 100);
+            fetchUserProfile(session.user.id).catch(console.error);
+            fetchAdminUser(session.user.id).catch(console.error);
+          }, 0);
         } else {
+          console.log('No session found, clearing profile');
           clearProfile();
         }
         
       } catch (error) {
         console.error('Auth initialization error:', error);
       } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        setLoading(false);
+        console.log('=== Auth initialization complete ===');
       }
     };
 
-    // Set up auth state listener first
+    initializeAuth();
+
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (!mounted) return;
+      async (event, session) => {
+        console.log('=== Auth state changed ===');
+        console.log('Event:', event);
+        console.log('Session:', session ? `User: ${session.user?.email}` : 'No session');
         
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Defer profile fetching to prevent race conditions
+          // Defer profile fetching to avoid blocking the auth state change
           setTimeout(() => {
-            if (mounted) {
-              fetchUserProfile(session.user.id).catch(console.error);
-              fetchAdminUser(session.user.id).catch(console.error);
-            }
-          }, 100);
+            fetchUserProfile(session.user.id).catch(console.error);
+            fetchAdminUser(session.user.id).catch(console.error);
+          }, 0);
           
           if (event === 'SIGNED_IN') {
             setTimeout(() => {
               logSecurityEvent(session.user.id, 'user_signed_in').catch(console.error);
-            }, 200);
+            }, 100);
           }
         } else {
           clearProfile();
@@ -86,17 +91,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (event === 'SIGNED_OUT') {
             setTimeout(() => {
               logSecurityEvent(user?.id, 'user_signed_out').catch(console.error);
-            }, 200);
+            }, 100);
           }
         }
       }
     );
 
-    // Then initialize auth
-    initializeAuth();
-
     return () => {
-      mounted = false;
+      console.log('Cleaning up auth listener');
       subscription.unsubscribe();
     };
   }, []);
