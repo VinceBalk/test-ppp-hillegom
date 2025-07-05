@@ -5,7 +5,7 @@ export function LoginHeader() {
     <CardHeader className="space-y-4 text-center">
       <div className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
         <img
-          src="/PPP_beeldmerk.webp"
+          src="/PPP_beeldmerk.svg"
           alt="PPP Hillegom logo"
           className="h-full w-full object-contain"
         />
