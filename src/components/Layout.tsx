@@ -7,6 +7,7 @@ import { Header } from './Header';
 import { useSecurityMonitoring } from '../hooks/useSecurityMonitoring';
 
 export default function Layout() {
+  console.log('=== LAYOUT COMPONENT RENDERING ===');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Initialize security monitoring

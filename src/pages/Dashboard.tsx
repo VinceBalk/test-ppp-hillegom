@@ -6,6 +6,7 @@ import { PlayerRankings } from '@/components/dashboard/PlayerRankings';
 import { useDashboardData } from '@/hooks/useDashboardData';
 
 export default function Dashboard() {
+  console.log('=== DASHBOARD COMPONENT RENDERING ===');
   const navigate = useNavigate();
   const {
     currentTournament,

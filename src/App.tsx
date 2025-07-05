@@ -28,6 +28,8 @@ const queryClient = new QueryClient();
 
 const App = () => {
   console.log('=== APP COMPONENT RENDERING ===');
+  console.log('Current URL:', window.location.href);
+  console.log('Pathname:', window.location.pathname);
   
   return (
   <QueryClientProvider client={queryClient}>
