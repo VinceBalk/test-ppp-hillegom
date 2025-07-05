@@ -9,21 +9,6 @@ export const useMatchesFetch = (tournamentId?: string) => {
     queryFn: async () => {
       console.log('=== FETCHING MATCHES START ===');
       console.log('Tournament ID:', tournamentId);
-      
-      // Check current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      console.log('Current user in fetch:', user?.email || 'No user');
-      console.log('User error:', userError);
-      
-      if (userError) {
-        console.error('User authentication error:', userError);
-        throw new Error('Authentication required');
-      }
-      
-      if (!user) {
-        console.error('No user found in matches fetch');
-        throw new Error('User not authenticated');
-      }
 
       let query = supabase
         .from('matches')
