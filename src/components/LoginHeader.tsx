@@ -12,7 +12,7 @@ export function LoginHeader() {
       </div>
       <CardTitle className="text-2xl font-bold">PPP Hillegom</CardTitle>
       <CardDescription className="text-base">
-        Padel toernooi management systeem
+        Padel Toernooi Management Systeem
       </CardDescription>
     </CardHeader>
     );
