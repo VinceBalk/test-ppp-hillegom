@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { Sidebar } from './Sidebar';
+import Sidebar from './Sidebar';
 import { MobileMenu } from './MobileMenu';
 import { Header } from './Header';
 import { useSecurityMonitoring } from '../hooks/useSecurityMonitoring';
