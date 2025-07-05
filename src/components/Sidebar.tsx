@@ -26,11 +26,11 @@ const navItems = [
   { to: '/users', label: 'Gebruikers', icon: Shield }
 ];
 
-export default function Sidebar() {
+export function Sidebar() {
   return (
-    <aside className="w-64 min-h-screen bg-white border-r flex flex-col justify-between">
+    <aside className="w-64 min-h-screen bg-background border-r border-border flex flex-col justify-between">
       {/* Logo */}
-      <div className="h-16 flex items-center justify-center border-b px-4">
+      <div className="h-16 flex items-center justify-center border-b border-border px-4">
         <img
           src="/PPP_logo.svg"
           alt="PPP Hillegom logo"
@@ -46,8 +46,8 @@ export default function Sidebar() {
               <NavLink
                 to={to}
                 className={({ isActive }) =>
-                  `flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium hover:bg-accent ${
-                    isActive ? 'bg-orange-500 text-white' : 'text-muted-foreground'
+                  `flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground ${
+                    isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
                   }`
                 }
               >
@@ -60,10 +60,12 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer met e-mailadres of user info */}
-      <div className="border-t p-4 text-xs text-muted-foreground">
+      <div className="border-t border-border p-4 text-xs text-muted-foreground">
         <div className="text-[13px] font-medium">vincebalk@gmail.com</div>
         <div className="text-[12px]">Beheerder (Super Admin)</div>
       </div>
     </aside>
   );
 }
+
+export default Sidebar;
