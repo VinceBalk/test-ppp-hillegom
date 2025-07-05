@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 
 interface Setting {
   key: string;
@@ -19,7 +20,9 @@ export default function Settings() {
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loggingOutUsers, setLoggingOutUsers] = useState(false);
   const { toast } = useToast();
+  const { isSuperAdmin } = useAuth();
 
   useEffect(() => {
     fetchSettings();
@@ -100,6 +103,29 @@ export default function Settings() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const forceLogoutAllUsers = async () => {
+    setLoggingOutUsers(true);
+    try {
+      const { error } = await supabase.rpc('force_logout_all_users');
+
+      if (error) throw error;
+
+      toast({
+        title: 'Gebruikers uitgelogd',
+        description: 'Alle gebruikers zijn succesvol uitgelogd.',
+      });
+    } catch (error) {
+      console.error('Error forcing logout:', error);
+      toast({
+        title: 'Fout',
+        description: 'Kon gebruikers niet uitloggen.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoggingOutUsers(false);
     }
   };
 
@@ -310,6 +336,41 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Admin Actions - Only visible to super admins */}
+        {isSuperAdmin() && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                Admin Acties
+              </CardTitle>
+              <CardDescription>
+                Gevaarlijke acties die alleen door super admins uitgevoerd kunnen worden
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-4">
+                <div className="p-4 border border-destructive/20 bg-destructive/5 rounded-lg">
+                  <h4 className="font-medium text-destructive mb-2">
+                    Alle gebruikers uitloggen
+                  </h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Dit zal alle gebruikers dwingen om opnieuw in te loggen. Gebruik dit alleen in noodgevallen.
+                  </p>
+                  <Button 
+                    variant="destructive" 
+                    onClick={forceLogoutAllUsers}
+                    disabled={loggingOutUsers}
+                  >
+                    {loggingOutUsers && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {loggingOutUsers ? 'Uitloggen...' : 'Alle gebruikers uitloggen'}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <div className="flex justify-end">
