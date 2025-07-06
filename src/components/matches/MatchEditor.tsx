@@ -1,121 +1,56 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import MatchScoreInput from "./MatchScoreInput";
 
-import { useState } from 'react';
-import { ScheduleMatch } from '@/types/schedule';
-import { useTournamentPlayers } from '@/hooks/useTournamentPlayers';
-import { useCourts } from '@/hooks/useCourts';
-import { useIndividualMatchSaveMutation } from '@/hooks/useIndividualMatchSaveMutation';
-import MatchEditorView from './MatchEditorView';
-import MatchEditorForm from './MatchEditorForm';
+type Match = {
+  id: string;
+  court_name: string;
+  round_number: number;
+  team1_names: string[];
+  team2_names: string[];
+  score_team1: number | null;
+  score_team2: number | null;
+  status: string;
+};
+
+type Tournament = {
+  id: string;
+  status: "not_started" | "active" | "completed";
+  is_simulation: boolean;
+};
 
 interface MatchEditorProps {
-  match: ScheduleMatch;
-  tournamentId: string;
-  onUpdate: (matchId: string, updates: Partial<ScheduleMatch>) => void;
-  showSaveButton?: boolean;
+  match: Match;
+  tournament: Tournament;
 }
 
-export default function MatchEditor({ match, tournamentId, onUpdate, showSaveButton = true }: MatchEditorProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedMatch, setEditedMatch] = useState<ScheduleMatch>(match);
-  const { tournamentPlayers } = useTournamentPlayers(tournamentId);
-  const { courts } = useCourts();
-  const saveMatch = useIndividualMatchSaveMutation();
-
-  const activeCourts = courts.filter(court => court.is_active);
-
-  const isLeftGroup = match.court_name?.includes('Links') || false;
-  const isRightGroup = match.court_name?.includes('Rechts') || false;
-  
-  const availablePlayers = tournamentPlayers.filter(tp => {
-    if (isLeftGroup) return tp.group === 'left';
-    if (isRightGroup) return tp.group === 'right';
-    return true;
-  });
-
-  const handleSave = () => {
-    onUpdate(match.id, editedMatch);
-    setIsEditing(false);
-  };
-
-  const handleSaveToDatabase = async () => {
-    try {
-      await saveMatch.mutateAsync({
-        matchId: match.id,
-        team1Player1Id: editedMatch.team1_player1_id,
-        team1Player2Id: editedMatch.team1_player2_id,
-        team2Player1Id: editedMatch.team2_player1_id,
-        team2Player2Id: editedMatch.team2_player2_id,
-        courtId: editedMatch.court_id,
-        courtNumber: editedMatch.court_number?.toString(),
-        roundWithinGroup: editedMatch.round_within_group
-      });
-      setIsEditing(false);
-      
-      // Also update the local state
-      onUpdate(match.id, editedMatch);
-    } catch (error) {
-      console.error('Failed to save match to database:', error);
-    }
-  };
-
-  const handleCancel = () => {
-    setEditedMatch(match);
-    setIsEditing(false);
-  };
-
-  const updatePlayer = (position: 'team1_player1' | 'team1_player2' | 'team2_player1' | 'team2_player2', playerId: string) => {
-    const player = availablePlayers.find(tp => tp.player_id === playerId);
-    if (!player) return;
-
-    setEditedMatch(prev => ({
-      ...prev,
-      [`${position}_id`]: playerId,
-      [`${position}_name`]: player.player.name,
-    }));
-  };
-
-  const updateCourt = (courtId: string) => {
-    const court = activeCourts.find(c => c.id === courtId);
-    if (!court) return;
-
-    setEditedMatch(prev => ({
-      ...prev,
-      court_id: courtId,
-      court_name: court.name,
-    }));
-  };
-
-  const updateRound = (round: number) => {
-    setEditedMatch(prev => ({
-      ...prev,
-      round_within_group: round
-    }));
-  };
-
-  if (!isEditing) {
-    return (
-      <MatchEditorView 
-        match={match} 
-        onEdit={() => setIsEditing(true)} 
-      />
-    );
-  }
-
+export default function MatchEditor({ match, tournament }: MatchEditorProps) {
   return (
-    <MatchEditorForm
-      editedMatch={editedMatch}
-      availablePlayers={availablePlayers}
-      activeCourts={activeCourts}
-      isLeftGroup={isLeftGroup}
-      isRightGroup={isRightGroup}
-      showSaveButton={showSaveButton}
-      onSave={handleSave}
-      onSaveToDatabase={handleSaveToDatabase}
-      onCancel={handleCancel}
-      onUpdatePlayer={updatePlayer}
-      onUpdateCourt={updateCourt}
-      onUpdateRound={updateRound}
-      isSaving={saveMatch.isPending}
-    />
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          Wedstrijd Bewerken – Baan {match.court_name}, Ronde {match.round_number}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div>
+          <p className="font-semibold text-blue-700">
+            Team 1: {match.team1_names.join(" & ")}
+          </p>
+          <p className="font-semibold text-red-700">
+            Team 2: {match.team2_names.join(" & ")}
+          </p>
+        </div>
+
+        <div className="text-muted-foreground text-sm">
+          Status: {match.status}
+        </div>
+
+        <MatchScoreInput
+          match={match}
+          tournament={tournament}
+          round={match.round_number}
+        />
+      </CardContent>
+    </Card>
   );
 }
