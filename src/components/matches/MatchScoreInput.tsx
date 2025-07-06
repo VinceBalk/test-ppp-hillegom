@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,9 +6,10 @@ import { useToast } from "@/hooks/use-toast";
 
 type Match = {
   id: string;
+  tournament_id: string;
+  round_number: number;
   score_team1: number | null;
   score_team2: number | null;
-  round_number: number;
   status: string;
 };
 
@@ -33,6 +34,8 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
     match.score_team2 ?? ""
   );
   const [loading, setLoading] = useState(false);
+  const [blocked, setBlocked] = useState(false);
+  const [blockMessage, setBlockMessage] = useState("");
 
   const isLocked =
     tournament.status !== "active" ||
@@ -40,6 +43,37 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
 
   const canSimulate =
     tournament.is_simulation && tournament.status === "not_started";
+
+  // Check vorige ronde status
+  useEffect(() => {
+    const checkPreviousRoundComplete = async () => {
+      if (round === 1 || tournament.status !== "active") return;
+
+      const prevRound = round - 1;
+      const { data: matches, error } = await supabase
+        .from("matches")
+        .select("id, status")
+        .eq("tournament_id", match.tournament_id)
+        .eq("round_number", prevRound);
+
+      if (error || !matches) {
+        setBlocked(true);
+        setBlockMessage("Kan eerdere ronde niet controleren.");
+        return;
+      }
+
+      const notCompleted = matches.filter((m) => m.status !== "completed");
+
+      if (notCompleted.length > 0) {
+        setBlocked(true);
+        setBlockMessage(
+          `Ronde ${prevRound} is nog niet volledig afgerond. Invoer is geblokkeerd.`
+        );
+      }
+    };
+
+    checkPreviousRoundComplete();
+  }, [match.tournament_id, round, tournament.status]);
 
   const handleSubmit = async () => {
     if (team1Score === "" || team2Score === "") {
@@ -84,6 +118,12 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
       });
     }
   };
+
+  if (blocked) {
+    return (
+      <p className="text-sm text-yellow-600 font-medium mt-2">{blockMessage}</p>
+    );
+  }
 
   return (
     <div className="flex items-center gap-2 mt-4">
