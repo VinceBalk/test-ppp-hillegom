@@ -11,6 +11,10 @@ type Match = {
   score_team1: number | null;
   score_team2: number | null;
   status: string;
+  team1_player1_id: string;
+  team1_player2_id: string;
+  team2_player1_id: string;
+  team2_player2_id: string;
 };
 
 type Tournament = {
@@ -27,12 +31,8 @@ type Props = {
 
 export default function MatchScoreInput({ match, tournament, round }: Props) {
   const { toast } = useToast();
-  const [team1Score, setTeam1Score] = useState<number | "">(
-    match.score_team1 ?? ""
-  );
-  const [team2Score, setTeam2Score] = useState<number | "">(
-    match.score_team2 ?? ""
-  );
+  const [team1Score, setTeam1Score] = useState<number | "">(match.score_team1 ?? "");
+  const [team2Score, setTeam2Score] = useState<number | "">(match.score_team2 ?? "");
   const [loading, setLoading] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [blockMessage, setBlockMessage] = useState("");
@@ -44,7 +44,6 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
   const canSimulate =
     tournament.is_simulation && tournament.status === "not_started";
 
-  // Check vorige ronde status
   useEffect(() => {
     const checkPreviousRoundComplete = async () => {
       if (round === 1 || tournament.status !== "active") return;
@@ -77,10 +76,7 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
 
   const handleSubmit = async () => {
     if (team1Score === "" || team2Score === "") {
-      toast({
-        title: "Vul beide scores in",
-        variant: "destructive",
-      });
+      toast({ title: "Vul beide scores in", variant: "destructive" });
       return;
     }
 
@@ -94,7 +90,8 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
 
     setLoading(true);
 
-    const { error } = await supabase
+    // 1. Update match
+    const { error: matchError } = await supabase
       .from("matches")
       .update({
         score_team1: Number(team1Score),
@@ -103,12 +100,32 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
       })
       .eq("id", match.id);
 
+    // 2. Insert/update player_match_stats
+    const players = [
+      { player_id: match.team1_player1_id, team_number: 1, games_won: Number(team1Score) },
+      { player_id: match.team1_player2_id, team_number: 1, games_won: Number(team1Score) },
+      { player_id: match.team2_player1_id, team_number: 2, games_won: Number(team2Score) },
+      { player_id: match.team2_player2_id, team_number: 2, games_won: Number(team2Score) },
+    ];
+
+    const { error: statsError } = await supabase
+      .from("player_match_stats")
+      .upsert(
+        players.map((p) => ({
+          match_id: match.id,
+          player_id: p.player_id,
+          team_number: p.team_number,
+          games_won: p.games_won,
+        })),
+        { onConflict: "match_id,player_id" }
+      );
+
     setLoading(false);
 
-    if (error) {
+    if (matchError || statsError) {
       toast({
         title: "Fout bij opslaan",
-        description: error.message,
+        description: matchError?.message || statsError?.message,
         variant: "destructive",
       });
     } else {
