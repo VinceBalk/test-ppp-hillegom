@@ -29,6 +29,11 @@ type Props = {
   round: number;
 };
 
+type PlayerSpecial = {
+  player_id: string;
+  count: number;
+};
+
 export default function MatchScoreInput({ match, tournament, round }: Props) {
   const { toast } = useToast();
   const [team1Score, setTeam1Score] = useState<number | "">(match.score_team1 ?? "");
@@ -36,6 +41,15 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
   const [loading, setLoading] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [blockMessage, setBlockMessage] = useState("");
+
+  const [specials, setSpecials] = useState<{
+    [playerId: string]: number;
+  }>({
+    [match.team1_player1_id]: 0,
+    [match.team1_player2_id]: 0,
+    [match.team2_player1_id]: 0,
+    [match.team2_player2_id]: 0,
+  });
 
   const isLocked =
     tournament.status !== "active" ||
@@ -90,7 +104,6 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
 
     setLoading(true);
 
-    // 1. Update match
     const { error: matchError } = await supabase
       .from("matches")
       .update({
@@ -100,7 +113,6 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
       })
       .eq("id", match.id);
 
-    // 2. Insert/update player_match_stats
     const players = [
       { player_id: match.team1_player1_id, team_number: 1, games_won: Number(team1Score) },
       { player_id: match.team1_player2_id, team_number: 1, games_won: Number(team1Score) },
@@ -120,18 +132,31 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
         { onConflict: "match_id,player_id" }
       );
 
+    const specialsToInsert = Object.entries(specials)
+      .filter(([_, count]) => count > 0)
+      .map(([player_id, count]) => ({
+        match_id: match.id,
+        player_id,
+        special_type_id: "tiebreaker", // pas aan als je meerdere types gebruikt
+        count,
+      }));
+
+    const { error: specialsError } = specialsToInsert.length
+      ? await supabase.from("match_specials").upsert(specialsToInsert, { onConflict: "match_id,player_id,special_type_id" })
+      : { error: null };
+
     setLoading(false);
 
-    if (matchError || statsError) {
+    if (matchError || statsError || specialsError) {
       toast({
         title: "Fout bij opslaan",
-        description: matchError?.message || statsError?.message,
+        description: matchError?.message || statsError?.message || specialsError?.message,
         variant: "destructive",
       });
     } else {
       toast({
         title: "Score opgeslagen",
-        description: `De score is bijgewerkt naar ${team1Score} – ${team2Score}`,
+        description: `Score: ${team1Score} – ${team2Score}, specials ook opgeslagen.`,
       });
     }
   };
@@ -142,25 +167,57 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
     );
   }
 
+  const handleSpecialChange = (playerId: string, value: number) => {
+    setSpecials((prev) => ({
+      ...prev,
+      [playerId]: value,
+    }));
+  };
+
+  const allPlayerIds = [
+    match.team1_player1_id,
+    match.team1_player2_id,
+    match.team2_player1_id,
+    match.team2_player2_id,
+  ];
+
   return (
-    <div className="flex items-center gap-2 mt-4">
-      <Input
-        type="number"
-        value={team1Score}
-        onChange={(e) => setTeam1Score(Number(e.target.value))}
-        disabled={isLocked || loading}
-        placeholder="Team 1"
-        className="w-20"
-      />
-      <span className="text-muted-foreground">–</span>
-      <Input
-        type="number"
-        value={team2Score}
-        onChange={(e) => setTeam2Score(Number(e.target.value))}
-        disabled={isLocked || loading}
-        placeholder="Team 2"
-        className="w-20"
-      />
+    <div className="mt-4 space-y-4">
+      <div className="flex items-center gap-2">
+        <Input
+          type="number"
+          value={team1Score}
+          onChange={(e) => setTeam1Score(Number(e.target.value))}
+          disabled={isLocked || loading}
+          placeholder="Team 1"
+          className="w-20"
+        />
+        <span className="text-muted-foreground">–</span>
+        <Input
+          type="number"
+          value={team2Score}
+          onChange={(e) => setTeam2Score(Number(e.target.value))}
+          disabled={isLocked || loading}
+          placeholder="Team 2"
+          className="w-20"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {allPlayerIds.map((pid) => (
+          <div key={pid} className="flex items-center gap-2">
+            <span className="text-sm w-24">Specials {pid.slice(0, 4)}…</span>
+            <Input
+              type="number"
+              value={specials[pid]}
+              onChange={(e) => handleSpecialChange(pid, Number(e.target.value))}
+              className="w-24"
+              min={0}
+            />
+          </div>
+        ))}
+      </div>
+
       <Button
         onClick={handleSubmit}
         disabled={isLocked || loading}
