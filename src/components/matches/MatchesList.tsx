@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,9 +11,14 @@ interface MatchesListProps {
   matches: Match[];
   editMode: boolean;
   selectedTournamentId: string;
+  tournament: {
+    id: string;
+    status: "not_started" | "active" | "completed";
+    is_simulation: boolean;
+  };
 }
 
-export default function MatchesList({ matches, editMode, selectedTournamentId }: MatchesListProps) {
+export default function MatchesList({ matches, editMode, selectedTournamentId, tournament }: MatchesListProps) {
   const [showNumberManager, setShowNumberManager] = useState(false);
   const [selectedRound, setSelectedRound] = useState<number | null>(null);
 
@@ -22,7 +26,6 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
     return null;
   }
 
-  // Group matches by court
   const matchesByCourt = matches.reduce((groups, match) => {
     const courtKey = match.court?.name || (match.court_number ? `Baan ${match.court_number}` : 'Onbekende baan');
     if (!groups[courtKey]) {
@@ -32,7 +35,6 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
     return groups;
   }, {} as Record<string, Match[]>);
 
-  // Separate courts based on row_side from the court data
   const leftCourts: Array<{ name: string; matches: Match[]; menuOrder: number; backgroundColor: string }> = [];
   const rightCourts: Array<{ name: string; matches: Match[]; menuOrder: number; backgroundColor: string }> = [];
 
@@ -40,20 +42,14 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
     const court = courtMatches[0]?.court;
     const menuOrder = court?.menu_order ?? 999;
     const backgroundColor = court?.background_color || '#ffffff';
-    const rowSide = court?.row_side || 'left'; // Default to left if not specified
+    const rowSide = court?.row_side || 'left';
     
-    // Sort matches within each court by match_number first, then creation order
     const sortedMatches = courtMatches.sort((a, b) => {
-      // If both have match numbers, sort by match number
       if (a.match_number !== null && b.match_number !== null) {
         return a.match_number - b.match_number;
       }
-      
-      // If only one has match number, prioritize it
       if (a.match_number !== null && b.match_number === null) return -1;
       if (a.match_number === null && b.match_number !== null) return 1;
-      
-      // Fallback to creation time
       if (a.created_at && b.created_at) {
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       }
@@ -67,7 +63,6 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
       backgroundColor
     };
 
-    // Use the actual row_side from the database
     if (rowSide === 'left') {
       leftCourts.push(courtData);
     } else {
@@ -75,11 +70,9 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
     }
   });
 
-  // Sort courts within each column by menu_order (ascending)
   leftCourts.sort((a, b) => a.menuOrder - b.menuOrder);
   rightCourts.sort((a, b) => a.menuOrder - b.menuOrder);
 
-  // Get unique rounds for display
   const rounds = [...new Set(matches.map(match => match.round_number))].sort();
   const roundText = rounds.length === 1 ? `ronde ${rounds[0]}` : `${rounds.length} rondes`;
 
@@ -133,7 +126,6 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
       
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Left Column - Courts with row_side = 'left' */}
           <div className="space-y-6">
             <div className="text-center">
               <h3 className="text-lg font-semibold text-primary mb-4">Linker Groep</h3>
@@ -157,6 +149,7 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
                       key={match.id} 
                       match={match}
                       matchNumberInCourtRound={index + 1}
+                      tournament={tournament}
                     />
                   ))}
                 </div>
@@ -164,7 +157,6 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
             ))}
           </div>
           
-          {/* Right Column - Courts with row_side = 'right' */}
           <div className="space-y-6">
             <div className="text-center">
               <h3 className="text-lg font-semibold text-primary mb-4">Rechter Groep</h3>
@@ -188,6 +180,7 @@ export default function MatchesList({ matches, editMode, selectedTournamentId }:
                       key={match.id} 
                       match={match}
                       matchNumberInCourtRound={index + 1}
+                      tournament={tournament}
                     />
                   ))}
                 </div>

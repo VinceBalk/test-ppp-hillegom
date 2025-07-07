@@ -1,24 +1,41 @@
+import { useParams } from "react-router-dom";
+import { useTournament } from "@/hooks/useTournament";
+import { useMatches } from "@/hooks/useMatches";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import MatchesList from "@/components/matches/MatchesList";
 
-import { useMatches } from '@/hooks/useMatches';
-import MatchesSection from './MatchesSection';
+export default function TournamentMatches() {
+  const { tournamentId } = useParams<{ tournamentId: string }>();
+  const { tournament, isLoading: loadingTournament } = useTournament(tournamentId);
+  const { matches, isLoading: loadingMatches } = useMatches(tournamentId);
 
-interface TournamentMatchesProps {
-  tournamentId: string;
-  tournamentName: string;
-  maxMatches?: number;
-}
+  if (loadingTournament || loadingMatches) {
+    return <p>Bezig met laden...</p>;
+  }
 
-export default function TournamentMatches({ tournamentId, tournamentName, maxMatches = 5 }: TournamentMatchesProps) {
-  const { matches, isLoading, error } = useMatches(tournamentId);
+  if (!tournament) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Toernooi niet gevonden</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>Het opgegeven toernooi kon niet worden geladen.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <MatchesSection
+    <MatchesList
       matches={matches}
-      tournamentName={tournamentName}
-      tournamentId={tournamentId}
-      maxMatches={maxMatches}
-      isLoading={isLoading}
-      error={error}
+      editMode={tournament.status === "active"}
+      selectedTournamentId={tournamentId!}
+      tournament={{
+        id: tournament.id,
+        status: tournament.status,
+        is_simulation: tournament.is_simulation ?? false,
+      }}
     />
   );
 }
