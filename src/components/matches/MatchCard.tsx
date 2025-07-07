@@ -60,7 +60,13 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
 
   const displayMatchNumber = match.match_number || matchNumberInCourtRound;
 
-  const toernooiStatus = match.tournament_status || match.tournament?.status || 'unknown';
+  // ✅ Robuuste fallback
+  const toernooiStatus =
+    match.tournament_status ||
+    match.tournament?.status ||
+    match.tournament?.status?.toString() ||
+    'unknown';
+
   const afgerond = match.status === 'completed';
 
   useEffect(() => {
@@ -119,16 +125,17 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
               </Button>
             )}
 
-            {toernooiStatus === 'in_progress' && !afgerond && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setShowScoreInput(!showScoreInput)}
-                className="text-green-600 border-green-600 hover:bg-green-50"
-              >
-                Score invoeren
-              </Button>
-            )}
+            {(toernooiStatus === 'in_progress' || toernooiStatus === 'active') &&
+              !afgerond && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowScoreInput(!showScoreInput)}
+                  className="text-green-600 border-green-600 hover:bg-green-50"
+                >
+                  Score invoeren
+                </Button>
+              )}
           </div>
         </div>
 
