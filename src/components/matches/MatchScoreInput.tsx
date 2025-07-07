@@ -3,8 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { getShortTeamName } from "@/utils/matchUtils";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 type Match = {
   id: string;
@@ -35,228 +34,230 @@ type Props = {
   round: number;
 };
 
-type SpecialType = {
-  id: string;
-  name: string;
-};
-
 export default function MatchScoreInput({ match, tournament, round }: Props) {
   const { toast } = useToast();
   const [team1Score, setTeam1Score] = useState<number | "">(match.score_team1 ?? "");
-  const [specialTypes, setSpecialTypes] = useState<SpecialType[]>([]);
-  const [specials, setSpecials] = useState<Record<string, Record<string, number>>>({});
-  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [blockMessage, setBlockMessage] = useState("");
 
-  const team1Name = getShortTeamName(match.team1_player1, match.team1_player2);
-  const team2Name = getShortTeamName(match.team2_player1, match.team2_player2);
-  const allPlayerIds = [
-    match.team1_player1_id,
-    match.team1_player2_id,
-    match.team2_player1_id,
-    match.team2_player2_id,
-  ];
+  const [specials, setSpecials] = useState<Record<string, number>>({
+    [match.team1_player1_id]: 0,
+    [match.team1_player2_id]: 0,
+    [match.team2_player1_id]: 0,
+    [match.team2_player2_id]: 0,
+  });
+
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const isLocked =
     tournament.status !== "active" ||
     (match.status === "completed" && !tournament.is_simulation);
 
+  const canSimulate = tournament.is_simulation && tournament.status === "not_started";
+
+  const team2Score = team1Score === "" ? "" : 8 - Number(team1Score);
+
   useEffect(() => {
     const checkPreviousRoundComplete = async () => {
       if (round === 1 || tournament.status !== "active") return;
-      const { data: matches } = await supabase
+
+      const prevRound = round - 1;
+      const { data: matches, error } = await supabase
         .from("matches")
         .select("id, status")
         .eq("tournament_id", match.tournament_id)
-        .eq("round_number", round - 1);
+        .eq("round_number", prevRound);
 
-      if (!matches) {
+      if (error || !matches) {
         setBlocked(true);
         setBlockMessage("Kan eerdere ronde niet controleren.");
         return;
       }
 
       const notCompleted = matches.filter((m) => m.status !== "completed");
+
       if (notCompleted.length > 0) {
         setBlocked(true);
-        setBlockMessage(`Ronde ${round - 1} is nog niet afgerond.`);
+        setBlockMessage(
+          `Ronde ${prevRound} is nog niet volledig afgerond. Invoer is geblokkeerd.`
+        );
       }
     };
 
-    const fetchSpecials = async () => {
-      const { data } = await supabase
-        .from("special_types")
-        .select("id, name")
-        .eq("is_active", true);
-      if (data) setSpecialTypes(data);
-    };
-
     checkPreviousRoundComplete();
-    fetchSpecials();
   }, [match.tournament_id, round, tournament.status]);
 
-  useEffect(() => {
-    const initial: Record<string, Record<string, number>> = {};
-    allPlayerIds.forEach((pid) => {
-      initial[pid] = {};
-      specialTypes.forEach((s) => {
-        initial[pid][s.id] = 0;
-      });
-    });
-    setSpecials(initial);
-  }, [specialTypes]);
-
-  const handleSpecialChange = (playerId: string, specialId: string, value: number) => {
-    setSpecials((prev) => ({
-      ...prev,
-      [playerId]: {
-        ...prev[playerId],
-        [specialId]: value,
-      },
-    }));
-  };
-
   const handleSubmit = async () => {
-    if (team1Score === "" || isNaN(Number(team1Score))) {
-      toast({ title: "Vul een geldige score in", variant: "destructive" });
+    if (team1Score === "") {
+      toast({ title: "Vul een score voor Team 1 in", variant: "destructive" });
       return;
     }
-    setShowConfirm(true);
-  };
 
-  const confirmSubmit = async () => {
     setLoading(true);
-    const score1 = Number(team1Score);
-    const score2 = 8 - score1;
 
-    await supabase
+    const { error: matchError } = await supabase
       .from("matches")
       .update({
-        score_team1: score1,
-        score_team2: score2,
+        score_team1: Number(team1Score),
+        score_team2: Number(team2Score),
         status: "completed",
       })
       .eq("id", match.id);
 
     const players = [
-      { id: match.team1_player1_id, score: score1 },
-      { id: match.team1_player2_id, score: score1 },
-      { id: match.team2_player1_id, score: score2 },
-      { id: match.team2_player2_id, score: score2 },
+      { player_id: match.team1_player1_id, team_number: 1, games_won: Number(team1Score) },
+      { player_id: match.team1_player2_id, team_number: 1, games_won: Number(team1Score) },
+      { player_id: match.team2_player1_id, team_number: 2, games_won: Number(team2Score) },
+      { player_id: match.team2_player2_id, team_number: 2, games_won: Number(team2Score) },
     ];
 
-    await supabase.from("player_match_stats").upsert(
-      players.map((p) => ({
-        match_id: match.id,
-        player_id: p.id,
-        games_won: p.score,
-      })),
-      { onConflict: "match_id,player_id" }
-    );
-
-    const specialsArray = Object.entries(specials)
-      .flatMap(([playerId, specialsByType]) =>
-        Object.entries(specialsByType).map(([specialId, count]) => ({
+    const { error: statsError } = await supabase
+      .from("player_match_stats")
+      .upsert(
+        players.map((p) => ({
           match_id: match.id,
-          player_id: playerId,
-          special_type_id: specialId,
-          count,
-        }))
-      )
-      .filter((s) => s.count > 0);
+          player_id: p.player_id,
+          team_number: p.team_number,
+          games_won: p.games_won,
+        })),
+        { onConflict: "match_id,player_id" }
+      );
 
-    if (specialsArray.length > 0) {
-      await supabase.from("match_specials").upsert(specialsArray, {
-        onConflict: "match_id,player_id,special_type_id",
+    const specialsToInsert = Object.entries(specials)
+      .filter(([_, count]) => count > 0)
+      .map(([player_id, count]) => ({
+        match_id: match.id,
+        player_id,
+        special_type_id: "tiebreaker",
+        count,
+      }));
+
+    const { error: specialsError } = specialsToInsert.length
+      ? await supabase
+          .from("match_specials")
+          .upsert(specialsToInsert, { onConflict: "match_id,player_id,special_type_id" })
+      : { error: null };
+
+    setLoading(false);
+
+    if (matchError || statsError || specialsError) {
+      toast({
+        title: "Fout bij opslaan",
+        description: matchError?.message || statsError?.message || specialsError?.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Score opgeslagen",
+        description: `Score: ${team1Score} – ${team2Score}, specials ook opgeslagen.`,
       });
     }
-
-    toast({ title: "Score opgeslagen", description: `${score1} – ${score2}` });
-    setLoading(false);
-    setShowConfirm(false);
   };
 
   if (blocked) {
-    return <p className="text-sm text-yellow-600 font-medium mt-2">{blockMessage}</p>;
+    return (
+      <p className="text-sm text-yellow-600 font-medium mt-2">{blockMessage}</p>
+    );
   }
+
+  const allPlayers = [
+    {
+      id: match.team1_player1_id,
+      name: match.team1_player1?.name?.split(" ")[0] || "Speler 1A",
+    },
+    {
+      id: match.team1_player2_id,
+      name: match.team1_player2?.name?.split(" ")[0] || "Speler 1B",
+    },
+    {
+      id: match.team2_player1_id,
+      name: match.team2_player1?.name?.split(" ")[0] || "Speler 2A",
+    },
+    {
+      id: match.team2_player2_id,
+      name: match.team2_player2?.name?.split(" ")[0] || "Speler 2B",
+    },
+  ];
 
   return (
     <div className="mt-4 space-y-4">
-      <div className="flex items-center gap-2 text-lg font-semibold">
-        <span>{team1Name}</span>
-        <span>–</span>
-        <span>{team2Name}</span>
-      </div>
-
-      <div className="flex items-center gap-2">
+      {/* Score invoer */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-medium text-sm text-muted-foreground">Team 1:</span>
         <Input
           type="number"
           value={team1Score}
-          onChange={(e) => {
-            const val = Number(e.target.value);
-            if (val >= 0 && val <= 8) setTeam1Score(val);
-          }}
+          onChange={(e) => setTeam1Score(Number(e.target.value))}
           disabled={isLocked || loading}
-          className="w-24"
+          placeholder="0"
+          className="w-20"
           min={0}
           max={8}
         />
-        <span className="text-muted-foreground">–</span>
-        <Input value={team1Score !== "" ? 8 - Number(team1Score) : ""} disabled className="w-24" />
+        <span className="text-muted-foreground text-sm">–</span>
+        <Input
+          type="number"
+          value={team2Score}
+          disabled
+          placeholder="0"
+          className="w-20 bg-gray-50"
+        />
+        <span className="font-medium text-sm text-muted-foreground">Team 2</span>
       </div>
 
-      {specialTypes.length > 0 && (
-        <div className="space-y-4">
-          {allPlayerIds.map((pid) => (
-            <div key={pid} className="space-y-2">
-              <div className="font-medium text-sm">
-                Specials voor {pid.slice(0, 4)}… {/* eventueel vervangen door echte naam */}
+      {/* Specials */}
+      <div className="space-y-2">
+        {allPlayers.map((player) => (
+          <div key={player.id} className="border rounded-md p-2 bg-muted/10">
+            <button
+              type="button"
+              className="flex items-center justify-between w-full text-sm font-medium text-left"
+              onClick={() =>
+                setExpanded((prev) => ({
+                  ...prev,
+                  [player.id]: !prev[player.id],
+                }))
+              }
+            >
+              <span>Specials voor {player.name}</span>
+              {expanded[player.id] ? (
+                <ChevronUp className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
+            </button>
+
+            {expanded[player.id] && (
+              <div className="mt-2">
+                <label className="text-sm text-muted-foreground mb-1 block">
+                  Aantal tiebreaker specials
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={specials[player.id] || 0}
+                  onChange={(e) =>
+                    setSpecials((prev) => ({
+                      ...prev,
+                      [player.id]: Number(e.target.value),
+                    }))
+                  }
+                  className="w-24"
+                />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                {specialTypes.map((s) => (
-                  <div key={s.id} className="flex items-center gap-2">
-                    <span className="text-sm w-24">{s.name}</span>
-                    <Input
-                      type="number"
-                      value={specials[pid]?.[s.id] ?? 0}
-                      onChange={(e) => handleSpecialChange(pid, s.id, Number(e.target.value))}
-                      className="w-20"
-                      min={0}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+            )}
+          </div>
+        ))}
+      </div>
 
       <Button
         onClick={handleSubmit}
         disabled={isLocked || loading}
         className="bg-green-600 hover:bg-green-700 text-white"
       >
-        ✅ Score bevestigen
+        {canSimulate ? "▶️ Simuleer" : "✅ Score Opslaan"}
       </Button>
-
-      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Bevestig de ingevoerde score</DialogTitle>
-          </DialogHeader>
-          <p>
-            Team 1: <strong>{team1Name}</strong> — {team1Score} <br />
-            Team 2: <strong>{team2Name}</strong> — {team1Score !== "" ? 8 - Number(team1Score) : ""}
-          </p>
-          <DialogFooter>
-            <Button onClick={confirmSubmit} disabled={loading}>
-              Bevestig en sla op
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
