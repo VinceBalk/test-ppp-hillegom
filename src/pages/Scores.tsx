@@ -1,139 +1,146 @@
+import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
-type Tournament = {
+interface MatchDetail {
   id: string;
-  name: string;
-  start_date: string;
-  end_date: string;
-  status: string;
-  current_round: number;
-};
-
-type Match = {
-  id: string;
-  tournament_id: string;
   round_number: number;
-  court_name: string;
-  team1_name: string;
-  team2_name: string;
-  score_team1: number | null;
-  score_team2: number | null;
-  players: PlayerSpecials[];
-};
+  score_team1: number;
+  score_team2: number;
+  team1_player1?: { name: string };
+  team1_player2?: { name: string };
+  team2_player1?: { name: string };
+  team2_player2?: { name: string };
+  court?: { name: string };
+  tournament?: { name: string };
+  player_stats: {
+    player_id: string;
+    player: { name: string };
+    games_won: number;
+  }[];
+  match_specials: {
+    player_id: string;
+    player: { name: string };
+    special_type_id: string;
+    count: number;
+  }[];
+}
 
-type PlayerSpecials = {
-  player_name: string;
-  specials: { type: string; count: number }[];
-};
-
-export default function ScoresPage() {
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [matchesByTournament, setMatchesByTournament] = useState<
-    Record<string, Match[]>
-  >({});
+export default function MatchScorePage() {
+  const router = useRouter();
+  const { matchId } = router.query;
+  const [match, setMatch] = useState<MatchDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchScores = async () => {
-      setLoading(true);
+    if (!matchId || typeof matchId !== "string") return;
 
-      const { data: tournaments } = await supabase
-        .from("tournaments")
-        .select("*")
-        .eq("status", "in_progress");
+    const fetchData = async () => {
+      const { data, error } = await supabase
+        .from("matches")
+        .select(
+          `
+          id,
+          round_number,
+          score_team1,
+          score_team2,
+          court:courts(name),
+          tournament:tournaments(name),
+          team1_player1:players!matches_team1_player1_id_fkey(name),
+          team1_player2:players!matches_team1_player2_id_fkey(name),
+          team2_player1:players!matches_team2_player1_id_fkey(name),
+          team2_player2:players!matches_team2_player2_id_fkey(name),
+          player_stats:player_match_stats (
+            player_id,
+            games_won,
+            player:players(name)
+          ),
+          match_specials:match_specials (
+            player_id,
+            special_type_id,
+            count,
+            player:players(name)
+          )
+        `
+        )
+        .eq("id", matchId)
+        .single();
 
-      if (!tournaments) return;
-
-      const result: Record<string, Match[]> = {};
-
-      for (const tournament of tournaments) {
-        const { data: matches } = await supabase.rpc("get_completed_match_scores", {
-          tournamentid: tournament.id,
-        });
-
-        if (matches) result[tournament.id] = matches;
+      if (error) {
+        console.error("Fout bij ophalen:", error);
+        setMatch(null);
+      } else {
+        setMatch(data);
       }
-
-      setTournaments(tournaments);
-      setMatchesByTournament(result);
       setLoading(false);
     };
 
-    fetchScores();
-  }, []);
+    fetchData();
+  }, [matchId]);
 
-  if (loading) return <p>Bezig met laden...</p>;
+  if (loading) return <p className="p-4 text-sm text-muted-foreground">Laden...</p>;
+  if (!match) return <p className="p-4 text-red-600">Geen score gevonden voor deze wedstrijd.</p>;
+
+  const getPlayerName = (pid?: { name: string }) => pid?.name || "Onbekend";
 
   return (
-    <div className="space-y-8 px-4 md:px-8 pb-12">
-      <h1 className="text-2xl font-bold">Scores & Uitslagen</h1>
-      <p className="text-muted-foreground">Bekijk de resultaten van alle toernooien</p>
-
-      {tournaments.map((tournament) => (
-        <Card key={tournament.id} className="bg-orange-50 border-orange-200">
-          <CardHeader>
-            <CardTitle className="text-lg font-bold">{tournament.name}</CardTitle>
-            <div className="text-sm text-muted-foreground flex gap-2 flex-wrap">
-              <span>
-                {new Date(tournament.start_date).toLocaleDateString("nl-NL")} –{" "}
-                {new Date(tournament.end_date).toLocaleDateString("nl-NL")}
-              </span>
-              <span>•</span>
-              <span>Status: {tournament.status === "in_progress" ? "Actief" : tournament.status}</span>
-              <span>•</span>
-              <span>Huidige ronde: {tournament.current_round}</span>
+    <div className="max-w-4xl mx-auto p-4 space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Uitslag: Ronde {match.round_number}</CardTitle>
+          <p className="text-sm text-muted-foreground">{match.tournament?.name}</p>
+          <p className="text-sm text-muted-foreground">{match.court?.name}</p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="font-semibold mb-1">
+                {getPlayerName(match.team1_player1)}{" "}
+                {match.team1_player2 && `& ${getPlayerName(match.team1_player2)}`}
+              </p>
+              <p className="text-2xl">{match.score_team1}</p>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {matchesByTournament[tournament.id]?.length ? (
-              matchesByTournament[tournament.id].map((match) => (
-                <div
-                  key={match.id}
-                  className="p-4 bg-white rounded border border-gray-200 shadow-sm space-y-2"
-                >
-                  <div className="flex flex-wrap justify-between items-center">
-                    <div className="font-medium">
-                      {match.team1_name} vs {match.team2_name}
-                    </div>
-                    <div>
-                      <Badge variant="secondary">Ronde {match.round_number}</Badge>{" "}
-                      <Badge variant="outline">{match.court_name}</Badge>
-                    </div>
-                  </div>
+            <div>
+              <p className="font-semibold mb-1">
+                {getPlayerName(match.team2_player1)}{" "}
+                {match.team2_player2 && `& ${getPlayerName(match.team2_player2)}`}
+              </p>
+              <p className="text-2xl">{match.score_team2}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-                  <div className="text-lg font-bold">
-                    {match.score_team1} – {match.score_team2}
-                  </div>
-
-                  <div className="mt-2 space-y-1">
-                    <h4 className="font-semibold text-sm">Specials:</h4>
-                    {match.players.map((player) => (
-                      <div key={player.player_name} className="text-sm pl-2">
-                        <span className="font-medium">{player.player_name}:</span>{" "}
-                        {player.specials.length > 0 ? (
-                          player.specials.map((s, i) => (
-                            <span key={i}>
-                              {s.type} × {s.count}
-                              {i < player.specials.length - 1 && ", "}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-muted-foreground">Geen</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Specials & Stats per speler</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {match.player_stats.map((p) => {
+              const specials = match.match_specials.filter((s) => s.player_id === p.player_id);
+              return (
+                <div key={p.player_id} className="bg-muted/50 p-3 rounded">
+                  <p className="font-semibold mb-1">{p.player.name}</p>
+                  <p className="text-sm mb-2">Games gewonnen: {p.games_won}</p>
+                  {specials.length > 0 ? (
+                    <ul className="text-sm list-disc list-inside">
+                      {specials.map((s, i) => (
+                        <li key={i}>
+                          {s.special_type_id} × {s.count}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Geen specials</p>
+                  )}
                 </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground">Nog geen voltooide wedstrijden</p>
-            )}
-          </CardContent>
-        </Card>
-      ))}
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
