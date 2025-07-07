@@ -13,9 +13,14 @@ import MatchScoreInput from "./MatchScoreInput";
 interface MatchCardProps {
   match: Match;
   matchNumberInCourtRound?: number;
+  tournament?: {
+    id: string;
+    status: "not_started" | "active" | "completed";
+    is_simulation: boolean;
+  };
 }
 
-export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardProps) {
+export default function MatchCard({ match, matchNumberInCourtRound, tournament }: MatchCardProps) {
   const navigate = useNavigate();
   const [showSimulator, setShowSimulator] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
@@ -63,8 +68,17 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
   const { team1, team2 } = getPlayerTeams(match);
   const displayMatchNumber = match.match_number || matchNumberInCourtRound;
 
-  const toernooiStatus = match.tournament?.status || "unknown";
-  const isSimulation = match.tournament?.is_simulation || false;
+  // Use passed tournament or create from match data
+  const effectiveTournament = tournament || {
+    id: match.tournament_id,
+    status: (match.tournament?.status === "in_progress" ? "active" : 
+             match.tournament?.status === "completed" ? "completed" :
+             "not_started") as "not_started" | "active" | "completed",
+    is_simulation: match.tournament?.is_simulation || false,
+  };
+
+  const toernooiStatus = effectiveTournament.status;
+  const isSimulation = effectiveTournament.is_simulation;
   const round = match.round_number;
 
   if (showSimulator) {
@@ -96,11 +110,7 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
         </div>
         <MatchScoreInput
           match={match}
-          tournament={{
-            id: match.tournament_id,
-            status: toernooiStatus === "in_progress" ? "active" : toernooiStatus,
-            is_simulation: isSimulation,
-          }}
+          tournament={effectiveTournament}
           round={round}
         />
       </div>
@@ -120,7 +130,7 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
 
         <div className="flex items-start justify-end mb-2">
           <div className="flex gap-1">
-            {toernooiStatus === "in_progress" && match.status !== "completed" && (
+            {toernooiStatus === "active" && match.status !== "completed" && (
               <Button
                 size="sm"
                 variant="outline"

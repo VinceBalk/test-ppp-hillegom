@@ -11,7 +11,7 @@ interface MatchesListProps {
   matches: Match[];
   editMode: boolean;
   selectedTournamentId: string;
-  tournament: {
+  tournament?: {
     id: string;
     status: "not_started" | "active" | "completed";
     is_simulation: boolean;

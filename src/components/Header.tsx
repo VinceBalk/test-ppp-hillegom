@@ -1,4 +1,3 @@
-
 import { Button } from '@/components/ui/button';
 import { Menu } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,10 +31,12 @@ export function Header({ onMenuClick }: HeaderProps) {
             >
               <Menu className="h-6 w-6" />
             </Button>
-            <div className="lg:hidden">
-              <h1 className="text-xl font-bold gradient-primary bg-clip-text">
-                PPP Hillegom
-              </h1>
+            <div className="lg:hidden flex items-center">
+              <img
+                src="/PPP_logo.svg"
+                alt="PPP Hillegom logo"
+                className="h-8 w-auto object-contain"
+              />
             </div>
           </div>
           
@@ -60,10 +61,12 @@ export function Header({ onMenuClick }: HeaderProps) {
           >
             <Menu className="h-6 w-6" />
           </Button>
-          <div className="lg:hidden">
-            <h1 className="text-xl font-bold gradient-primary bg-clip-text">
-              PPP Hillegom
-            </h1>
+          <div className="lg:hidden flex items-center">
+            <img
+              src="/PPP_logo.svg"
+              alt="PPP Hillegom logo"
+              className="h-8 w-auto object-contain max-w-[120px]"
+            />
           </div>
         </div>
         

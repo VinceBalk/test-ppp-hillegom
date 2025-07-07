@@ -1,4 +1,3 @@
-
 import { NavLink } from 'react-router-dom';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
@@ -42,8 +41,12 @@ export function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="left" className="w-72 p-0">
         <SheetHeader className="p-6 border-b border-border">
-          <SheetTitle className="text-2xl font-bold gradient-primary bg-clip-text text-transparent">
-            PPP Hillegom
+          <SheetTitle className="flex items-center justify-center">
+            <img
+              src="/PPP_logo.svg"
+              alt="PPP Hillegom logo"
+              className="h-10 w-auto object-contain max-w-[160px]"
+            />
           </SheetTitle>
         </SheetHeader>
 
