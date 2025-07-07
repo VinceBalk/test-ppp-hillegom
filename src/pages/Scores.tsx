@@ -343,13 +343,13 @@ export default function Scores() {
           </CardContent>
         </Card>
 
-        {/* Speler Statistieken */}
-        {match.player_stats && match.player_stats.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Speler Statistieken & Specials</CardTitle>
-            </CardHeader>
-            <CardContent>
+        {/* Speler Statistieken & Specials */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Speler Statistieken & Specials</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {match.player_stats && match.player_stats.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {match.player_stats.map((p) => {
                   const specials = match.match_specials?.filter((s) => s.player_id === p.player_id) || [];
@@ -357,7 +357,7 @@ export default function Scores() {
                     <div key={p.player_id} className="bg-muted/50 p-4 rounded-lg">
                       <p className="font-semibold mb-2 text-base">{p.player.name}</p>
                       <p className="text-sm mb-3 text-muted-foreground">
-                        Games: <span className="font-medium text-foreground">{p.games_won}</span>
+                        Games gewonnen: <span className="font-medium text-foreground">{p.games_won}</span>
                       </p>
                       {specials.length > 0 ? (
                         <div>
@@ -378,9 +378,56 @@ export default function Scores() {
                   );
                 })}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            ) : (
+              // Geen player_stats maar wel spelers tonen
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                  { id: 'team1_player1', name: getPlayerName(match.team1_player1) },
+                  match.team1_player2 && { id: 'team1_player2', name: getPlayerName(match.team1_player2) },
+                  { id: 'team2_player1', name: getPlayerName(match.team2_player1) },
+                  match.team2_player2 && { id: 'team2_player2', name: getPlayerName(match.team2_player2) }
+                ].filter(Boolean).map((player, index) => {
+                  const specials = match.match_specials?.filter((s) => 
+                    s.player?.name === player?.name
+                  ) || [];
+                  
+                  return (
+                    <div key={player?.id || index} className="bg-muted/50 p-4 rounded-lg">
+                      <p className="font-semibold mb-2 text-base">{player?.name}</p>
+                      <p className="text-sm mb-3 text-muted-foreground">
+                        Games gewonnen: <span className="font-medium text-foreground">-</span>
+                      </p>
+                      {specials.length > 0 ? (
+                        <div>
+                          <p className="text-xs font-medium mb-2 text-muted-foreground">Specials:</p>
+                          <ul className="text-xs space-y-1">
+                            {specials.map((s, i) => (
+                              <li key={i} className="flex justify-between">
+                                <span>{s.special_type_id}</span>
+                                <span className="font-medium">× {s.count}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Geen specials</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            
+            {/* Fallback bericht als er helemaal geen specials zijn */}
+            {(!match.match_specials || match.match_specials.length === 0) && (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">
+                  Er zijn geen specials voor deze wedstrijd
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     );
   }
