@@ -166,24 +166,27 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
   return (
     <div className="mt-4 space-y-6">
       {/* SCORE */}
-      <div className="text-sm font-medium mb-2">Score Invoeren</div>
-      <div className="flex items-center gap-2">
-        <Input
-          type="number"
-          value={team1Score}
-          onChange={(e) => setTeam1Score(Number(e.target.value))}
-          disabled={isLocked || loading}
-          placeholder={team1Names}
-          className="w-32"
-        />
-        <span className="text-muted-foreground">–</span>
-        <Input
-          type="number"
-          value={team1Score !== "" ? 8 - Number(team1Score) : ""}
-          disabled
-          placeholder={team2Names}
-          className="w-32"
-        />
+      <div className="text-sm font-medium">Score Invoeren</div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+        <div>
+          <div className="text-sm font-semibold mb-1">{team1Names}</div>
+          <Input
+            type="number"
+            value={team1Score}
+            onChange={(e) => setTeam1Score(Number(e.target.value))}
+            disabled={isLocked || loading}
+            className="w-full"
+          />
+        </div>
+        <div>
+          <div className="text-sm font-semibold mb-1">{team2Names}</div>
+          <Input
+            type="number"
+            value={team1Score !== "" ? 8 - Number(team1Score) : ""}
+            disabled
+            className="w-full"
+          />
+        </div>
       </div>
 
       {/* SPECIALS */}
