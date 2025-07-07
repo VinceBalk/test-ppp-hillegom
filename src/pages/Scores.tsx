@@ -490,7 +490,7 @@ export default function Scores() {
                   <div className="mt-3 pt-3 border-t">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">
-                        {match.match_specials.length} special{match.match_specials.length !== 1 ? 's' : ''}
+                        {match.match_specials.reduce((total, special) => total + special.count, 0)} special{match.match_specials.reduce((total, special) => total + special.count, 0) !== 1 ? 's' : ''}
                       </span>
                       <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
                         <Eye className="h-3 w-3 mr-1" />
