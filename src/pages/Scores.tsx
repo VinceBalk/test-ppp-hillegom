@@ -30,14 +30,18 @@ interface MatchDetail {
   }[];
 }
 
-export default function MatchScorePage() {
+export default function Scores() {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!matchId) return;
+    // Als er geen matchId is, toon een overzichtspagina of redirect
+    if (!matchId) {
+      setLoading(false);
+      return;
+    }
 
     const fetchData = async () => {
       const { data, error } = await supabase
@@ -81,6 +85,33 @@ export default function MatchScorePage() {
 
     fetchData();
   }, [matchId]);
+
+  // Als er geen matchId is, toon de scores overzichtspagina
+  if (!matchId) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Scores</h1>
+          <p className="text-muted-foreground">
+            Bekijk wedstrijdscores en uitslagen
+          </p>
+        </div>
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">
+                Selecteer een wedstrijd om de score details te bekijken.
+              </p>
+              <Button onClick={() => navigate('/matches')}>
+                Ga naar Wedstrijden
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
