@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Edit, Play } from 'lucide-react';
+import { Edit, Play, X } from 'lucide-react';
 import { Match } from '@/hooks/useMatches';
 import { getShortTeamName } from '@/utils/matchUtils';
 import SavedMatchEditor from './SavedMatchEditor';
@@ -68,33 +68,6 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
     console.log('Match status:', match.status);
   }, [toernooiStatus, match.status]);
 
-  if (showScoreInput) {
-    return (
-      <MatchScoreInput
-        match={match}
-        tournament={{
-          id: match.tournament?.id || match.tournament_id,
-          status: (match.tournament?.status || match.tournament_status) as
-            | 'not_started'
-            | 'active'
-            | 'completed',
-          is_simulation: match.tournament?.is_simulation ?? false,
-        }}
-        round={match.round_number}
-        onClose={() => setShowScoreInput(false)}
-      />
-    );
-  }
-
-  if (showSimulator) {
-    return (
-      <MatchSimulator
-        match={match}
-        onClose={() => setShowSimulator(false)}
-      />
-    );
-  }
-
   if (showEditor) {
     return (
       <div className="space-y-4">
@@ -104,10 +77,7 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
             Terug naar overzicht
           </Button>
         </div>
-        <SavedMatchEditor
-          match={match}
-          tournamentId={match.tournament_id}
-        />
+        <SavedMatchEditor match={match} tournamentId={match.tournament_id} />
       </div>
     );
   }
@@ -141,7 +111,7 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setShowSimulator(true)}
+                onClick={() => setShowSimulator(!showSimulator)}
                 className="text-blue-600 border-blue-600 hover:bg-blue-50"
               >
                 <Play className="h-3 w-3 mr-1" />
@@ -153,7 +123,7 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setShowScoreInput(true)}
+                onClick={() => setShowScoreInput(!showScoreInput)}
                 className="text-green-600 border-green-600 hover:bg-green-50"
               >
                 Score invoeren
@@ -185,10 +155,43 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
         </div>
       </CardHeader>
 
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 space-y-4">
         {match.notes && (
           <div className="text-xs text-orange-600 mb-3 p-2 bg-orange-50 rounded">
             {match.notes}
+          </div>
+        )}
+
+        {showSimulator && (
+          <MatchSimulator match={match} onClose={() => setShowSimulator(false)} />
+        )}
+
+        {showScoreInput && (
+          <div className="border-t pt-4 mt-4">
+            <MatchScoreInput
+              match={match}
+              tournament={{
+                id: match.tournament?.id || match.tournament_id,
+                status: (match.tournament?.status || match.tournament_status) as
+                  | 'not_started'
+                  | 'active'
+                  | 'completed',
+                is_simulation: match.tournament?.is_simulation ?? false,
+              }}
+              round={match.round_number}
+              onClose={() => setShowScoreInput(false)}
+            />
+            <div className="mt-2 text-right">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-muted-foreground"
+                onClick={() => setShowScoreInput(false)}
+              >
+                <X className="h-4 w-4 mr-1" />
+                Sluiten
+              </Button>
+            </div>
           </div>
         )}
       </CardContent>
