@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Eye, MapPin } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, Eye, MapPin, Filter } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface MatchDetail {
@@ -14,10 +15,10 @@ interface MatchDetail {
   team2_score: number | null;
   status: string;
   court_number: string | null;
-  team1_player1?: { name: string };
-  team1_player2?: { name: string };
-  team2_player1?: { name: string };
-  team2_player2?: { name: string };
+  team1_player1?: { name: string; row_side?: string };
+  team1_player2?: { name: string; row_side?: string };
+  team2_player1?: { name: string; row_side?: string };
+  team2_player2?: { name: string; row_side?: string };
   court?: { name: string };
   tournament?: { name: string };
   player_stats?: {
@@ -38,7 +39,10 @@ export default function Scores() {
   const navigate = useNavigate();
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [matches, setMatches] = useState<MatchDetail[]>([]);
+  const [filteredMatches, setFilteredMatches] = useState<MatchDetail[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedRound, setSelectedRound] = useState<string>("all");
+  const [availableRounds, setAvailableRounds] = useState<number[]>([]);
 
   useEffect(() => {
     if (matchId) {
@@ -47,6 +51,15 @@ export default function Scores() {
       fetchMatchesWithScores();
     }
   }, [matchId]);
+
+  useEffect(() => {
+    // Filter matches op geselecteerde ronde
+    if (selectedRound === "all") {
+      setFilteredMatches(matches);
+    } else {
+      setFilteredMatches(matches.filter(match => match.round_number === parseInt(selectedRound)));
+    }
+  }, [matches, selectedRound]);
 
   const fetchMatchDetail = async (id: string) => {
     setLoading(true);
@@ -65,10 +78,10 @@ export default function Scores() {
         court_number,
         court:courts(name),
         tournament:tournaments(name),
-        team1_player1:players!matches_team1_player1_id_fkey(name),
-        team1_player2:players!matches_team1_player2_id_fkey(name),
-        team2_player1:players!matches_team2_player1_id_fkey(name),
-        team2_player2:players!matches_team2_player2_id_fkey(name),
+        team1_player1:players!matches_team1_player1_id_fkey(name, row_side),
+        team1_player2:players!matches_team1_player2_id_fkey(name, row_side),
+        team2_player1:players!matches_team2_player1_id_fkey(name, row_side),
+        team2_player2:players!matches_team2_player2_id_fkey(name, row_side),
         player_stats:player_match_stats (
           player_id,
           games_won,
@@ -112,10 +125,10 @@ export default function Scores() {
         court_number,
         court:courts(name),
         tournament:tournaments(name),
-        team1_player1:players!matches_team1_player1_id_fkey(name),
-        team1_player2:players!matches_team1_player2_id_fkey(name),
-        team2_player1:players!matches_team2_player1_id_fkey(name),
-        team2_player2:players!matches_team2_player2_id_fkey(name),
+        team1_player1:players!matches_team1_player1_id_fkey(name, row_side),
+        team1_player2:players!matches_team1_player2_id_fkey(name, row_side),
+        team2_player1:players!matches_team2_player1_id_fkey(name, row_side),
+        team2_player2:players!matches_team2_player2_id_fkey(name, row_side),
         player_stats:player_match_stats (
           player_id,
           games_won,
@@ -131,26 +144,46 @@ export default function Scores() {
       )
       .eq('status', 'completed')
       .not('team1_score', 'is', null)
-      .not('team2_score', 'is', null)
-      .order('round_number', { ascending: true })
-      .order('court_number', { ascending: true })
-      .order('match_number', { ascending: true });
+      .not('team2_score', 'is', null);
 
     if (error) {
       console.error("Fout bij ophalen completed wedstrijden:", error);
       setMatches([]);
     } else {
       console.log("Completed wedstrijden opgehaald:", data?.length, "matches");
-      console.log("Sample match:", data?.[0]);
       
       // Filter op wedstrijden die daadwerkelijk scores hebben
       const matchesWithScores = (data || []).filter(match => 
         match.team1_score !== null && 
         match.team2_score !== null
       );
+
+      // Sorteer op: Ronde -> Baan -> Wedstrijd
+      matchesWithScores.sort((a, b) => {
+        // Eerst op ronde
+        if (a.round_number !== b.round_number) {
+          return a.round_number - b.round_number;
+        }
+        
+        // Dan op baan (court_number of court name)
+        const aCourtNum = parseInt(a.court_number || '0') || 0;
+        const bCourtNum = parseInt(b.court_number || '0') || 0;
+        if (aCourtNum !== bCourtNum) {
+          return aCourtNum - bCourtNum;
+        }
+        
+        // Dan op wedstrijd nummer
+        const aMatchNum = a.match_number || 0;
+        const bMatchNum = b.match_number || 0;
+        return aMatchNum - bMatchNum;
+      });
       
-      console.log("Matches met echte scores:", matchesWithScores.length);
+      console.log("Matches met echte scores (gesorteerd):", matchesWithScores.length);
       setMatches(matchesWithScores);
+      
+      // Verkrijg beschikbare rondes voor filter
+      const rounds = [...new Set(matchesWithScores.map(m => m.round_number))].sort((a, b) => a - b);
+      setAvailableRounds(rounds);
     }
     
     setLoading(false);
@@ -158,16 +191,57 @@ export default function Scores() {
 
   const getPlayerName = (pid?: { name: string }) => pid?.name || "Onbekend";
 
-  const getTeamName = (player1?: { name: string }, player2?: { name: string }) => {
-    const name1 = getPlayerName(player1);
-    const name2 = player2 ? getPlayerName(player2) : null;
-    return name2 ? `${name1} & ${name2}` : name1;
-  };
-
   const getCourtInfo = (match: MatchDetail) => {
     if (match.court?.name) return match.court.name;
     if (match.court_number) return `Baan ${match.court_number}`;
     return "Geen baan";
+  };
+
+  // Bepaal welke spelers in welke kolom (links/rechts)
+  const getTeamColumns = (match: MatchDetail) => {
+    const allPlayers = [
+      { player: match.team1_player1, team: 1 },
+      { player: match.team1_player2, team: 1 },
+      { player: match.team2_player1, team: 2 },
+      { player: match.team2_player2, team: 2 }
+    ].filter(p => p.player);
+
+    const leftSidePlayers = allPlayers.filter(p => p.player?.row_side === 'left');
+    const rightSidePlayers = allPlayers.filter(p => p.player?.row_side === 'right');
+
+    // Bepaal team scores per kant
+    const leftTeams = [...new Set(leftSidePlayers.map(p => p.team))];
+    const rightTeams = [...new Set(rightSidePlayers.map(p => p.team))];
+
+    let leftScore = 0;
+    let rightScore = 0;
+
+    if (leftTeams.includes(1) && !leftTeams.includes(2)) {
+      // Alleen team 1 links
+      leftScore = match.team1_score ?? 0;
+      rightScore = match.team2_score ?? 0;
+    } else if (leftTeams.includes(2) && !leftTeams.includes(1)) {
+      // Alleen team 2 links  
+      leftScore = match.team2_score ?? 0;
+      rightScore = match.team1_score ?? 0;
+    } else {
+      // Mixed teams of onbekend, gebruik originele team indeling
+      leftScore = match.team1_score ?? 0;
+      rightScore = match.team2_score ?? 0;
+    }
+
+    return {
+      leftPlayers: leftSidePlayers.length > 0 ? leftSidePlayers : [
+        { player: match.team1_player1, team: 1 },
+        { player: match.team1_player2, team: 1 }
+      ].filter(p => p.player),
+      rightPlayers: rightSidePlayers.length > 0 ? rightSidePlayers : [
+        { player: match.team2_player1, team: 2 },
+        { player: match.team2_player2, team: 2 }
+      ].filter(p => p.player),
+      leftScore,
+      rightScore
+    };
   };
 
   // Loading state
@@ -203,6 +277,8 @@ export default function Scores() {
       );
     }
 
+    const { leftPlayers, rightPlayers, leftScore, rightScore } = getTeamColumns(match);
+
     return (
       <div className="max-w-4xl mx-auto p-4 space-y-6">
         <div className="flex items-center gap-4">
@@ -236,31 +312,31 @@ export default function Scores() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-              {/* Team 1 */}
-              <div className="text-center md:text-left">
+            <div className="grid grid-cols-3 gap-6 items-center">
+              {/* Linker Rijtje */}
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground mb-2">Linker Rijtje</p>
                 <div className="space-y-1">
-                  <p className="font-semibold text-lg">{getPlayerName(match.team1_player1)}</p>
-                  {match.team1_player2 && (
-                    <p className="font-semibold text-lg">{getPlayerName(match.team1_player2)}</p>
-                  )}
+                  {leftPlayers.map((p, i) => (
+                    <p key={i} className="font-semibold text-lg">{getPlayerName(p.player)}</p>
+                  ))}
                 </div>
               </div>
               
               {/* Score */}
               <div className="text-center">
                 <div className="text-5xl font-bold text-primary">
-                  {match.team1_score ?? 0} - {match.team2_score ?? 0}
+                  {leftScore} - {rightScore}
                 </div>
               </div>
               
-              {/* Team 2 */}
-              <div className="text-center md:text-right">
+              {/* Rechter Rijtje */}
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground mb-2">Rechter Rijtje</p>
                 <div className="space-y-1">
-                  <p className="font-semibold text-lg">{getPlayerName(match.team2_player1)}</p>
-                  {match.team2_player2 && (
-                    <p className="font-semibold text-lg">{getPlayerName(match.team2_player2)}</p>
-                  )}
+                  {rightPlayers.map((p, i) => (
+                    <p key={i} className="font-semibold text-lg">{getPlayerName(p.player)}</p>
+                  ))}
                 </div>
               </div>
             </div>
@@ -312,19 +388,44 @@ export default function Scores() {
   // Overzichtspagina - Match Cards
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Scores</h1>
-        <p className="text-muted-foreground">
-          Bekijk wedstrijdscores en uitslagen ({matches.length} wedstrijden met scores)
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Scores</h1>
+          <p className="text-muted-foreground">
+            Bekijk wedstrijdscores en uitslagen ({filteredMatches.length} wedstrijden)
+          </p>
+        </div>
+        
+        {/* Ronde Filter */}
+        {availableRounds.length > 1 && (
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Select value={selectedRound} onValueChange={setSelectedRound}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Alle rondes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle rondes</SelectItem>
+                {availableRounds.map((round) => (
+                  <SelectItem key={round} value={round.toString()}>
+                    Ronde {round}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
       
-      {matches.length === 0 ? (
+      {filteredMatches.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">
-                Er zijn nog geen completed wedstrijden met scores.
+                {selectedRound === "all" 
+                  ? "Er zijn nog geen completed wedstrijden met scores."
+                  : `Geen wedstrijden gevonden voor ronde ${selectedRound}.`
+                }
               </p>
               <Button onClick={() => navigate('/matches')}>
                 Ga naar Wedstrijden
@@ -334,74 +435,78 @@ export default function Scores() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {matches.map((match) => (
-            <Card key={match.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/scores/${match.id}`)}>
-              <CardContent className="pt-4">
-                {/* Header */}
-                <div className="flex justify-between items-center mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">Ronde {match.round_number}</span>
-                    <span className="text-muted-foreground">•</span>
-                    <span className="text-sm text-muted-foreground">#{match.match_number || '?'}</span>
+          {filteredMatches.map((match) => {
+            const { leftPlayers, rightPlayers, leftScore, rightScore } = getTeamColumns(match);
+            
+            return (
+              <Card key={match.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/scores/${match.id}`)}>
+                <CardContent className="pt-4">
+                  {/* Header */}
+                  <div className="flex justify-between items-center mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">Ronde {match.round_number}</span>
+                      <span className="text-muted-foreground">•</span>
+                      <span className="text-sm text-muted-foreground">#{match.match_number || '?'}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <MapPin className="h-3 w-3" />
+                      {getCourtInfo(match)}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <MapPin className="h-3 w-3" />
-                    {getCourtInfo(match)}
-                  </div>
-                </div>
 
-                {/* Tournament info */}
-                <div className="text-xs text-muted-foreground mb-3">
-                  {match.tournament?.name}
-                </div>
+                  {/* Tournament info */}
+                  <div className="text-xs text-muted-foreground mb-3">
+                    {match.tournament?.name}
+                  </div>
 
-                {/* Teams en Score */}
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  {/* Team 1 */}
-                  <div className="text-left">
-                    <div className="space-y-0.5">
-                      <p className="font-medium text-sm leading-tight">{getPlayerName(match.team1_player1)}</p>
-                      {match.team1_player2 && (
-                        <p className="font-medium text-sm leading-tight">{getPlayerName(match.team1_player2)}</p>
-                      )}
+                  {/* Teams en Score - Kolom Layout */}
+                  <div className="grid grid-cols-3 gap-4 items-center">
+                    {/* Linker Rijtje */}
+                    <div className="text-left">
+                      <p className="text-xs text-muted-foreground mb-1">Linker Rijtje</p>
+                      <div className="space-y-0.5">
+                        {leftPlayers.map((p, i) => (
+                          <p key={i} className="font-medium text-sm leading-tight">{getPlayerName(p.player)}</p>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Score */}
+                    <div className="text-center">
+                      <div className="text-2xl font-bold">
+                        {leftScore} - {rightScore}
+                      </div>
+                    </div>
+                    
+                    {/* Rechter Rijtje */}
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground mb-1">Rechter Rijtje</p>
+                      <div className="space-y-0.5">
+                        {rightPlayers.map((p, i) => (
+                          <p key={i} className="font-medium text-sm leading-tight">{getPlayerName(p.player)}</p>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                  
-                  {/* Score */}
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">
-                      {match.team1_score ?? 0} - {match.team2_score ?? 0}
-                    </div>
-                  </div>
-                  
-                  {/* Team 2 */}
-                  <div className="text-right">
-                    <div className="space-y-0.5">
-                      <p className="font-medium text-sm leading-tight">{getPlayerName(match.team2_player1)}</p>
-                      {match.team2_player2 && (
-                        <p className="font-medium text-sm leading-tight">{getPlayerName(match.team2_player2)}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
 
-                {/* Specials Summary */}
-                {match.match_specials && match.match_specials.length > 0 && (
-                  <div className="mt-3 pt-3 border-t">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        {match.match_specials.length} special{match.match_specials.length !== 1 ? 's' : ''}
-                      </span>
-                      <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
-                        <Eye className="h-3 w-3 mr-1" />
-                        Details
-                      </Button>
+                  {/* Specials Summary */}
+                  {match.match_specials && match.match_specials.length > 0 && (
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          {match.match_specials.length} special{match.match_specials.length !== 1 ? 's' : ''}
+                        </span>
+                        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                          <Eye className="h-3 w-3 mr-1" />
+                          Details
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
