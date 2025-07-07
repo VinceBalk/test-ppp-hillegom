@@ -2,12 +2,12 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Play, Edit, CheckSquare, Eye } from "lucide-react";
 import { Match } from "@/hooks/useMatches";
 import { getShortTeamName } from "@/utils/matchUtils";
 import MatchSimulator from "./MatchSimulator";
 import SavedMatchEditor from "./SavedMatchEditor";
 import MatchScoreInput from "./MatchScoreInput";
+import { Link } from "react-router-dom";
 
 interface MatchCardProps {
   match: Match;
@@ -64,6 +64,7 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
   const toernooiStatus = match.tournament?.status || "unknown";
   const isSimulation = match.tournament?.is_simulation || false;
   const round = match.round_number;
+  const isCompleted = match.status === "completed";
 
   if (showSimulator) {
     return <MatchSimulator match={match} onClose={() => setShowSimulator(false)} />;
@@ -75,7 +76,7 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
         <div className="flex items-center justify-between">
           <h3 className="font-semibold">Wedstrijd Bewerken</h3>
           <Button variant="outline" size="sm" onClick={() => setShowEditor(false)}>
-            Terug naar overzicht
+            Terug
           </Button>
         </div>
         <SavedMatchEditor match={match} tournamentId={match.tournament_id} />
@@ -89,7 +90,7 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
         <div className="flex items-center justify-between">
           <h3 className="font-semibold">Score Invoeren</h3>
           <Button variant="outline" size="sm" onClick={() => setShowScoreInput(false)}>
-            Terug naar overzicht
+            Terug
           </Button>
         </div>
         <MatchScoreInput
@@ -108,7 +109,6 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
-        {/* Match nummer badge */}
         {displayMatchNumber && (
           <div className="flex justify-start mb-2">
             <Badge variant="secondary" className="text-xs">
@@ -117,66 +117,50 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
           </div>
         )}
 
-        {/* Actieknoppen */}
         <div className="flex items-start justify-end mb-2">
-          <div className="flex gap-1">
-            {/* Bewerken (altijd mogelijk voor superadmin) */}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowEditor(true)}
-              className="text-orange-600 border-orange-600 hover:bg-orange-50"
-            >
-              <Edit className="h-3 w-3 mr-1" />
-              Bewerken
-            </Button>
-
-            {/* Completed: toon alleen bekijken-button */}
-            {match.status === "completed" ? (
+          <div className="flex gap-2 flex-wrap">
+            {/* Bewerken - alleen zichtbaar als toernooi nog niet bezig is */}
+            {toernooiStatus !== "in_progress" && toernooiStatus !== "completed" && (
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() =>
-                  (window.location.href = `/scores#match-${match.id}`)
-                }
-                className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                onClick={() => setShowEditor(true)}
               >
-                <Eye className="h-3 w-3 mr-1" />
-                Score Bekijken
+                Bewerken
               </Button>
-            ) : (
-              <>
-                {/* Score invoeren als het toernooi bezig is */}
-                {toernooiStatus === "in_progress" && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setShowScoreInput(true)}
-                    className="text-green-600 border-green-600 hover:bg-green-50"
-                  >
-                    <CheckSquare className="h-3 w-3 mr-1" />
-                    Score Invoeren
-                  </Button>
-                )}
+            )}
 
-                {/* Simuleren als toernooi nog niet gestart is */}
-                {toernooiStatus === "not_started" && isSimulation && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setShowSimulator(true)}
-                    className="text-blue-600 border-blue-600 hover:bg-blue-50"
-                  >
-                    <Play className="h-3 w-3 mr-1" />
-                    Simuleren
-                  </Button>
-                )}
-              </>
+            {/* Score bekijken als wedstrijd voltooid */}
+            {isCompleted && (
+              <Button size="sm" variant="outline" asChild>
+                <Link to={`/scores#${match.id}`}>Score bekijken</Link>
+              </Button>
+            )}
+
+            {/* Score invoeren - alleen als toernooi actief en wedstrijd nog niet completed */}
+            {toernooiStatus === "in_progress" && !isCompleted && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowScoreInput(true)}
+              >
+                Score invoeren
+              </Button>
+            )}
+
+            {/* Simuleren - alleen als in simulatie en nog niet begonnen */}
+            {toernooiStatus === "not_started" && isSimulation && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowSimulator(true)}
+              >
+                Simuleren
+              </Button>
             )}
           </div>
         </div>
 
-        {/* Spelers */}
         <CardTitle className="text-base leading-tight">
           {team2 ? (
             <div className="space-y-1 text-left">
@@ -189,7 +173,6 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
           )}
         </CardTitle>
 
-        {/* Info */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-3">
             <span>{match.tournament?.name || "Onbekend toernooi"}</span>
