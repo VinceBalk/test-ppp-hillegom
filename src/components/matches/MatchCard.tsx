@@ -60,22 +60,27 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
 
   const displayMatchNumber = match.match_number || matchNumberInCourtRound;
 
-  // ✅ Debug fallback + logging
   const toernooiStatus = match.tournament_status || match.tournament?.status || 'unknown';
   const afgerond = match.status === 'completed';
 
   useEffect(() => {
-    console.log('MATCH DEBUG →');
     console.log('Toernooi status:', toernooiStatus);
     console.log('Match status:', match.status);
-    console.log('Simuleer toegestaan:', toernooiStatus === 'planned');
-    console.log('Score invoeren toegestaan:', toernooiStatus === 'in_progress' && !afgerond);
   }, [toernooiStatus, match.status]);
 
   if (showScoreInput) {
     return (
       <MatchScoreInput
         match={match}
+        tournament={{
+          id: match.tournament?.id || match.tournament_id,
+          status: (match.tournament?.status || match.tournament_status) as
+            | 'not_started'
+            | 'active'
+            | 'completed',
+          is_simulation: match.tournament?.is_simulation ?? false,
+        }}
+        round={match.round_number}
         onClose={() => setShowScoreInput(false)}
       />
     );
@@ -132,7 +137,6 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
               Bewerken
             </Button>
 
-            {/* DEBUG: Simuleren enkel bij geplande toernooien */}
             {toernooiStatus === 'planned' && (
               <Button
                 size="sm"
@@ -145,21 +149,16 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
               </Button>
             )}
 
-            {/* DEBUG: Altijd tonen om te testen */}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowScoreInput(true)}
-              className="text-green-600 border-green-600 hover:bg-green-50"
-            >
-              Score invoeren
-            </Button>
-
-            {/* Zet dit terug naar:
             {toernooiStatus === 'in_progress' && !afgerond && (
-              <Button ... >Score invoeren</Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowScoreInput(true)}
+                className="text-green-600 border-green-600 hover:bg-green-50"
+              >
+                Score invoeren
+              </Button>
             )}
-            zodra je weet dat status klopt */}
           </div>
         </div>
 
