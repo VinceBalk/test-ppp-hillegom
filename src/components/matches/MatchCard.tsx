@@ -61,8 +61,8 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
   const { team1, team2 } = getPlayerTeams(match);
   const displayMatchNumber = match.match_number || matchNumberInCourtRound;
 
-  const toernooiStatus = match.tournament_status || "unknown";
-  const isSimulation = match.is_simulation || false;
+  const toernooiStatus = match.tournament?.status || "unknown";
+  const isSimulation = match.tournament?.is_simulation || false;
   const round = match.round_number;
 
   if (showSimulator) {
@@ -108,7 +108,6 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
-        {/* Match nummer badge */}
         {displayMatchNumber && (
           <div className="flex justify-start mb-2">
             <Badge variant="secondary" className="text-xs">
@@ -117,10 +116,8 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
           </div>
         )}
 
-        {/* Actieknoppen */}
         <div className="flex items-start justify-end mb-2">
           <div className="flex gap-1">
-            {/* Bewerken (superadmin blijft toegang houden) */}
             <Button
               size="sm"
               variant="outline"
@@ -131,7 +128,6 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
               Bewerken
             </Button>
 
-            {/* Score invoeren als het toernooi bezig is */}
             {toernooiStatus === "in_progress" && (
               <Button
                 size="sm"
@@ -144,7 +140,6 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
               </Button>
             )}
 
-            {/* Simuleren alleen als toernooi nog niet gestart is */}
             {toernooiStatus === "not_started" && isSimulation && (
               <Button
                 size="sm"
@@ -159,7 +154,6 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
           </div>
         </div>
 
-        {/* Spelers */}
         <CardTitle className="text-base leading-tight">
           {team2 ? (
             <div className="space-y-1 text-left">
@@ -172,7 +166,6 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
           )}
         </CardTitle>
 
-        {/* Info */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-3">
             <span>{match.tournament?.name || "Onbekend toernooi"}</span>
