@@ -5,6 +5,11 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
+type Player = {
+  id: string;
+  name: string;
+};
+
 type Match = {
   id: string;
   tournament_id: string;
@@ -12,10 +17,10 @@ type Match = {
   score_team1: number | null;
   score_team2: number | null;
   status: string;
-  team1_player1: { id: string; name: string };
-  team1_player2: { id: string; name: string };
-  team2_player1: { id: string; name: string };
-  team2_player2: { id: string; name: string };
+  team1_player1: Player;
+  team1_player2: Player;
+  team2_player1: Player;
+  team2_player2: Player;
 };
 
 type Tournament = {
@@ -44,6 +49,9 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
     match.team2_player1,
     match.team2_player2,
   ];
+
+  const team1Names = `${match.team1_player1.name.split(" ")[0]} & ${match.team1_player2.name.split(" ")[0]}`;
+  const team2Names = `${match.team2_player1.name.split(" ")[0]} & ${match.team2_player2.name.split(" ")[0]}`;
 
   const isLocked =
     tournament.status !== "active" ||
@@ -101,11 +109,9 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
       match_id: match.id,
       player_id: p.id,
       team_number:
-        p.id === match.team1_player1.id || p.id === match.team1_player2.id ? 1 : 2,
+        [match.team1_player1.id, match.team1_player2.id].includes(p.id) ? 1 : 2,
       games_won:
-        p.id === match.team1_player1.id || p.id === match.team1_player2.id
-          ? score1
-          : score2,
+        [match.team1_player1.id, match.team1_player2.id].includes(p.id) ? score1 : score2,
     }));
 
     const { error: statsError } = await supabase
@@ -143,10 +149,6 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
     }
   };
 
-  if (blocked) {
-    return <p className="text-sm text-yellow-600 font-medium mt-2">{blockMessage}</p>;
-  }
-
   const handleSpecialChange = (playerId: string, typeId: string, count: number) => {
     setSpecials((prev) => ({
       ...prev,
@@ -157,27 +159,34 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
     }));
   };
 
+  if (blocked) {
+    return <p className="text-sm text-yellow-600 font-medium mt-2">{blockMessage}</p>;
+  }
+
   return (
     <div className="mt-4 space-y-6">
+      {/* SCORE */}
+      <div className="text-sm font-medium mb-2">Score Invoeren</div>
       <div className="flex items-center gap-2">
         <Input
           type="number"
           value={team1Score}
           onChange={(e) => setTeam1Score(Number(e.target.value))}
           disabled={isLocked || loading}
-          placeholder="Score team 1"
-          className="w-28"
+          placeholder={team1Names}
+          className="w-32"
         />
         <span className="text-muted-foreground">–</span>
         <Input
           type="number"
           value={team1Score !== "" ? 8 - Number(team1Score) : ""}
           disabled
-          placeholder="Score team 2"
-          className="w-28"
+          placeholder={team2Names}
+          className="w-32"
         />
       </div>
 
+      {/* SPECIALS */}
       <Accordion type="multiple" className="w-full">
         {allPlayers.map((player) => (
           <AccordionItem key={player.id} value={player.id}>
@@ -210,12 +219,13 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
         ))}
       </Accordion>
 
+      {/* BUTTON */}
       <Button
         onClick={handleSubmit}
         disabled={isLocked || loading}
         className="bg-green-600 hover:bg-green-700 text-white"
       >
-        ✅ Opslaan
+        Score bevestigen
       </Button>
     </div>
   );
