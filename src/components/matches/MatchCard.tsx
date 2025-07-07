@@ -60,7 +60,8 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
 
   const displayMatchNumber = match.match_number || matchNumberInCourtRound;
 
-  const toernooiStatus = match.tournament?.status;
+  // ✅ Fallback voor toernooistatus
+  const toernooiStatus = match.tournament_status || match.tournament?.status || 'unknown';
   const afgerond = match.status === 'completed';
 
   if (showScoreInput) {
@@ -113,7 +114,7 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
 
         <div className="flex items-start justify-end mb-2">
           <div className="flex gap-1">
-            {/* Bewerken mag altijd (superadmin logica zit daar zelf in) */}
+            {/* Bewerken mag altijd */}
             <Button
               size="sm"
               variant="outline"
