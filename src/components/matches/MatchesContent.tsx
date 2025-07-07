@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useTournaments } from '@/hooks/useTournaments';
 import { useMatches } from '@/hooks/useMatches';
@@ -108,6 +107,16 @@ export default function MatchesContent({
 
   const selectedTournament = tournaments.find(t => t.id === selectedTournamentId);
 
+  // Create tournament object for MatchesList with proper type mapping
+  const tournamentForMatches = selectedTournament ? {
+    id: selectedTournament.id,
+    status: (selectedTournament.status === 'in_progress' ? 'active' : 
+             selectedTournament.status === 'completed' ? 'completed' :
+             selectedTournament.status === 'draft' ? 'not_started' : 
+             'not_started') as "not_started" | "active" | "completed",
+    is_simulation: selectedTournament.is_simulation || false
+  } : undefined;
+
   console.log('=== RENDERING MATCHES CONTENT ===');
 
   return (
@@ -157,6 +166,7 @@ export default function MatchesContent({
           matches={filteredMatches}
           editMode={editMode}
           selectedTournamentId={selectedTournamentId}
+          tournament={tournamentForMatches}
         />
       )}
 
