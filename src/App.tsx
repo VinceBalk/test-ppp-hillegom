@@ -33,43 +33,44 @@ const App = () => {
   console.log('React is working - this should appear first');
   
   return (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<Dashboard />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="players" element={<Players />} />
-              <Route path="players/:id" element={<PlayerDetail />} />
-              <Route path="tournaments" element={<Tournaments />} />
-              <Route path="tournaments/:id/assign-players" element={<AssignPlayers />} />
-              <Route path="matches" element={<Matches />} />
-              <Route path="schedule" element={<Schedule />} />
-              <Route path="schedule/:tournamentId" element={<Schedule />} />
-              <Route path="scores" element={<Scores />} />
-              <Route path="specials" element={<Specials />} />
-              <Route path="courts" element={<Courts />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="profile" element={<Profile />} />
-              <Route path="users" element={<Users />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Layout />
+                </ProtectedRoute>
+              }>
+                <Route index element={<Dashboard />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="players" element={<Players />} />
+                <Route path="players/:id" element={<PlayerDetail />} />
+                <Route path="tournaments" element={<Tournaments />} />
+                <Route path="tournaments/:id/assign-players" element={<AssignPlayers />} />
+                <Route path="matches" element={<Matches />} />
+                <Route path="schedule" element={<Schedule />} />
+                <Route path="schedule/:tournamentId" element={<Schedule />} />
+                <Route path="scores" element={<Scores />} />
+                <Route path="scores/:matchId" element={<Scores />} />
+                <Route path="specials" element={<Specials />} />
+                <Route path="courts" element={<Courts />} />
+                <Route path="settings" element={<Settings />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="users" element={<Users />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
 };
 
 export default App;
