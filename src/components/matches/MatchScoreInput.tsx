@@ -70,8 +70,8 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
     },
   ];
 
-  const team1Names = `${match.team1_player1.name.split(" ")[0]} & ${match.team1_player2.name.split(" ")[0]}`;
-  const team2Names = `${match.team2_player1.name.split(" ")[0]} & ${match.team2_player2.name.split(" ")[0]}`;
+  const team1Names = `${match.team1_player1?.name.split(" ")[0]} & ${match.team1_player2?.name.split(" ")[0]}`;
+  const team2Names = `${match.team2_player1?.name.split(" ")[0]} & ${match.team2_player2?.name.split(" ")[0]}`;
 
   const isLocked =
     tournament.status !== "active" ||
@@ -252,24 +252,28 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
             </button>
             {expandedPlayers.includes(player.id) && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                {["aces", "dubbele_fout", "love_game", "uit_kooi", "zijwand"].map(
-                  (type) => (
-                    <div key={type}>
-                      <label className="block text-xs text-muted-foreground mb-1">
-                        {type.replace("_", " ")}
-                      </label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={specials[player.id]?.[type] || 0}
-                        onChange={(e) =>
-                          handleSpecialChange(player.id, type, Number(e.target.value))
-                        }
-                        className="w-full"
-                      />
-                    </div>
-                  )
-                )}
+                {[
+                  { id: "ace", label: "Ace" },
+                  { id: "double_fault", label: "Dubbele fout" },
+                  { id: "love_game", label: "Love game" },
+                  { id: "out_of_cage", label: "Uit de kooi" },
+                  { id: "via_sidewall", label: "Via zijwand" },
+                ].map(({ id, label }) => (
+                  <div key={id}>
+                    <label className="block text-xs text-muted-foreground mb-1">
+                      {label}
+                    </label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={specials[player.id]?.[id] || 0}
+                      onChange={(e) =>
+                        handleSpecialChange(player.id, id, Number(e.target.value))
+                      }
+                      className="w-full"
+                    />
+                  </div>
+                ))}
               </div>
             )}
           </div>
