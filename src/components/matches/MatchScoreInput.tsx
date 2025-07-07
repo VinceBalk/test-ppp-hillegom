@@ -27,6 +27,11 @@ type Tournament = {
   is_simulation: boolean;
 };
 
+type SpecialType = {
+  id: string;
+  name: string;
+};
+
 type Props = {
   match: Match;
   tournament: Tournament;
@@ -36,11 +41,15 @@ type Props = {
 export default function MatchScoreInput({ match, tournament, round }: Props) {
   const { toast } = useToast();
   const [team1Score, setTeam1Score] = useState<number | "">(match.score_team1 ?? "");
-  const [team2Score, setTeam2Score] = useState<number | "">(match.score_team2 ?? "");
   const [loading, setLoading] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [blockMessage, setBlockMessage] = useState("");
   const [expandedPlayers, setExpandedPlayers] = useState<string[]>([]);
+  const [specials, setSpecials] = useState<{
+    [playerId: string]: { [specialType: string]: number };
+  }>({});
+  const [specialTypes, setSpecialTypes] = useState<SpecialType[]>([]);
+  const [specialsLoaded, setSpecialsLoaded] = useState(false);
 
   const isLocked =
     tournament.status !== "active" ||
@@ -64,10 +73,6 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
       name: match.team2_player2?.name || "Team 2 - Speler 2",
     },
   ];
-
-  const [specials, setSpecials] = useState<{
-    [playerId: string]: { [specialType: string]: number };
-  }>({});
 
   useEffect(() => {
     const checkPreviousRoundComplete = async () => {
@@ -99,6 +104,33 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
     checkPreviousRoundComplete();
   }, [match.tournament_id, round, tournament.status]);
 
+  const fetchSpecialTypes = async () => {
+    const { data, error } = await supabase
+      .from("special_types")
+      .select("id, name")
+      .eq("is_active", true);
+
+    if (error) {
+      toast({ title: "Fout bij laden van specials", variant: "destructive" });
+      return;
+    }
+
+    setSpecialTypes(data ?? []);
+    setSpecialsLoaded(true);
+  };
+
+  const togglePlayer = async (playerId: string) => {
+    setExpandedPlayers((prev) =>
+      prev.includes(playerId)
+        ? prev.filter((id) => id !== playerId)
+        : [...prev, playerId]
+    );
+
+    if (!specialsLoaded) {
+      await fetchSpecialTypes();
+    }
+  };
+
   const handleSpecialChange = (
     playerId: string,
     type: string,
@@ -120,7 +152,6 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
     }
 
     const calculatedTeam2 = 8 - Number(team1Score);
-    setTeam2Score(calculatedTeam2);
 
     setLoading(true);
 
@@ -169,7 +200,9 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
     const { error: specialsError } = specialsToInsert.length
       ? await supabase
           .from("match_specials")
-          .upsert(specialsToInsert, { onConflict: "match_id,player_id,special_type_id" })
+          .upsert(specialsToInsert, {
+            onConflict: "match_id,player_id,special_type_id",
+          })
       : { error: null };
 
     setLoading(false);
@@ -189,14 +222,6 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
         description: "Scores en specials zijn succesvol verwerkt.",
       });
     }
-  };
-
-  const togglePlayer = (playerId: string) => {
-    setExpandedPlayers((prev) =>
-      prev.includes(playerId)
-        ? prev.filter((id) => id !== playerId)
-        : [...prev, playerId]
-    );
   };
 
   if (blocked) {
@@ -226,7 +251,7 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
           <label className="block text-sm font-medium mb-1">Team 2</label>
           <Input
             type="number"
-            value={team2Score !== "" ? 8 - Number(team1Score) : ""}
+            value={team1Score === "" ? "" : 8 - Number(team1Score)}
             disabled
             className="w-full bg-gray-100"
             placeholder="Score team 2"
@@ -250,28 +275,26 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
               </button>
               {isExpanded && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                  {["aces", "dubbele_fout", "love_game", "uit_kooi", "zijwand"].map(
-                    (type) => (
-                      <div key={type}>
-                        <label className="block text-xs text-muted-foreground mb-1">
-                          {type.replace("_", " ")}
-                        </label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={specials[player.id]?.[type] ?? 0}
-                          onChange={(e) =>
-                            handleSpecialChange(
-                              player.id,
-                              type,
-                              Number(e.target.value)
-                            )
-                          }
-                          className="w-full"
-                        />
-                      </div>
-                    )
-                  )}
+                  {specialTypes.map((special) => (
+                    <div key={special.id}>
+                      <label className="block text-xs text-muted-foreground mb-1">
+                        {special.name}
+                      </label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={specials[player.id]?.[special.id] ?? 0}
+                        onChange={(e) =>
+                          handleSpecialChange(
+                            player.id,
+                            special.id,
+                            Number(e.target.value)
+                          )
+                        }
+                        className="w-full"
+                      />
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
