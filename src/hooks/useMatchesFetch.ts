@@ -13,25 +13,14 @@ export const useMatchesFetch = (tournamentId?: string) => {
         .from('matches')
         .select(`
           *,
-          tournament:tournaments(
-            id,
-            name,
-            status,
-            is_simulation,
-            start_date
-          ),
+          tournament:tournaments(id, name, status, is_simulation, start_date),
           player1:players!matches_player1_id_fkey(name),
           player2:players!matches_player2_id_fkey(name),
           team1_player1:players!matches_team1_player1_id_fkey(name),
           team1_player2:players!matches_team1_player2_id_fkey(name),
           team2_player1:players!matches_team2_player1_id_fkey(name),
           team2_player2:players!matches_team2_player2_id_fkey(name),
-          court:courts(
-            name,
-            menu_order,
-            background_color,
-            row_side
-          )
+          court:courts(name, menu_order, background_color, row_side)
         `);
 
       if (tournamentId) {
@@ -40,41 +29,16 @@ export const useMatchesFetch = (tournamentId?: string) => {
 
       query = query.order('created_at', { ascending: false });
 
-      console.log('Executing matches query...');
       const { data, error } = await query;
 
       if (error) {
         console.error('=== MATCHES QUERY ERROR ===');
-        console.error('Error code:', error.code);
-        console.error('Error message:', error.message);
-        console.error('Error details:', error.details);
-        console.error('Error hint:', error.hint);
+        console.error('Error:', error);
         throw error;
       }
 
       console.log('=== MATCHES QUERY SUCCESS ===');
-      console.log('Raw data from database:', data);
-      console.log('Number of matches found:', data?.length || 0);
-
-      if (data && data.length > 0) {
-        data.forEach((match, index) => {
-          console.log(`Match ${index + 1}:`, {
-            id: match.id,
-            tournament_id: match.tournament_id,
-            team1_player1: match.team1_player1?.name,
-            team1_player2: match.team1_player2?.name,
-            team2_player1: match.team2_player1?.name,
-            team2_player2: match.team2_player2?.name,
-            court: match.court?.name,
-            court_number: match.court_number,
-            court_row_side: match.court?.row_side,
-            tournament_status: match.tournament?.status,
-            is_simulation: match.tournament?.is_simulation,
-            status: match.status,
-            created_at: match.created_at
-          });
-        });
-      }
+      console.log('Aantal matches:', data?.length || 0);
 
       return data as Match[];
     },
