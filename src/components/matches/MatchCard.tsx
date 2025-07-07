@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -60,9 +60,17 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
 
   const displayMatchNumber = match.match_number || matchNumberInCourtRound;
 
-  // ✅ Fallback voor toernooistatus
+  // ✅ Debug fallback + logging
   const toernooiStatus = match.tournament_status || match.tournament?.status || 'unknown';
   const afgerond = match.status === 'completed';
+
+  useEffect(() => {
+    console.log('MATCH DEBUG →');
+    console.log('Toernooi status:', toernooiStatus);
+    console.log('Match status:', match.status);
+    console.log('Simuleer toegestaan:', toernooiStatus === 'planned');
+    console.log('Score invoeren toegestaan:', toernooiStatus === 'in_progress' && !afgerond);
+  }, [toernooiStatus, match.status]);
 
   if (showScoreInput) {
     return (
@@ -114,7 +122,6 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
 
         <div className="flex items-start justify-end mb-2">
           <div className="flex gap-1">
-            {/* Bewerken mag altijd */}
             <Button
               size="sm"
               variant="outline"
@@ -125,6 +132,7 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
               Bewerken
             </Button>
 
+            {/* DEBUG: Simuleren enkel bij geplande toernooien */}
             {toernooiStatus === 'planned' && (
               <Button
                 size="sm"
@@ -137,16 +145,21 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
               </Button>
             )}
 
+            {/* DEBUG: Altijd tonen om te testen */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowScoreInput(true)}
+              className="text-green-600 border-green-600 hover:bg-green-50"
+            >
+              Score invoeren
+            </Button>
+
+            {/* Zet dit terug naar:
             {toernooiStatus === 'in_progress' && !afgerond && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setShowScoreInput(true)}
-                className="text-green-600 border-green-600 hover:bg-green-50"
-              >
-                Score invoeren
-              </Button>
+              <Button ... >Score invoeren</Button>
             )}
+            zodra je weet dat status klopt */}
           </div>
         </div>
 
