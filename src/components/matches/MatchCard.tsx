@@ -65,6 +65,8 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
   const isSimulation = match.tournament?.is_simulation || false;
   const round = match.round_number;
 
+  const allowEdit = toernooiStatus === "draft" || toernooiStatus === "open";
+
   if (showSimulator) {
     return <MatchSimulator match={match} onClose={() => setShowSimulator(false)} />;
   }
@@ -118,15 +120,17 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
 
         <div className="flex items-start justify-end mb-2">
           <div className="flex gap-1">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowEditor(true)}
-              className="text-orange-600 border-orange-600 hover:bg-orange-50"
-            >
-              <Edit className="h-3 w-3 mr-1" />
-              Bewerken
-            </Button>
+            {allowEdit && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowEditor(true)}
+                className="text-orange-600 border-orange-600 hover:bg-orange-50"
+              >
+                <Edit className="h-3 w-3 mr-1" />
+                Bewerken
+              </Button>
+            )}
 
             {toernooiStatus === "in_progress" && (
               <Button
