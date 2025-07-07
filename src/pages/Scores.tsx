@@ -3,15 +3,17 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Eye } from "lucide-react";
+import { ArrowLeft, Eye, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface MatchDetail {
   id: string;
   round_number: number;
+  match_number: number;
   team1_score: number | null;
   team2_score: number | null;
   status: string;
+  court_number: string | null;
   team1_player1?: { name: string };
   team1_player2?: { name: string };
   team2_player1?: { name: string };
@@ -56,9 +58,11 @@ export default function Scores() {
         `
         id,
         round_number,
+        match_number,
         team1_score,
         team2_score,
         status,
+        court_number,
         court:courts(name),
         tournament:tournaments(name),
         team1_player1:players!matches_team1_player1_id_fkey(name),
@@ -95,59 +99,46 @@ export default function Scores() {
     setLoading(true);
     console.log("Fetching matches with scores...");
     
-    // Haal alle completed wedstrijden op (die hebben normaal scores)
     const { data, error } = await supabase
       .from("matches")
       .select(
         `
         id,
         round_number,
+        match_number,
         team1_score,
         team2_score,
         status,
+        court_number,
         court:courts(name),
         tournament:tournaments(name),
         team1_player1:players!matches_team1_player1_id_fkey(name),
         team1_player2:players!matches_team1_player2_id_fkey(name),
         team2_player1:players!matches_team2_player1_id_fkey(name),
-        team2_player2:players!matches_team2_player2_id_fkey(name)
+        team2_player2:players!matches_team2_player2_id_fkey(name),
+        player_stats:player_match_stats (
+          player_id,
+          games_won,
+          player:players(name)
+        ),
+        match_specials:match_specials (
+          player_id,
+          special_type_id,
+          count,
+          player:players(name)
+        )
       `
       )
       .eq('status', 'completed')
-      .order('round_number', { ascending: true });
+      .not('team1_score', 'is', null)
+      .not('team2_score', 'is', null)
+      .order('round_number', { ascending: true })
+      .order('court_number', { ascending: true })
+      .order('match_number', { ascending: true });
 
     if (error) {
       console.error("Fout bij ophalen completed wedstrijden:", error);
-      
-      // Backup: haal alle wedstrijden met scores op (ook als status niet completed is)
-      const { data: backupData, error: backupError } = await supabase
-        .from("matches")
-        .select(
-          `
-          id,
-          round_number,
-          team1_score,
-          team2_score,
-          status,
-          court:courts(name),
-          tournament:tournaments(name),
-          team1_player1:players!matches_team1_player1_id_fkey(name),
-          team1_player2:players!matches_team1_player2_id_fkey(name),
-          team2_player1:players!matches_team2_player1_id_fkey(name),
-          team2_player2:players!matches_team2_player2_id_fkey(name)
-        `
-        )
-        .not('team1_score', 'is', null)
-        .not('team2_score', 'is', null)
-        .order('round_number', { ascending: true });
-      
-      if (backupError) {
-        console.error("Backup query ook gefaald:", backupError);
-        setMatches([]);
-      } else {
-        console.log("Backup query succesvol:", backupData?.length, "matches");
-        setMatches(backupData || []);
-      }
+      setMatches([]);
     } else {
       console.log("Completed wedstrijden opgehaald:", data?.length, "matches");
       console.log("Sample match:", data?.[0]);
@@ -155,8 +146,7 @@ export default function Scores() {
       // Filter op wedstrijden die daadwerkelijk scores hebben
       const matchesWithScores = (data || []).filter(match => 
         match.team1_score !== null && 
-        match.team2_score !== null &&
-        (match.team1_score > 0 || match.team2_score > 0) // Minstens één team heeft gescoord
+        match.team2_score !== null
       );
       
       console.log("Matches met echte scores:", matchesWithScores.length);
@@ -172,6 +162,12 @@ export default function Scores() {
     const name1 = getPlayerName(player1);
     const name2 = player2 ? getPlayerName(player2) : null;
     return name2 ? `${name1} & ${name2}` : name1;
+  };
+
+  const getCourtInfo = (match: MatchDetail) => {
+    if (match.court?.name) return match.court.name;
+    if (match.court_number) return `Baan ${match.court_number}`;
+    return "Geen baan";
   };
 
   // Loading state
@@ -220,65 +216,77 @@ export default function Scores() {
           </div>
         </div>
 
+        {/* Hoofduitslag Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Uitslag: Ronde {match.round_number}</CardTitle>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">{match.tournament?.name}</p>
-              <p className="text-sm text-muted-foreground">{match.court?.name}</p>
-              <p className="text-sm text-muted-foreground">Status: {match.status}</p>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle>Ronde {match.round_number} - Wedstrijd {match.match_number}</CardTitle>
+                <div className="space-y-1 mt-2">
+                  <p className="text-sm text-muted-foreground">{match.tournament?.name}</p>
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <MapPin className="h-3 w-3" />
+                    {getCourtInfo(match)}
+                  </div>
+                </div>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Status: {match.status}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="text-center">
-                <p className="font-semibold mb-2 text-lg">
-                  {getPlayerName(match.team1_player1)}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+              {/* Team 1 */}
+              <div className="text-center md:text-left">
+                <div className="space-y-1">
+                  <p className="font-semibold text-lg">{getPlayerName(match.team1_player1)}</p>
                   {match.team1_player2 && (
-                    <>
-                      <span className="text-muted-foreground mx-2">&</span>
-                      {getPlayerName(match.team1_player2)}
-                    </>
+                    <p className="font-semibold text-lg">{getPlayerName(match.team1_player2)}</p>
                   )}
-                </p>
-                <p className="text-4xl font-bold text-primary">{match.team1_score ?? 0}</p>
+                </div>
               </div>
               
+              {/* Score */}
               <div className="text-center">
-                <p className="font-semibold mb-2 text-lg">
-                  {getPlayerName(match.team2_player1)}
+                <div className="text-5xl font-bold text-primary">
+                  {match.team1_score ?? 0} - {match.team2_score ?? 0}
+                </div>
+              </div>
+              
+              {/* Team 2 */}
+              <div className="text-center md:text-right">
+                <div className="space-y-1">
+                  <p className="font-semibold text-lg">{getPlayerName(match.team2_player1)}</p>
                   {match.team2_player2 && (
-                    <>
-                      <span className="text-muted-foreground mx-2">&</span>
-                      {getPlayerName(match.team2_player2)}
-                    </>
+                    <p className="font-semibold text-lg">{getPlayerName(match.team2_player2)}</p>
                   )}
-                </p>
-                <p className="text-4xl font-bold text-primary">{match.team2_score ?? 0}</p>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* Speler Statistieken */}
         {match.player_stats && match.player_stats.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle>Speler Statistieken & Specials</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {match.player_stats.map((p) => {
                   const specials = match.match_specials?.filter((s) => s.player_id === p.player_id) || [];
                   return (
                     <div key={p.player_id} className="bg-muted/50 p-4 rounded-lg">
-                      <p className="font-semibold mb-2 text-lg">{p.player.name}</p>
+                      <p className="font-semibold mb-2 text-base">{p.player.name}</p>
                       <p className="text-sm mb-3 text-muted-foreground">
-                        Games gewonnen: <span className="font-medium text-foreground">{p.games_won}</span>
+                        Games: <span className="font-medium text-foreground">{p.games_won}</span>
                       </p>
                       {specials.length > 0 ? (
                         <div>
-                          <p className="text-sm font-medium mb-2">Specials:</p>
-                          <ul className="text-sm space-y-1">
+                          <p className="text-xs font-medium mb-2 text-muted-foreground">Specials:</p>
+                          <ul className="text-xs space-y-1">
                             {specials.map((s, i) => (
                               <li key={i} className="flex justify-between">
                                 <span>{s.special_type_id}</span>
@@ -301,7 +309,7 @@ export default function Scores() {
     );
   }
 
-  // Overzichtspagina van alle scores
+  // Overzichtspagina - Match Cards
   return (
     <div className="space-y-6">
       <div>
@@ -325,53 +333,72 @@ export default function Scores() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {matches.map((match) => (
-            <Card key={match.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="pt-6">
-                <div className="flex justify-between items-center">
-                  <div className="flex-1">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold">
-                        Ronde {match.round_number}
-                      </h3>
-                      <div className="text-sm text-muted-foreground">
-                        {match.tournament?.name} • {match.court?.name}
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                      <div className="text-center md:text-left">
-                        <p className="font-medium">
-                          {getTeamName(match.team1_player1, match.team1_player2)}
-                        </p>
-                      </div>
-                      
-                      <div className="text-center">
-                        <div className="text-2xl font-bold">
-                          {match.team1_score ?? 0} - {match.team2_score ?? 0}
-                        </div>
-                      </div>
-                      
-                      <div className="text-center md:text-right">
-                        <p className="font-medium">
-                          {getTeamName(match.team2_player1, match.team2_player2)}
-                        </p>
-                      </div>
+            <Card key={match.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/scores/${match.id}`)}>
+              <CardContent className="pt-4">
+                {/* Header */}
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">Ronde {match.round_number}</span>
+                    <span className="text-muted-foreground">•</span>
+                    <span className="text-sm text-muted-foreground">#{match.match_number || '?'}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3" />
+                    {getCourtInfo(match)}
+                  </div>
+                </div>
+
+                {/* Tournament info */}
+                <div className="text-xs text-muted-foreground mb-3">
+                  {match.tournament?.name}
+                </div>
+
+                {/* Teams en Score */}
+                <div className="grid grid-cols-3 gap-4 items-center">
+                  {/* Team 1 */}
+                  <div className="text-left">
+                    <div className="space-y-0.5">
+                      <p className="font-medium text-sm leading-tight">{getPlayerName(match.team1_player1)}</p>
+                      {match.team1_player2 && (
+                        <p className="font-medium text-sm leading-tight">{getPlayerName(match.team1_player2)}</p>
+                      )}
                     </div>
                   </div>
                   
-                  <div className="ml-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/scores/${match.id}`)}
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      Details
-                    </Button>
+                  {/* Score */}
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">
+                      {match.team1_score ?? 0} - {match.team2_score ?? 0}
+                    </div>
+                  </div>
+                  
+                  {/* Team 2 */}
+                  <div className="text-right">
+                    <div className="space-y-0.5">
+                      <p className="font-medium text-sm leading-tight">{getPlayerName(match.team2_player1)}</p>
+                      {match.team2_player2 && (
+                        <p className="font-medium text-sm leading-tight">{getPlayerName(match.team2_player2)}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
+
+                {/* Specials Summary */}
+                {match.match_specials && match.match_specials.length > 0 && (
+                  <div className="mt-3 pt-3 border-t">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        {match.match_specials.length} special{match.match_specials.length !== 1 ? 's' : ''}
+                      </span>
+                      <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                        <Eye className="h-3 w-3 mr-1" />
+                        Details
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
