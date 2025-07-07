@@ -236,43 +236,47 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
 
       {/* Specials per speler */}
       <div className="space-y-4">
-        {allPlayers.map((player) => (
-          <div key={player.id}>
-            <button
-              type="button"
-              className="text-sm font-semibold underline text-left w-full"
-              onClick={() => togglePlayer(player.id)}
-            >
-              {player.name}
-            </button>
-            {expandedPlayers.includes(player.id) && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                {["aces", "dubbele_fout", "love_game", "uit_kooi", "zijwand"].map(
-                  (type) => (
-                    <div key={type}>
-                      <label className="block text-xs text-muted-foreground mb-1">
-                        {type.replace("_", " ")}
-                      </label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={specials[player.id]?.[type] ?? 0}
-                        onChange={(e) =>
-                          handleSpecialChange(
-                            player.id,
-                            type,
-                            Number(e.target.value)
-                          )
-                        }
-                        className="w-full"
-                      />
-                    </div>
-                  )
-                )}
-              </div>
-            )}
-          </div>
-        ))}
+        {allPlayers.map((player) => {
+          const isExpanded = expandedPlayers.includes(player.id);
+          return (
+            <div key={player.id} className="border p-3 rounded-md">
+              <button
+                type="button"
+                className="text-sm font-semibold text-left w-full flex items-center justify-between"
+                onClick={() => togglePlayer(player.id)}
+              >
+                {player.name}
+                <span>{isExpanded ? "▲" : "▼"}</span>
+              </button>
+              {isExpanded && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                  {["aces", "dubbele_fout", "love_game", "uit_kooi", "zijwand"].map(
+                    (type) => (
+                      <div key={type}>
+                        <label className="block text-xs text-muted-foreground mb-1">
+                          {type.replace("_", " ")}
+                        </label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={specials[player.id]?.[type] ?? 0}
+                          onChange={(e) =>
+                            handleSpecialChange(
+                              player.id,
+                              type,
+                              Number(e.target.value)
+                            )
+                          }
+                          className="w-full"
+                        />
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <Button
