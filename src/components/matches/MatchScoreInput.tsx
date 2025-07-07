@@ -9,9 +9,9 @@ type Match = {
   id: string;
   tournament_id: string;
   round_number: number;
-  team1_score: number | null;
-  team2_score: number | null;
   status: string;
+  team1_score?: number;
+  team2_score?: number;
   team1_player1_id: string;
   team1_player2_id: string;
   team2_player1_id: string;
@@ -24,7 +24,7 @@ type Match = {
 
 type Tournament = {
   id: string;
-  status: "not_started" | "in_progress" | "completed";
+  status: "not_started" | "active" | "completed";
   is_simulation: boolean;
 };
 
@@ -34,43 +34,36 @@ type Props = {
   round: number;
 };
 
-type SpecialType = {
-  id: string;
-  name: string;
-};
-
 export default function MatchScoreInput({ match, tournament, round }: Props) {
   const { toast } = useToast();
   const [team1Score, setTeam1Score] = useState<number | "">(match.team1_score ?? "");
-  const [specialTypes, setSpecialTypes] = useState<SpecialType[]>([]);
+  const team2Score = team1Score !== "" ? 8 - Number(team1Score) : "";
   const [loading, setLoading] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [blockMessage, setBlockMessage] = useState("");
 
-  const allPlayers = [
-    {
-      id: match.team1_player1_id,
-      name: match.team1_player1?.name ?? "Speler 1",
-    },
-    {
-      id: match.team1_player2_id,
-      name: match.team1_player2?.name ?? "Speler 2",
-    },
-    {
-      id: match.team2_player1_id,
-      name: match.team2_player1?.name ?? "Speler 3",
-    },
-    {
-      id: match.team2_player2_id,
-      name: match.team2_player2?.name ?? "Speler 4",
-    },
+  const players = [
+    { id: match.team1_player1_id, name: match.team1_player1?.name || "Speler 1" },
+    { id: match.team1_player2_id, name: match.team1_player2?.name || "Speler 2" },
+    { id: match.team2_player1_id, name: match.team2_player1?.name || "Speler 3" },
+    { id: match.team2_player2_id, name: match.team2_player2?.name || "Speler 4" },
   ];
 
-  const [specials, setSpecials] = useState<{
-    [playerId: string]: { [specialId: string]: number };
-  }>({});
+  const [specialTypes, setSpecialTypes] = useState<
+    { id: string; name: string; is_active: boolean }[]
+  >([]);
+  const [specials, setSpecials] = useState<Record<string, Record<string, number>>>({});
 
-  const isLocked = tournament.status !== "in_progress";
+  const isLocked = tournament.status !== "active" || match.status === "completed";
+
+  useEffect(() => {
+    // init player specials
+    const initial: Record<string, Record<string, number>> = {};
+    players.forEach((p) => {
+      initial[p.id] = {};
+    });
+    setSpecials(initial);
+  }, [match.id]);
 
   useEffect(() => {
     const fetchSpecialTypes = async () => {
@@ -78,42 +71,16 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
         .from("special_types")
         .select("*")
         .eq("is_active", true);
-
       if (!error && data) {
         setSpecialTypes(data);
       }
     };
-
-    const initSpecials = () => {
-      const init = {};
-      for (const player of allPlayers) {
-        init[player.id] = {};
-        for (const s of specialTypes) {
-          init[player.id][s.id] = 0;
-        }
-      }
-      setSpecials(init);
-    };
-
     fetchSpecialTypes();
   }, []);
 
   useEffect(() => {
-    if (specialTypes.length > 0) {
-      const init = {};
-      for (const player of allPlayers) {
-        init[player.id] = {};
-        for (const s of specialTypes) {
-          init[player.id][s.id] = 0;
-        }
-      }
-      setSpecials(init);
-    }
-  }, [specialTypes]);
-
-  useEffect(() => {
     const checkPreviousRoundComplete = async () => {
-      if (round === 1 || tournament.status !== "in_progress") return;
+      if (round === 1 || tournament.status !== "active") return;
 
       const prevRound = round - 1;
       const { data: matches, error } = await supabase
@@ -129,6 +96,7 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
       }
 
       const notCompleted = matches.filter((m) => m.status !== "completed");
+
       if (notCompleted.length > 0) {
         setBlocked(true);
         setBlockMessage(
@@ -140,82 +108,75 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
     checkPreviousRoundComplete();
   }, [match.tournament_id, round, tournament.status]);
 
+  const handleSpecialChange = (playerId: string, typeId: string, value: number) => {
+    setSpecials((prev) => ({
+      ...prev,
+      [playerId]: {
+        ...prev[playerId],
+        [typeId]: value,
+      },
+    }));
+  };
+
   const handleSubmit = async () => {
-    if (team1Score === "" || isNaN(Number(team1Score))) {
-      toast({ title: "Vul een geldige score in", variant: "destructive" });
+    if (team1Score === "" || team2Score === "") {
+      toast({ title: "Vul een score in", variant: "destructive" });
       return;
     }
-
-    const team1 = Number(team1Score);
-    const team2 = 8 - team1;
 
     setLoading(true);
 
     const { error: matchError } = await supabase
       .from("matches")
       .update({
-        team1_score: team1,
-        team2_score: team2,
+        team1_score: Number(team1Score),
+        team2_score: Number(team2Score),
         status: "completed",
       })
       .eq("id", match.id);
 
-    const allPlayersScores = [
-      { player_id: match.team1_player1_id, team_number: 1, games_won: team1 },
-      { player_id: match.team1_player2_id, team_number: 1, games_won: team1 },
-      { player_id: match.team2_player1_id, team_number: 2, games_won: team2 },
-      { player_id: match.team2_player2_id, team_number: 2, games_won: team2 },
-    ];
+    const playerRows = players.map((p) => ({
+      match_id: match.id,
+      player_id: p.id,
+      games_won:
+        match.team1_player1_id === p.id || match.team1_player2_id === p.id
+          ? Number(team1Score)
+          : Number(team2Score),
+    }));
 
     const { error: statsError } = await supabase
       .from("player_match_stats")
-      .upsert(
-        allPlayersScores.map((p) => ({
+      .upsert(playerRows, { onConflict: "match_id,player_id" });
+
+    const specialRows = Object.entries(specials).flatMap(([playerId, types]) =>
+      Object.entries(types)
+        .filter(([_, count]) => count > 0)
+        .map(([specialTypeId, count]) => ({
           match_id: match.id,
-          player_id: p.player_id,
-          team_number: p.team_number,
-          games_won: p.games_won,
-        })),
-        { onConflict: "match_id,player_id" }
-      );
+          player_id: playerId,
+          special_type_id: specialTypeId,
+          count,
+        }))
+    );
 
-    const specialsToInsert = [];
-
-    for (const playerId in specials) {
-      for (const specialId in specials[playerId]) {
-        const count = specials[playerId][specialId];
-        if (count > 0) {
-          specialsToInsert.push({
-            match_id: match.id,
-            player_id: playerId,
-            special_type_id: specialId,
-            count,
-          });
-        }
-      }
-    }
-
-    const { error: specialsError } = specialsToInsert.length
+    const { error: specialError } = specialRows.length
       ? await supabase
           .from("match_specials")
-          .upsert(specialsToInsert, {
-            onConflict: "match_id,player_id,special_type_id",
-          })
+          .upsert(specialRows, { onConflict: "match_id,player_id,special_type_id" })
       : { error: null };
 
     setLoading(false);
 
-    if (matchError || statsError || specialsError) {
+    if (matchError || statsError || specialError) {
       toast({
         title: "Fout bij opslaan",
-        description:
-          matchError?.message || statsError?.message || specialsError?.message,
+        description: matchError?.message || statsError?.message || specialError?.message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Opgeslagen",
-        description: `Score: ${team1} – ${team2}`,
+        title: "Score opgeslagen",
+        description: `Score: ${team1Score} – ${team2Score}`,
       });
     }
   };
@@ -225,66 +186,63 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mt-4 space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-semibold mb-1">
-            {allPlayers[0].name} & {allPlayers[1].name}
+          <label className="block text-sm text-muted-foreground mb-1">
+            {players[0].name} & {players[1].name}
           </label>
           <Input
             type="number"
-            min={0}
-            max={8}
             value={team1Score}
+            max={8}
+            min={0}
             onChange={(e) => {
-              const val = Math.min(8, Math.max(0, Number(e.target.value)));
-              setTeam1Score(val);
+              const val = Number(e.target.value);
+              if (val >= 0 && val <= 8) {
+                setTeam1Score(val);
+              }
             }}
             disabled={isLocked || loading}
-            placeholder="Score team 1"
+            className="w-full"
           />
         </div>
         <div>
-          <label className="block font-semibold mb-1">
-            {allPlayers[2].name} & {allPlayers[3].name}
+          <label className="block text-sm text-muted-foreground mb-1">
+            {players[2].name} & {players[3].name}
           </label>
           <Input
             type="number"
-            value={team1Score === "" ? "" : 8 - Number(team1Score)}
+            value={team2Score}
             disabled
-            placeholder="Score team 2"
+            className="w-full opacity-70"
           />
         </div>
       </div>
 
       <Accordion type="multiple" className="w-full">
-        {allPlayers.map((player) => (
-          <AccordionItem key={player.id} value={player.id}>
-            <AccordionTrigger className="text-sm font-semibold">
-              {player.name}
-            </AccordionTrigger>
-            <AccordionContent className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {specialTypes.map((s) => (
-                <div key={s.id}>
-                  <label className="text-sm text-muted-foreground">
-                    {s.name}
-                  </label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={specials[player.id]?.[s.id] ?? 0}
-                    onChange={(e) =>
-                      setSpecials((prev) => ({
-                        ...prev,
-                        [player.id]: {
-                          ...prev[player.id],
-                          [s.id]: Number(e.target.value),
-                        },
-                      }))
-                    }
-                  />
-                </div>
-              ))}
+        {players.map((p) => (
+          <AccordionItem key={p.id} value={p.id}>
+            <AccordionTrigger className="text-base font-semibold">{p.name}</AccordionTrigger>
+            <AccordionContent className="space-y-3 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {specialTypes.map((type) => (
+                  <div key={type.id}>
+                    <label className="block text-sm text-muted-foreground mb-1">
+                      {type.name}
+                    </label>
+                    <Input
+                      type="number"
+                      value={specials[p.id]?.[type.id] || 0}
+                      min={0}
+                      onChange={(e) =>
+                        handleSpecialChange(p.id, type.id, Number(e.target.value))
+                      }
+                      className="w-full"
+                    />
+                  </div>
+                ))}
+              </div>
             </AccordionContent>
           </AccordionItem>
         ))}
@@ -295,7 +253,7 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
         disabled={isLocked || loading}
         className="bg-green-600 hover:bg-green-700 text-white"
       >
-        ✅ Score bevestigen
+        Opslaan
       </Button>
     </div>
   );
