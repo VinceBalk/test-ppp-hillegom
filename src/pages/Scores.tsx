@@ -234,95 +234,100 @@ export default function Scores() {
     }
 
     return (
-      <div className="max-w-4xl mx-auto p-4 space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => navigate('/scores')}>
+      <div className="space-y-4 px-2">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" onClick={() => navigate('/scores')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Terug naar Scores
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Wedstrijd Details</h1>
-            <p className="text-muted-foreground">Uitslag en statistieken</p>
-          </div>
         </div>
 
-        {/* Hoofduitslag Card */}
+        <div>
+          <h1 className="text-2xl font-bold">Wedstrijd Details</h1>
+          <p className="text-sm text-muted-foreground">Uitslag en statistieken</p>
+        </div>
+      </div>
+
+      {/* Compacte mobiele layout */}
+      <div className="space-y-4 px-2">
+        {/* Match Info Card */}
         <Card>
-          <CardHeader>
-            <div className="flex justify-between items-start">
+          <CardHeader className="pb-3">
+            <div className="flex justify-between items-start text-sm">
               <div>
-                <CardTitle>Ronde {match.round_number} - Wedstrijd {match.match_number}</CardTitle>
-                <div className="space-y-1 mt-2">
-                  <p className="text-sm text-muted-foreground">{match.tournament?.name}</p>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <MapPin className="h-3 w-3" />
-                    {getCourtInfo(match)}
-                  </div>
+                <CardTitle className="text-lg">Ronde {match.round_number} - #{match.match_number}</CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">{match.tournament?.name}</p>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                  <MapPin className="h-3 w-3" />
+                  {getCourtInfo(match)}
                 </div>
               </div>
-              <div className="text-sm text-muted-foreground">
-                Status: {match.status}
+              <div className="text-xs text-muted-foreground">
+                {match.status}
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-6 items-center">
+          
+          <CardContent className="pt-0">
+            {/* Mobiele score layout - gestackt */}
+            <div className="space-y-3">
               {/* Team 1 */}
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground mb-2">Team 1</p>
-                <div className="space-y-1">
-                  <p className="font-semibold text-lg">{getPlayerName(match.team1_player1)}</p>
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                <div>
+                  <p className="text-xs text-blue-600 font-medium mb-0.5">Team 1</p>
+                  <p className="font-semibold text-sm">{getPlayerName(match.team1_player1)}</p>
                   {match.team1_player2 && (
-                    <p className="font-semibold text-lg">{getPlayerName(match.team1_player2)}</p>
+                    <p className="font-semibold text-sm">{getPlayerName(match.team1_player2)}</p>
                   )}
+                </div>
+                <div className="text-3xl font-bold text-blue-600">
+                  {match.team1_score ?? 0}
                 </div>
               </div>
               
-              {/* Score */}
+              {/* VS divider */}
               <div className="text-center">
-                <div className="text-5xl font-bold text-primary">
-                  {match.team1_score ?? 0} - {match.team2_score ?? 0}
-                </div>
+                <span className="text-sm font-medium text-muted-foreground bg-muted px-3 py-1 rounded-full">VS</span>
               </div>
               
               {/* Team 2 */}
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground mb-2">Team 2</p>
-                <div className="space-y-1">
-                  <p className="font-semibold text-lg">{getPlayerName(match.team2_player1)}</p>
+              <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                <div>
+                  <p className="text-xs text-red-600 font-medium mb-0.5">Team 2</p>
+                  <p className="font-semibold text-sm">{getPlayerName(match.team2_player1)}</p>
                   {match.team2_player2 && (
-                    <p className="font-semibold text-lg">{getPlayerName(match.team2_player2)}</p>
+                    <p className="font-semibold text-sm">{getPlayerName(match.team2_player2)}</p>
                   )}
+                </div>
+                <div className="text-3xl font-bold text-red-600">
+                  {match.team2_score ?? 0}
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Speler Statistieken & Specials */}
+        {/* Speler Statistieken - Mobile optimized */}
         <Card>
-          <CardHeader>
-            <CardTitle>Speler Statistieken & Specials</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Specials</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             {match.player_stats && match.player_stats.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-3">
                 {match.player_stats.map((p) => {
                   const specials = match.match_specials?.filter((s) => s.player_id === p.player_id) || [];
                   return (
-                    <div key={p.player_id} className="bg-muted/50 p-4 rounded-lg">
-                      <p className="font-semibold mb-2 text-base">{p.player.name}</p>
+                    <div key={p.player_id} className="border border-muted rounded-lg p-3">
+                      <p className="font-medium text-sm mb-2">{p.player.name}</p>
                       {specials.length > 0 ? (
-                        <div>
-                          <p className="text-xs font-medium mb-2 text-muted-foreground">Specials:</p>
-                          <ul className="text-xs space-y-1">
-                            {specials.map((s, i) => (
-                              <li key={i} className="flex justify-between">
-                                <span>{s.special_type?.name || s.special_type_id}</span>
-                                <span className="font-medium">× {s.count}</span>
-                              </li>
-                            ))}
-                          </ul>
+                        <div className="space-y-1">
+                          {specials.map((s, i) => (
+                            <div key={i} className="flex justify-between items-center text-xs">
+                              <span className="text-muted-foreground">{s.special_type?.name || s.special_type_id}</span>
+                              <span className="font-medium bg-muted px-2 py-0.5 rounded">×{s.count}</span>
+                            </div>
+                          ))}
                         </div>
                       ) : (
                         <p className="text-xs text-muted-foreground">Geen specials</p>
@@ -332,8 +337,7 @@ export default function Scores() {
                 })}
               </div>
             ) : (
-              // Geen player_stats maar wel spelers tonen
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-3">
                 {[
                   { id: 'team1_player1', name: getPlayerName(match.team1_player1) },
                   match.team1_player2 && { id: 'team1_player2', name: getPlayerName(match.team1_player2) },
@@ -345,19 +349,16 @@ export default function Scores() {
                   ) || [];
                   
                   return (
-                    <div key={player?.id || index} className="bg-muted/50 p-4 rounded-lg">
-                      <p className="font-semibold mb-2 text-base">{player?.name}</p>
+                    <div key={player?.id || index} className="border border-muted rounded-lg p-3">
+                      <p className="font-medium text-sm mb-2">{player?.name}</p>
                       {specials.length > 0 ? (
-                        <div>
-                          <p className="text-xs font-medium mb-2 text-muted-foreground">Specials:</p>
-                          <ul className="text-xs space-y-1">
-                            {specials.map((s, i) => (
-                              <li key={i} className="flex justify-between">
-                                <span>{s.special_type?.name || s.special_type_id}</span>
-                                <span className="font-medium">× {s.count}</span>
-                              </li>
-                            ))}
-                          </ul>
+                        <div className="space-y-1">
+                          {specials.map((s, i) => (
+                            <div key={i} className="flex justify-between items-center text-xs">
+                              <span className="text-muted-foreground">{s.special_type?.name || s.special_type_id}</span>
+                              <span className="font-medium bg-muted px-2 py-0.5 rounded">×{s.count}</span>
+                            </div>
+                          ))}
                         </div>
                       ) : (
                         <p className="text-xs text-muted-foreground">Geen specials</p>
@@ -370,8 +371,8 @@ export default function Scores() {
             
             {/* Fallback bericht als er helemaal geen specials zijn */}
             {(!match.match_specials || match.match_specials.length === 0) && (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">
+              <div className="text-center py-6">
+                <p className="text-sm text-muted-foreground">
                   Er zijn geen specials voor deze wedstrijd
                 </p>
               </div>
