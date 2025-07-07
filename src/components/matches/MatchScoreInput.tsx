@@ -228,7 +228,7 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block font-semibold mb-1">
+          <label className="block text-sm font-semibold mb-1">
             {allPlayers[0].name} & {allPlayers[1].name}
           </label>
           <Input
