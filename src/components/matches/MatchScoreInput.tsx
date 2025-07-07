@@ -3,6 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 type Match = {
   id: string;
@@ -27,24 +34,19 @@ type Props = {
   match: Match;
   tournament: Tournament;
   round: number;
+  onClose?: () => void;
 };
 
-type PlayerSpecial = {
-  player_id: string;
-  count: number;
-};
-
-export default function MatchScoreInput({ match, tournament, round }: Props) {
+export default function MatchScoreInput({ match, tournament, round, onClose }: Props) {
   const { toast } = useToast();
   const [team1Score, setTeam1Score] = useState<number | "">(match.score_team1 ?? "");
   const [team2Score, setTeam2Score] = useState<number | "">(match.score_team2 ?? "");
   const [loading, setLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [blockMessage, setBlockMessage] = useState("");
 
-  const [specials, setSpecials] = useState<{
-    [playerId: string]: number;
-  }>({
+  const [specials, setSpecials] = useState<{ [playerId: string]: number }>({
     [match.team1_player1_id]: 0,
     [match.team1_player2_id]: 0,
     [match.team2_player1_id]: 0,
@@ -88,20 +90,7 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
     checkPreviousRoundComplete();
   }, [match.tournament_id, round, tournament.status]);
 
-  const handleSubmit = async () => {
-    if (team1Score === "" || team2Score === "") {
-      toast({ title: "Vul beide scores in", variant: "destructive" });
-      return;
-    }
-
-    if (canSimulate) {
-      toast({
-        title: "Score gesimuleerd",
-        description: `Score: ${team1Score} – ${team2Score}`,
-      });
-      return;
-    }
-
+  const handleSubmitConfirmed = async () => {
     setLoading(true);
 
     const { error: matchError } = await supabase
@@ -137,20 +126,25 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
       .map(([player_id, count]) => ({
         match_id: match.id,
         player_id,
-        special_type_id: "tiebreaker", // pas aan als je meerdere types gebruikt
+        special_type_id: "tiebreaker",
         count,
       }));
 
     const { error: specialsError } = specialsToInsert.length
-      ? await supabase.from("match_specials").upsert(specialsToInsert, { onConflict: "match_id,player_id,special_type_id" })
+      ? await supabase.from("match_specials").upsert(specialsToInsert, {
+          onConflict: "match_id,player_id,special_type_id",
+        })
       : { error: null };
 
     setLoading(false);
+    setConfirmOpen(false);
+    onClose?.();
 
     if (matchError || statsError || specialsError) {
       toast({
         title: "Fout bij opslaan",
-        description: matchError?.message || statsError?.message || specialsError?.message,
+        description:
+          matchError?.message || statsError?.message || specialsError?.message,
         variant: "destructive",
       });
     } else {
@@ -161,11 +155,22 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
     }
   };
 
-  if (blocked) {
-    return (
-      <p className="text-sm text-yellow-600 font-medium mt-2">{blockMessage}</p>
-    );
-  }
+  const handleSubmit = () => {
+    if (team1Score === "" || team2Score === "") {
+      toast({ title: "Vul beide scores in", variant: "destructive" });
+      return;
+    }
+
+    if (canSimulate) {
+      toast({
+        title: "Score gesimuleerd",
+        description: `Score: ${team1Score} – ${team2Score}`,
+      });
+      return;
+    }
+
+    setConfirmOpen(true);
+  };
 
   const handleSpecialChange = (playerId: string, value: number) => {
     setSpecials((prev) => ({
@@ -181,50 +186,91 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
     match.team2_player2_id,
   ];
 
+  if (blocked) {
+    return (
+      <p className="text-sm text-yellow-600 font-medium mt-2">{blockMessage}</p>
+    );
+  }
+
   return (
-    <div className="mt-4 space-y-4">
-      <div className="flex items-center gap-2">
-        <Input
-          type="number"
-          value={team1Score}
-          onChange={(e) => setTeam1Score(Number(e.target.value))}
+    <>
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            value={team1Score}
+            onChange={(e) => setTeam1Score(Number(e.target.value))}
+            disabled={isLocked || loading}
+            placeholder="Team 1"
+            className="w-20"
+          />
+          <span className="text-muted-foreground">–</span>
+          <Input
+            type="number"
+            value={team2Score}
+            onChange={(e) => setTeam2Score(Number(e.target.value))}
+            disabled={isLocked || loading}
+            placeholder="Team 2"
+            className="w-20"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {allPlayerIds.map((pid) => (
+            <div key={pid} className="flex items-center gap-2">
+              <span className="text-sm w-24">Specials {pid.slice(0, 4)}…</span>
+              <Input
+                type="number"
+                value={specials[pid]}
+                onChange={(e) => handleSpecialChange(pid, Number(e.target.value))}
+                className="w-24"
+                min={0}
+              />
+            </div>
+          ))}
+        </div>
+
+        <Button
+          onClick={handleSubmit}
           disabled={isLocked || loading}
-          placeholder="Team 1"
-          className="w-20"
-        />
-        <span className="text-muted-foreground">–</span>
-        <Input
-          type="number"
-          value={team2Score}
-          onChange={(e) => setTeam2Score(Number(e.target.value))}
-          disabled={isLocked || loading}
-          placeholder="Team 2"
-          className="w-20"
-        />
+          className="bg-green-600 hover:bg-green-700 text-white"
+        >
+          {canSimulate ? "▶️ Simuleer" : "✅ Score bevestigen"}
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {allPlayerIds.map((pid) => (
-          <div key={pid} className="flex items-center gap-2">
-            <span className="text-sm w-24">Specials {pid.slice(0, 4)}…</span>
-            <Input
-              type="number"
-              value={specials[pid]}
-              onChange={(e) => handleSpecialChange(pid, Number(e.target.value))}
-              className="w-24"
-              min={0}
-            />
+      {/* Bevestigingspopup */}
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bevestig score</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <p>
+              <strong>Team 1:</strong> {team1Score} <br />
+              <strong>Team 2:</strong> {team2Score}
+            </p>
+            <div className="text-sm space-y-1">
+              {Object.entries(specials).map(([pid, count]) => (
+                <div key={pid}>
+                  {pid.slice(0, 4)}… → {count} special(s)
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
-      </div>
-
-      <Button
-        onClick={handleSubmit}
-        disabled={isLocked || loading}
-        className="bg-green-600 hover:bg-green-700 text-white"
-      >
-        {canSimulate ? "▶️ Simuleer" : "✅ Opslaan"}
-      </Button>
-    </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConfirmOpen(false)}>
+              Annuleren
+            </Button>
+            <Button
+              onClick={handleSubmitConfirmed}
+              className="bg-green-600 text-white hover:bg-green-700"
+            >
+              ✅ Opslaan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
