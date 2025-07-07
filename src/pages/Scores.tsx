@@ -312,9 +312,6 @@ export default function Scores() {
                   return (
                     <div key={p.player_id} className="bg-muted/50 p-4 rounded-lg">
                       <p className="font-semibold mb-2 text-base">{p.player.name}</p>
-                      <p className="text-sm mb-3 text-muted-foreground">
-                        Games gewonnen: <span className="font-medium text-foreground">{p.games_won}</span>
-                      </p>
                       {specials.length > 0 ? (
                         <div>
                           <p className="text-xs font-medium mb-2 text-muted-foreground">Specials:</p>
@@ -350,9 +347,6 @@ export default function Scores() {
                   return (
                     <div key={player?.id || index} className="bg-muted/50 p-4 rounded-lg">
                       <p className="font-semibold mb-2 text-base">{player?.name}</p>
-                      <p className="text-sm mb-3 text-muted-foreground">
-                        Games gewonnen: <span className="font-medium text-foreground">-</span>
-                      </p>
                       {specials.length > 0 ? (
                         <div>
                           <p className="text-xs font-medium mb-2 text-muted-foreground">Specials:</p>
