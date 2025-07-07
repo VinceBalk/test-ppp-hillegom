@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 type Match = {
   id: string;
@@ -12,14 +12,10 @@ type Match = {
   score_team1: number | null;
   score_team2: number | null;
   status: string;
-  team1_player1_id: string;
-  team1_player2_id: string;
-  team2_player1_id: string;
-  team2_player2_id: string;
-  team1_player1?: { name: string };
-  team1_player2?: { name: string };
-  team2_player1?: { name: string };
-  team2_player2?: { name: string };
+  team1_player1: { id: string; name: string };
+  team1_player2: { id: string; name: string };
+  team2_player1: { id: string; name: string };
+  team2_player2: { id: string; name: string };
 };
 
 type Tournament = {
@@ -37,51 +33,44 @@ type Props = {
 export default function MatchScoreInput({ match, tournament, round }: Props) {
   const { toast } = useToast();
   const [team1Score, setTeam1Score] = useState<number | "">(match.score_team1 ?? "");
+  const [specials, setSpecials] = useState<Record<string, Record<string, number>>>({});
   const [loading, setLoading] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [blockMessage, setBlockMessage] = useState("");
 
-  const [specials, setSpecials] = useState<Record<string, number>>({
-    [match.team1_player1_id]: 0,
-    [match.team1_player2_id]: 0,
-    [match.team2_player1_id]: 0,
-    [match.team2_player2_id]: 0,
-  });
-
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const allPlayers = [
+    match.team1_player1,
+    match.team1_player2,
+    match.team2_player1,
+    match.team2_player2,
+  ];
 
   const isLocked =
     tournament.status !== "active" ||
     (match.status === "completed" && !tournament.is_simulation);
 
-  const canSimulate = tournament.is_simulation && tournament.status === "not_started";
-
-  const team2Score = team1Score === "" ? "" : 8 - Number(team1Score);
+  const canSimulate =
+    tournament.is_simulation && tournament.status === "not_started";
 
   useEffect(() => {
     const checkPreviousRoundComplete = async () => {
       if (round === 1 || tournament.status !== "active") return;
 
-      const prevRound = round - 1;
-      const { data: matches, error } = await supabase
+      const { data, error } = await supabase
         .from("matches")
         .select("id, status")
         .eq("tournament_id", match.tournament_id)
-        .eq("round_number", prevRound);
+        .eq("round_number", round - 1);
 
-      if (error || !matches) {
+      if (error || !data) {
         setBlocked(true);
         setBlockMessage("Kan eerdere ronde niet controleren.");
         return;
       }
 
-      const notCompleted = matches.filter((m) => m.status !== "completed");
-
-      if (notCompleted.length > 0) {
+      if (data.some((m) => m.status !== "completed")) {
         setBlocked(true);
-        setBlockMessage(
-          `Ronde ${prevRound} is nog niet volledig afgerond. Invoer is geblokkeerd.`
-        );
+        setBlockMessage(`Ronde ${round - 1} is nog niet volledig afgerond.`);
       }
     };
 
@@ -90,53 +79,52 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
 
   const handleSubmit = async () => {
     if (team1Score === "") {
-      toast({ title: "Vul een score voor Team 1 in", variant: "destructive" });
+      toast({ title: "Vul de score in voor team 1", variant: "destructive" });
       return;
     }
+
+    const score1 = Number(team1Score);
+    const score2 = 8 - score1;
 
     setLoading(true);
 
     const { error: matchError } = await supabase
       .from("matches")
       .update({
-        score_team1: Number(team1Score),
-        score_team2: Number(team2Score),
+        score_team1: score1,
+        score_team2: score2,
         status: "completed",
       })
       .eq("id", match.id);
 
-    const players = [
-      { player_id: match.team1_player1_id, team_number: 1, games_won: Number(team1Score) },
-      { player_id: match.team1_player2_id, team_number: 1, games_won: Number(team1Score) },
-      { player_id: match.team2_player1_id, team_number: 2, games_won: Number(team2Score) },
-      { player_id: match.team2_player2_id, team_number: 2, games_won: Number(team2Score) },
-    ];
+    const stats = allPlayers.map((p) => ({
+      match_id: match.id,
+      player_id: p.id,
+      team_number:
+        p.id === match.team1_player1.id || p.id === match.team1_player2.id ? 1 : 2,
+      games_won:
+        p.id === match.team1_player1.id || p.id === match.team1_player2.id
+          ? score1
+          : score2,
+    }));
 
     const { error: statsError } = await supabase
       .from("player_match_stats")
-      .upsert(
-        players.map((p) => ({
-          match_id: match.id,
-          player_id: p.player_id,
-          team_number: p.team_number,
-          games_won: p.games_won,
-        })),
-        { onConflict: "match_id,player_id" }
-      );
+      .upsert(stats, { onConflict: "match_id,player_id" });
 
-    const specialsToInsert = Object.entries(specials)
-      .filter(([_, count]) => count > 0)
-      .map(([player_id, count]) => ({
-        match_id: match.id,
-        player_id,
-        special_type_id: "tiebreaker",
-        count,
-      }));
+    const specialsFlat: any[] = [];
+    Object.entries(specials).forEach(([player_id, types]) => {
+      Object.entries(types).forEach(([special_type_id, count]) => {
+        if (count > 0) {
+          specialsFlat.push({ match_id: match.id, player_id, special_type_id, count });
+        }
+      });
+    });
 
-    const { error: specialsError } = specialsToInsert.length
+    const { error: specialsError } = specialsFlat.length
       ? await supabase
           .from("match_specials")
-          .upsert(specialsToInsert, { onConflict: "match_id,player_id,special_type_id" })
+          .upsert(specialsFlat, { onConflict: "match_id,player_id,special_type_id" })
       : { error: null };
 
     setLoading(false);
@@ -150,113 +138,84 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
     } else {
       toast({
         title: "Score opgeslagen",
-        description: `Score: ${team1Score} – ${team2Score}, specials ook opgeslagen.`,
+        description: `Score: ${score1} – ${score2}, specials ook opgeslagen.`,
       });
     }
   };
 
   if (blocked) {
-    return (
-      <p className="text-sm text-yellow-600 font-medium mt-2">{blockMessage}</p>
-    );
+    return <p className="text-sm text-yellow-600 font-medium mt-2">{blockMessage}</p>;
   }
 
-  const allPlayers = [
-    {
-      id: match.team1_player1_id,
-      name: match.team1_player1?.name?.split(" ")[0] || "Speler 1A",
-    },
-    {
-      id: match.team1_player2_id,
-      name: match.team1_player2?.name?.split(" ")[0] || "Speler 1B",
-    },
-    {
-      id: match.team2_player1_id,
-      name: match.team2_player1?.name?.split(" ")[0] || "Speler 2A",
-    },
-    {
-      id: match.team2_player2_id,
-      name: match.team2_player2?.name?.split(" ")[0] || "Speler 2B",
-    },
-  ];
+  const handleSpecialChange = (playerId: string, typeId: string, count: number) => {
+    setSpecials((prev) => ({
+      ...prev,
+      [playerId]: {
+        ...(prev[playerId] || {}),
+        [typeId]: count,
+      },
+    }));
+  };
 
   return (
-    <div className="mt-4 space-y-4">
-      {/* Score invoer */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="font-medium text-sm text-muted-foreground">Team 1:</span>
+    <div className="mt-4 space-y-6">
+      <div className="flex items-center gap-2">
         <Input
           type="number"
           value={team1Score}
           onChange={(e) => setTeam1Score(Number(e.target.value))}
           disabled={isLocked || loading}
-          placeholder="0"
-          className="w-20"
-          min={0}
-          max={8}
+          placeholder="Score team 1"
+          className="w-28"
         />
-        <span className="text-muted-foreground text-sm">–</span>
+        <span className="text-muted-foreground">–</span>
         <Input
           type="number"
-          value={team2Score}
+          value={team1Score !== "" ? 8 - Number(team1Score) : ""}
           disabled
-          placeholder="0"
-          className="w-20 bg-gray-50"
+          placeholder="Score team 2"
+          className="w-28"
         />
-        <span className="font-medium text-sm text-muted-foreground">Team 2</span>
       </div>
 
-      {/* Specials */}
-      <div className="space-y-2">
+      <Accordion type="multiple" className="w-full">
         {allPlayers.map((player) => (
-          <div key={player.id} className="border rounded-md p-2 bg-muted/10">
-            <button
-              type="button"
-              className="flex items-center justify-between w-full text-sm font-medium text-left"
-              onClick={() =>
-                setExpanded((prev) => ({
-                  ...prev,
-                  [player.id]: !prev[player.id],
-                }))
-              }
-            >
-              <span>Specials voor {player.name}</span>
-              {expanded[player.id] ? (
-                <ChevronUp className="w-4 h-4" />
-              ) : (
-                <ChevronDown className="w-4 h-4" />
-              )}
-            </button>
-
-            {expanded[player.id] && (
-              <div className="mt-2">
-                <label className="text-sm text-muted-foreground mb-1 block">
-                  Aantal tiebreaker specials
-                </label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={specials[player.id] || 0}
-                  onChange={(e) =>
-                    setSpecials((prev) => ({
-                      ...prev,
-                      [player.id]: Number(e.target.value),
-                    }))
-                  }
-                  className="w-24"
-                />
+          <AccordionItem key={player.id} value={player.id}>
+            <AccordionTrigger>{player.name.split(" ")[0]}</AccordionTrigger>
+            <AccordionContent>
+              <div className="grid gap-2">
+                {[
+                  { id: "ace", label: "Ace" },
+                  { id: "double_fault", label: "Dubbele fout" },
+                  { id: "love_game", label: "Love game" },
+                  { id: "out_of_cage", label: "Uit de kooi" },
+                  { id: "via_sidewall", label: "Via zijwand" },
+                ].map(({ id, label }) => (
+                  <div key={id} className="flex items-center gap-2">
+                    <label className="w-36 text-sm">{label}</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={specials[player.id]?.[id] || 0}
+                      onChange={(e) =>
+                        handleSpecialChange(player.id, id, Number(e.target.value))
+                      }
+                      className="w-20"
+                    />
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
+            </AccordionContent>
+          </AccordionItem>
         ))}
-      </div>
+      </Accordion>
 
       <Button
         onClick={handleSubmit}
         disabled={isLocked || loading}
         className="bg-green-600 hover:bg-green-700 text-white"
       >
-        {canSimulate ? "▶️ Simuleer" : "✅ Score Opslaan"}
+        ✅ Opslaan
       </Button>
     </div>
   );
