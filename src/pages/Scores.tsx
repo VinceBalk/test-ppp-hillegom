@@ -30,6 +30,7 @@ interface MatchDetail {
     player_id: string;
     player: { name: string };
     special_type_id: string;
+    special_type: { name: string };
     count: number;
   }[];
 }
@@ -91,7 +92,8 @@ export default function Scores() {
           player_id,
           special_type_id,
           count,
-          player:players(name)
+          player:players(name),
+          special_type:special_types(name)
         )
       `
       )
@@ -138,7 +140,8 @@ export default function Scores() {
           player_id,
           special_type_id,
           count,
-          player:players(name)
+          player:players(name),
+          special_type:special_types(name)
         )
       `
       )
@@ -197,53 +200,6 @@ export default function Scores() {
     return "Geen baan";
   };
 
-  // Bepaal welke spelers in welke kolom (links/rechts)
-  const getTeamColumns = (match: MatchDetail) => {
-    const allPlayers = [
-      { player: match.team1_player1, team: 1 },
-      { player: match.team1_player2, team: 1 },
-      { player: match.team2_player1, team: 2 },
-      { player: match.team2_player2, team: 2 }
-    ].filter(p => p.player);
-
-    const leftSidePlayers = allPlayers.filter(p => p.player?.row_side === 'left');
-    const rightSidePlayers = allPlayers.filter(p => p.player?.row_side === 'right');
-
-    // Bepaal team scores per kant
-    const leftTeams = [...new Set(leftSidePlayers.map(p => p.team))];
-    const rightTeams = [...new Set(rightSidePlayers.map(p => p.team))];
-
-    let leftScore = 0;
-    let rightScore = 0;
-
-    if (leftTeams.includes(1) && !leftTeams.includes(2)) {
-      // Alleen team 1 links
-      leftScore = match.team1_score ?? 0;
-      rightScore = match.team2_score ?? 0;
-    } else if (leftTeams.includes(2) && !leftTeams.includes(1)) {
-      // Alleen team 2 links  
-      leftScore = match.team2_score ?? 0;
-      rightScore = match.team1_score ?? 0;
-    } else {
-      // Mixed teams of onbekend, gebruik originele team indeling
-      leftScore = match.team1_score ?? 0;
-      rightScore = match.team2_score ?? 0;
-    }
-
-    return {
-      leftPlayers: leftSidePlayers.length > 0 ? leftSidePlayers : [
-        { player: match.team1_player1, team: 1 },
-        { player: match.team1_player2, team: 1 }
-      ].filter(p => p.player),
-      rightPlayers: rightSidePlayers.length > 0 ? rightSidePlayers : [
-        { player: match.team2_player1, team: 2 },
-        { player: match.team2_player2, team: 2 }
-      ].filter(p => p.player),
-      leftScore,
-      rightScore
-    };
-  };
-
   // Loading state
   if (loading) {
     return (
@@ -276,8 +232,6 @@ export default function Scores() {
         </div>
       );
     }
-
-    const { leftPlayers, rightPlayers, leftScore, rightScore } = getTeamColumns(match);
 
     return (
       <div className="max-w-4xl mx-auto p-4 space-y-6">
@@ -313,30 +267,32 @@ export default function Scores() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-6 items-center">
-              {/* Linker Rijtje */}
+              {/* Team 1 */}
               <div className="text-center">
-                <p className="text-xs text-muted-foreground mb-2">Linker Rijtje</p>
+                <p className="text-xs text-muted-foreground mb-2">Team 1</p>
                 <div className="space-y-1">
-                  {leftPlayers.map((p, i) => (
-                    <p key={i} className="font-semibold text-lg">{getPlayerName(p.player)}</p>
-                  ))}
+                  <p className="font-semibold text-lg">{getPlayerName(match.team1_player1)}</p>
+                  {match.team1_player2 && (
+                    <p className="font-semibold text-lg">{getPlayerName(match.team1_player2)}</p>
+                  )}
                 </div>
               </div>
               
               {/* Score */}
               <div className="text-center">
                 <div className="text-5xl font-bold text-primary">
-                  {leftScore} - {rightScore}
+                  {match.team1_score ?? 0} - {match.team2_score ?? 0}
                 </div>
               </div>
               
-              {/* Rechter Rijtje */}
+              {/* Team 2 */}
               <div className="text-center">
-                <p className="text-xs text-muted-foreground mb-2">Rechter Rijtje</p>
+                <p className="text-xs text-muted-foreground mb-2">Team 2</p>
                 <div className="space-y-1">
-                  {rightPlayers.map((p, i) => (
-                    <p key={i} className="font-semibold text-lg">{getPlayerName(p.player)}</p>
-                  ))}
+                  <p className="font-semibold text-lg">{getPlayerName(match.team2_player1)}</p>
+                  {match.team2_player2 && (
+                    <p className="font-semibold text-lg">{getPlayerName(match.team2_player2)}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -365,7 +321,7 @@ export default function Scores() {
                           <ul className="text-xs space-y-1">
                             {specials.map((s, i) => (
                               <li key={i} className="flex justify-between">
-                                <span>{s.special_type_id}</span>
+                                <span>{s.special_type?.name || s.special_type_id}</span>
                                 <span className="font-medium">× {s.count}</span>
                               </li>
                             ))}
@@ -403,7 +359,7 @@ export default function Scores() {
                           <ul className="text-xs space-y-1">
                             {specials.map((s, i) => (
                               <li key={i} className="flex justify-between">
-                                <span>{s.special_type_id}</span>
+                                <span>{s.special_type?.name || s.special_type_id}</span>
                                 <span className="font-medium">× {s.count}</span>
                               </li>
                             ))}
@@ -482,78 +438,76 @@ export default function Scores() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {filteredMatches.map((match) => {
-            const { leftPlayers, rightPlayers, leftScore, rightScore } = getTeamColumns(match);
-            
-            return (
-              <Card key={match.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/scores/${match.id}`)}>
-                <CardContent className="pt-4">
-                  {/* Header */}
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">Ronde {match.round_number}</span>
-                      <span className="text-muted-foreground">•</span>
-                      <span className="text-sm text-muted-foreground">#{match.match_number || '?'}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <MapPin className="h-3 w-3" />
-                      {getCourtInfo(match)}
+          {filteredMatches.map((match) => (
+            <Card key={match.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/scores/${match.id}`)}>
+              <CardContent className="pt-4">
+                {/* Header */}
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">Ronde {match.round_number}</span>
+                    <span className="text-muted-foreground">•</span>
+                    <span className="text-sm text-muted-foreground">#{match.match_number || '?'}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3" />
+                    {getCourtInfo(match)}
+                  </div>
+                </div>
+
+                {/* Tournament info */}
+                <div className="text-xs text-muted-foreground mb-3">
+                  {match.tournament?.name}
+                </div>
+
+                {/* Teams en Score - Simple Team Layout */}
+                <div className="grid grid-cols-3 gap-4 items-center">
+                  {/* Team 1 */}
+                  <div className="text-left">
+                    <p className="text-xs text-muted-foreground mb-1">Team 1</p>
+                    <div className="space-y-0.5">
+                      <p className="font-medium text-sm leading-tight">{getPlayerName(match.team1_player1)}</p>
+                      {match.team1_player2 && (
+                        <p className="font-medium text-sm leading-tight">{getPlayerName(match.team1_player2)}</p>
+                      )}
                     </div>
                   </div>
-
-                  {/* Tournament info */}
-                  <div className="text-xs text-muted-foreground mb-3">
-                    {match.tournament?.name}
-                  </div>
-
-                  {/* Teams en Score - Kolom Layout */}
-                  <div className="grid grid-cols-3 gap-4 items-center">
-                    {/* Linker Rijtje */}
-                    <div className="text-left">
-                      <p className="text-xs text-muted-foreground mb-1">Linker Rijtje</p>
-                      <div className="space-y-0.5">
-                        {leftPlayers.map((p, i) => (
-                          <p key={i} className="font-medium text-sm leading-tight">{getPlayerName(p.player)}</p>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    {/* Score */}
-                    <div className="text-center">
-                      <div className="text-2xl font-bold">
-                        {leftScore} - {rightScore}
-                      </div>
-                    </div>
-                    
-                    {/* Rechter Rijtje */}
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground mb-1">Rechter Rijtje</p>
-                      <div className="space-y-0.5">
-                        {rightPlayers.map((p, i) => (
-                          <p key={i} className="font-medium text-sm leading-tight">{getPlayerName(p.player)}</p>
-                        ))}
-                      </div>
+                  
+                  {/* Score */}
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">
+                      {match.team1_score ?? 0} - {match.team2_score ?? 0}
                     </div>
                   </div>
-
-                  {/* Specials Summary */}
-                  {match.match_specials && match.match_specials.length > 0 && (
-                    <div className="mt-3 pt-3 border-t">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">
-                          {match.match_specials.length} special{match.match_specials.length !== 1 ? 's' : ''}
-                        </span>
-                        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
-                          <Eye className="h-3 w-3 mr-1" />
-                          Details
-                        </Button>
-                      </div>
+                  
+                  {/* Team 2 */}
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground mb-1">Team 2</p>
+                    <div className="space-y-0.5">
+                      <p className="font-medium text-sm leading-tight">{getPlayerName(match.team2_player1)}</p>
+                      {match.team2_player2 && (
+                        <p className="font-medium text-sm leading-tight">{getPlayerName(match.team2_player2)}</p>
+                      )}
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
+                  </div>
+                </div>
+
+                {/* Specials Summary */}
+                {match.match_specials && match.match_specials.length > 0 && (
+                  <div className="mt-3 pt-3 border-t">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        {match.match_specials.length} special{match.match_specials.length !== 1 ? 's' : ''}
+                      </span>
+                      <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                        <Eye className="h-3 w-3 mr-1" />
+                        Details
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
     </div>
