@@ -3,139 +3,134 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-interface Match {
+type Tournament = {
   id: string;
-  team1_score: number;
-  team2_score: number;
-  team1_player1: { name: string };
-  team1_player2: { name: string };
-  team2_player1: { name: string };
-  team2_player2: { name: string };
-  tournament: { name: string };
+  name: string;
+  start_date: string;
+  end_date: string;
   status: string;
-}
+  current_round: number;
+};
 
-interface Special {
+type Match = {
   id: string;
-  match_id: string;
-  player_id: string;
-  count: number;
-  special_type: {
-    name: string;
-  };
-  player: {
-    name: string;
-  };
-}
+  tournament_id: string;
+  round_number: number;
+  court_name: string;
+  team1_name: string;
+  team2_name: string;
+  score_team1: number | null;
+  score_team2: number | null;
+  players: PlayerSpecials[];
+};
+
+type PlayerSpecials = {
+  player_name: string;
+  specials: { type: string; count: number }[];
+};
 
 export default function ScoresPage() {
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [specials, setSpecials] = useState<Special[]>([]);
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [matchesByTournament, setMatchesByTournament] = useState<
+    Record<string, Match[]>
+  >({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      const { data: matchesData } = await supabase
-        .from("matches")
-        .select(
-          `
-          id,
-          team1_score,
-          team2_score,
-          status,
-          tournament(name),
-          team1_player1(name),
-          team1_player2(name),
-          team2_player1(name),
-          team2_player2(name)
-        `
-        )
-        .eq("status", "completed")
-        .order("created_at", { ascending: false });
+    const fetchScores = async () => {
+      setLoading(true);
 
-      const { data: specialsData } = await supabase
-        .from("match_specials")
-        .select(
-          `
-          id,
-          match_id,
-          player_id,
-          count,
-          special_type(name),
-          player(name)
-        `
-        );
+      const { data: tournaments } = await supabase
+        .from("tournaments")
+        .select("*")
+        .eq("status", "in_progress");
 
-      setMatches(matchesData || []);
-      setSpecials(specialsData || []);
+      if (!tournaments) return;
+
+      const result: Record<string, Match[]> = {};
+
+      for (const tournament of tournaments) {
+        const { data: matches } = await supabase.rpc("get_completed_match_scores", {
+          tournamentid: tournament.id,
+        });
+
+        if (matches) result[tournament.id] = matches;
+      }
+
+      setTournaments(tournaments);
+      setMatchesByTournament(result);
+      setLoading(false);
     };
 
-    fetchData();
+    fetchScores();
   }, []);
 
-  const getPlayerSpecials = (matchId: string, playerName: string) => {
-    const playerSpecials = specials.filter(
-      (s) => s.match_id === matchId && s.player.name === playerName
-    );
-
-    if (playerSpecials.length === 0) return "–";
-
-    return playerSpecials.map((s) => (
-      <div key={s.id} className="text-sm">
-        {s.special_type.name}: {s.count}
-      </div>
-    ));
-  };
+  if (loading) return <p>Bezig met laden...</p>;
 
   return (
-    <div className="max-w-4xl mx-auto py-6 px-4 space-y-6">
-      <h1 className="text-2xl font-bold">Scores en Specials</h1>
-      {matches.map((match) => (
-        <Card key={match.id}>
+    <div className="space-y-8 px-4 md:px-8 pb-12">
+      <h1 className="text-2xl font-bold">Scores & Uitslagen</h1>
+      <p className="text-muted-foreground">Bekijk de resultaten van alle toernooien</p>
+
+      {tournaments.map((tournament) => (
+        <Card key={tournament.id} className="bg-orange-50 border-orange-200">
           <CardHeader>
-            <CardTitle className="text-lg">
-              {match.team1_player1.name} & {match.team1_player2.name} vs{" "}
-              {match.team2_player1.name} & {match.team2_player2.name}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Toernooi: {match.tournament.name}
-            </p>
+            <CardTitle className="text-lg font-bold">{tournament.name}</CardTitle>
+            <div className="text-sm text-muted-foreground flex gap-2 flex-wrap">
+              <span>
+                {new Date(tournament.start_date).toLocaleDateString("nl-NL")} –{" "}
+                {new Date(tournament.end_date).toLocaleDateString("nl-NL")}
+              </span>
+              <span>•</span>
+              <span>Status: {tournament.status === "in_progress" ? "Actief" : tournament.status}</span>
+              <span>•</span>
+              <span>Huidige ronde: {tournament.current_round}</span>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="mb-4">
-              <Badge variant="default">
-                Uitslag: {match.team1_score} – {match.team2_score}
-              </Badge>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h3 className="text-sm font-semibold text-primary mb-2">
-                  Team 1
-                </h3>
-                <div className="bg-muted p-2 rounded">
-                  <div className="font-medium">{match.team1_player1.name}</div>
-                  {getPlayerSpecials(match.id, match.team1_player1.name)}
-                  <div className="font-medium mt-2">
-                    {match.team1_player2.name}
+          <CardContent className="space-y-4">
+            {matchesByTournament[tournament.id]?.length ? (
+              matchesByTournament[tournament.id].map((match) => (
+                <div
+                  key={match.id}
+                  className="p-4 bg-white rounded border border-gray-200 shadow-sm space-y-2"
+                >
+                  <div className="flex flex-wrap justify-between items-center">
+                    <div className="font-medium">
+                      {match.team1_name} vs {match.team2_name}
+                    </div>
+                    <div>
+                      <Badge variant="secondary">Ronde {match.round_number}</Badge>{" "}
+                      <Badge variant="outline">{match.court_name}</Badge>
+                    </div>
                   </div>
-                  {getPlayerSpecials(match.id, match.team1_player2.name)}
-                </div>
-              </div>
 
-              <div>
-                <h3 className="text-sm font-semibold text-primary mb-2">
-                  Team 2
-                </h3>
-                <div className="bg-muted p-2 rounded">
-                  <div className="font-medium">{match.team2_player1.name}</div>
-                  {getPlayerSpecials(match.id, match.team2_player1.name)}
-                  <div className="font-medium mt-2">
-                    {match.team2_player2.name}
+                  <div className="text-lg font-bold">
+                    {match.score_team1} – {match.score_team2}
                   </div>
-                  {getPlayerSpecials(match.id, match.team2_player2.name)}
+
+                  <div className="mt-2 space-y-1">
+                    <h4 className="font-semibold text-sm">Specials:</h4>
+                    {match.players.map((player) => (
+                      <div key={player.player_name} className="text-sm pl-2">
+                        <span className="font-medium">{player.player_name}:</span>{" "}
+                        {player.specials.length > 0 ? (
+                          player.specials.map((s, i) => (
+                            <span key={i}>
+                              {s.type} × {s.count}
+                              {i < player.specials.length - 1 && ", "}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground">Geen</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">Nog geen voltooide wedstrijden</p>
+            )}
           </CardContent>
         </Card>
       ))}
