@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Edit, Play, X } from 'lucide-react';
+import { Edit, PlayCircle, CheckCircle } from 'lucide-react';
 import { Match } from '@/hooks/useMatches';
 import { getShortTeamName } from '@/utils/matchUtils';
+import MatchSimulator from './MatchSimulator';
 import SavedMatchEditor from './SavedMatchEditor';
 import MatchScoreInput from './MatchScoreInput';
-import MatchSimulator from './MatchSimulator';
 
 interface MatchCardProps {
   match: Match;
@@ -15,9 +15,16 @@ interface MatchCardProps {
 }
 
 export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardProps) {
+  const [showSimulator, setShowSimulator] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [showScoreInput, setShowScoreInput] = useState(false);
-  const [showSimulator, setShowSimulator] = useState(false);
+
+  const toernooiStatus =
+    match.tournament_status ||
+    match.tournament?.status ||
+    'unknown';
+
+  const afgerond = match.status === 'completed';
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -59,20 +66,11 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
   };
 
   const displayMatchNumber = match.match_number || matchNumberInCourtRound;
+  const { team1, team2 } = getPlayerTeams(match);
 
-  // ✅ Robuuste fallback
-  const toernooiStatus =
-    match.tournament_status ||
-    match.tournament?.status ||
-    match.tournament?.status?.toString() ||
-    'unknown';
-
-  const afgerond = match.status === 'completed';
-
-  useEffect(() => {
-    console.log('Toernooi status:', toernooiStatus);
-    console.log('Match status:', match.status);
-  }, [toernooiStatus, match.status]);
+  if (showSimulator) {
+    return <MatchSimulator match={match} onClose={() => setShowSimulator(false)} />;
+  }
 
   if (showEditor) {
     return (
@@ -88,11 +86,10 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
     );
   }
 
-  const { team1, team2 } = getPlayerTeams(match);
-
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
+        {/* Match number badge */}
         {displayMatchNumber && (
           <div className="flex justify-start mb-2">
             <Badge variant="secondary" className="text-xs">
@@ -101,8 +98,9 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
           </div>
         )}
 
+        {/* Action buttons */}
         <div className="flex items-start justify-end mb-2">
-          <div className="flex gap-1">
+          <div className="flex gap-2">
             <Button
               size="sm"
               variant="outline"
@@ -113,32 +111,33 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
               Bewerken
             </Button>
 
-            {toernooiStatus === 'planned' && (
+            {toernooiStatus === 'not_started' && !afgerond && (
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setShowSimulator(!showSimulator)}
+                onClick={() => setShowSimulator(true)}
                 className="text-blue-600 border-blue-600 hover:bg-blue-50"
               >
-                <Play className="h-3 w-3 mr-1" />
+                <PlayCircle className="h-3 w-3 mr-1" />
                 Simuleren
               </Button>
             )}
 
-            {(toernooiStatus === 'in_progress' || toernooiStatus === 'active') &&
-              !afgerond && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowScoreInput(!showScoreInput)}
-                  className="text-green-600 border-green-600 hover:bg-green-50"
-                >
-                  Score invoeren
-                </Button>
-              )}
+            {toernooiStatus === 'in_progress' && !afgerond && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowScoreInput(true)}
+                className="text-green-600 border-green-600 hover:bg-green-50"
+              >
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Score invoeren
+              </Button>
+            )}
           </div>
         </div>
 
+        {/* Player names */}
         <CardTitle className="text-base leading-tight">
           {team2 ? (
             <div className="space-y-1 text-left">
@@ -151,6 +150,7 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
           )}
         </CardTitle>
 
+        {/* Tournament info row */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-3">
             <span>{match.tournament?.name || 'Onbekend toernooi'}</span>
@@ -162,44 +162,23 @@ export default function MatchCard({ match, matchNumberInCourtRound }: MatchCardP
         </div>
       </CardHeader>
 
-      <CardContent className="pt-0 space-y-4">
+      <CardContent className="pt-0">
         {match.notes && (
           <div className="text-xs text-orange-600 mb-3 p-2 bg-orange-50 rounded">
             {match.notes}
           </div>
         )}
 
-        {showSimulator && (
-          <MatchSimulator match={match} onClose={() => setShowSimulator(false)} />
-        )}
-
         {showScoreInput && (
-          <div className="border-t pt-4 mt-4">
-            <MatchScoreInput
-              match={match}
-              tournament={{
-                id: match.tournament?.id || match.tournament_id,
-                status: (match.tournament?.status || match.tournament_status) as
-                  | 'not_started'
-                  | 'active'
-                  | 'completed',
-                is_simulation: match.tournament?.is_simulation ?? false,
-              }}
-              round={match.round_number}
-              onClose={() => setShowScoreInput(false)}
-            />
-            <div className="mt-2 text-right">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-muted-foreground"
-                onClick={() => setShowScoreInput(false)}
-              >
-                <X className="h-4 w-4 mr-1" />
-                Sluiten
-              </Button>
-            </div>
-          </div>
+          <MatchScoreInput
+            match={match}
+            tournament={{
+              id: match.tournament_id,
+              status: toernooiStatus,
+              is_simulation: match.tournament?.is_simulation || false,
+            }}
+            round={match.round_number}
+          />
         )}
       </CardContent>
     </Card>
