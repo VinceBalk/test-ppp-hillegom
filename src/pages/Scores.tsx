@@ -234,7 +234,7 @@ export default function Scores() {
     }
 
     return (
-      <div className="space-y-4 px-2">
+      <div className="space-y-4 p-4">
         <div className="flex items-center gap-3">
           <Button variant="outline" size="sm" onClick={() => navigate('/scores')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -246,10 +246,7 @@ export default function Scores() {
           <h1 className="text-2xl font-bold">Wedstrijd Details</h1>
           <p className="text-sm text-muted-foreground">Uitslag en statistieken</p>
         </div>
-      </div>
 
-      {/* Compacte mobiele layout */}
-      <div className="space-y-4 px-2">
         {/* Match Info Card */}
         <Card>
           <CardHeader className="pb-3">
