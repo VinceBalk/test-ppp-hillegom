@@ -3,6 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+
+type Player = {
+  id: string;
+  name: string;
+};
 
 type Match = {
   id: string;
@@ -41,10 +47,9 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
   const [blocked, setBlocked] = useState(false);
   const [blockMessage, setBlockMessage] = useState("");
   const [expandedPlayers, setExpandedPlayers] = useState<string[]>([]);
-
-  const isLocked =
-    tournament.status !== "active" ||
-    (match.status === "completed" && !tournament.is_simulation);
+  const [specials, setSpecials] = useState<{
+    [playerId: string]: { [specialType: string]: number };
+  }>({});
 
   const allPlayers = [
     {
@@ -65,34 +70,35 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
     },
   ];
 
-  const [specials, setSpecials] = useState<{
-    [playerId: string]: { [specialType: string]: number };
-  }>({});
+  const team1Names = `${match.team1_player1.name.split(" ")[0]} & ${match.team1_player2.name.split(" ")[0]}`;
+  const team2Names = `${match.team2_player1.name.split(" ")[0]} & ${match.team2_player2.name.split(" ")[0]}`;
+
+  const isLocked =
+    tournament.status !== "active" ||
+    (match.status === "completed" && !tournament.is_simulation);
+
+  const canSimulate =
+    tournament.is_simulation && tournament.status === "not_started";
 
   useEffect(() => {
     const checkPreviousRoundComplete = async () => {
       if (round === 1 || tournament.status !== "active") return;
 
-      const prevRound = round - 1;
-      const { data: matches, error } = await supabase
+      const { data, error } = await supabase
         .from("matches")
         .select("id, status")
         .eq("tournament_id", match.tournament_id)
-        .eq("round_number", prevRound);
+        .eq("round_number", round - 1);
 
-      if (error || !matches) {
+      if (error || !data) {
         setBlocked(true);
         setBlockMessage("Kan eerdere ronde niet controleren.");
         return;
       }
 
-      const notCompleted = matches.filter((m) => m.status !== "completed");
-
-      if (notCompleted.length > 0) {
+      if (data.some((m) => m.status !== "completed")) {
         setBlocked(true);
-        setBlockMessage(
-          `Ronde ${prevRound} is nog niet volledig afgerond. Invoer is geblokkeerd.`
-        );
+        setBlockMessage(`Ronde ${round - 1} is nog niet volledig afgerond.`);
       }
     };
 
@@ -119,25 +125,26 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
       return;
     }
 
-    const calculatedTeam2 = 8 - Number(team1Score);
-    setTeam2Score(calculatedTeam2);
+    const score1 = Number(team1Score);
+    const score2 = 8 - score1;
+    setTeam2Score(score2);
 
     setLoading(true);
 
     const { error: matchError } = await supabase
       .from("matches")
       .update({
-        score_team1: Number(team1Score),
-        score_team2: calculatedTeam2,
+        score_team1: score1,
+        score_team2: score2,
         status: "completed",
       })
       .eq("id", match.id);
 
     const players = [
-      { player_id: match.team1_player1_id, games_won: Number(team1Score) },
-      { player_id: match.team1_player2_id, games_won: Number(team1Score) },
-      { player_id: match.team2_player1_id, games_won: calculatedTeam2 },
-      { player_id: match.team2_player2_id, games_won: calculatedTeam2 },
+      { player_id: match.team1_player1_id, games_won: score1 },
+      { player_id: match.team1_player2_id, games_won: score1 },
+      { player_id: match.team2_player1_id, games_won: score2 },
+      { player_id: match.team2_player2_id, games_won: score2 },
     ];
 
     const { error: statsError } = await supabase
@@ -210,7 +217,7 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
       {/* Score invoer */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
         <div>
-          <label className="block text-sm font-medium mb-1">Team 1</label>
+          <label className="block text-sm font-medium mb-1">{team1Names}</label>
           <Input
             type="number"
             min={0}
@@ -219,17 +226,15 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
             onChange={(e) => setTeam1Score(Number(e.target.value))}
             disabled={isLocked || loading}
             className="w-full"
-            placeholder="Score team 1"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Team 2</label>
+          <label className="block text-sm font-medium mb-1">{team2Names}</label>
           <Input
             type="number"
             value={team2Score !== "" ? 8 - Number(team1Score) : ""}
             disabled
             className="w-full bg-gray-100"
-            placeholder="Score team 2"
           />
         </div>
       </div>
@@ -256,13 +261,9 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
                       <Input
                         type="number"
                         min={0}
-                        value={specials[player.id]?.[type] ?? 0}
+                        value={specials[player.id]?.[type] || 0}
                         onChange={(e) =>
-                          handleSpecialChange(
-                            player.id,
-                            type,
-                            Number(e.target.value)
-                          )
+                          handleSpecialChange(player.id, type, Number(e.target.value))
                         }
                         className="w-full"
                       />
