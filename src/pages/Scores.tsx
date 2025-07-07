@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,19 +6,67 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Trophy, Users, Calendar } from 'lucide-react';
 import { useTournaments } from '@/hooks/useTournaments';
 import { useMatches } from '@/hooks/useMatches';
+import { supabase } from '@/integrations/supabase/client';
+
+type MatchSpecial = {
+  match_id: string;
+  player_id: string;
+  special_type_id: string;
+  count: number;
+};
+
+type SpecialType = {
+  id: string;
+  name: string;
+};
 
 export default function Scores() {
   const navigate = useNavigate();
   const { tournaments, isLoading: tournamentsLoading } = useTournaments();
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>('');
   const { matches, isLoading: matchesLoading } = useMatches(selectedTournamentId || undefined);
-
-  console.log('=== SCORES PAGE DEBUG ===');
-  console.log('Tournaments:', tournaments?.length || 0);
-  console.log('Selected tournament:', selectedTournamentId);
-  console.log('Matches for tournament:', matches?.length || 0);
+  const [specialsPerMatch, setSpecialsPerMatch] = useState<Record<string, MatchSpecial[]>>({});
+  const [specialTypes, setSpecialTypes] = useState<SpecialType[]>([]);
 
   const isLoading = tournamentsLoading || matchesLoading;
+
+  useEffect(() => {
+    const fetchSpecialTypes = async () => {
+      const { data, error } = await supabase
+        .from('special_types')
+        .select('id, name')
+        .eq('is_active', true);
+
+      if (!error && data) setSpecialTypes(data);
+    };
+
+    fetchSpecialTypes();
+  }, []);
+
+  useEffect(() => {
+    const fetchSpecialsForMatches = async () => {
+      if (!matches?.length) return;
+      const matchIds = matches.map((m) => m.id);
+      const { data, error } = await supabase
+        .from('match_specials')
+        .select('match_id, player_id, special_type_id, count')
+        .in('match_id', matchIds);
+
+      if (!error && data) {
+        const grouped: Record<string, MatchSpecial[]> = {};
+        data.forEach((s) => {
+          if (!grouped[s.match_id]) grouped[s.match_id] = [];
+          grouped[s.match_id].push(s);
+        });
+        setSpecialsPerMatch(grouped);
+      }
+    };
+
+    fetchSpecialsForMatches();
+  }, [matches]);
+
+  const completedMatches = matches.filter(match => match.status === 'completed');
+  const activeTournaments = tournaments.filter(t => t.status === 'in_progress' || t.status === 'completed');
 
   if (isLoading) {
     return (
@@ -34,9 +81,6 @@ export default function Scores() {
       </div>
     );
   }
-
-  const completedMatches = matches.filter(match => match.status === 'completed');
-  const activeTournaments = tournaments.filter(t => t.status === 'in_progress' || t.status === 'completed');
 
   return (
     <div className="space-y-6">
@@ -109,9 +153,9 @@ export default function Scores() {
             <div className="grid gap-4">
               {completedMatches.map((match) => (
                 <Card key={match.id}>
-                  <CardContent className="pt-4">
+                  <CardContent className="pt-4 space-y-2">
                     <div className="flex items-center justify-between">
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <div className="font-medium">
                           {match.team1_player1?.name && match.team1_player2?.name ? (
                             `${match.team1_player1.name} & ${match.team1_player2.name}`
@@ -134,14 +178,31 @@ export default function Scores() {
                         </div>
                       </div>
                       <div className="text-2xl font-bold">
-                        {match.team1_score !== undefined && match.team2_score !== undefined
-                          ? `${match.team1_score} - ${match.team2_score}`
-                          : match.player1_score !== undefined && match.player2_score !== undefined
-                          ? `${match.player1_score} - ${match.player2_score}`
-                          : 'Geen score'
-                        }
+                        {match.score_team1 !== undefined && match.score_team2 !== undefined
+                          ? `${match.score_team1} - ${match.score_team2}`
+                          : 'Geen score'}
                       </div>
                     </div>
+
+                    {/* Specials */}
+                    {specialsPerMatch[match.id]?.length > 0 && (
+                      <div className="text-sm text-muted-foreground">
+                        <div className="mt-2">
+                          <strong>Specials:</strong>
+                          <ul className="mt-1 list-disc list-inside space-y-1">
+                            {specialsPerMatch[match.id].map((special, i) => {
+                              const type = specialTypes.find(t => t.id === special.special_type_id);
+                              if (!type) return null;
+                              return (
+                                <li key={i}>
+                                  Speler {special.player_id}: {type.name} × {special.count}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
