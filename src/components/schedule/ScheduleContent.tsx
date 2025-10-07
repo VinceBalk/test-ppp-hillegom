@@ -11,7 +11,6 @@ import RoundSelector from '@/components/schedule/RoundSelector';
 import PreviewGenerator from '@/components/schedule/PreviewGenerator';
 import SchedulePreview from '@/components/schedule/SchedulePreview';
 import ManualMatchBuilder from '@/components/schedule/ManualMatchBuilder';
-import ScheduleDebug from '@/components/schedule/ScheduleDebug';
 import ScheduleMatchesDisplay from '@/components/schedule/ScheduleMatchesDisplay';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -211,13 +210,6 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
           {selectedRound <= 2 && (
             <ManualMatchBuilder tournamentId={selectedTournamentId} initialRound={selectedRound} />
           )}
-
-          <ScheduleDebug 
-            tournaments={tournaments || []}
-            currentTournament={tournament}
-            tournamentPlayers={tournamentPlayers}
-            tournamentId={selectedTournamentId}
-          />
         </>
       )}
 

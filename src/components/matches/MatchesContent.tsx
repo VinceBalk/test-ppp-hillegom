@@ -9,7 +9,6 @@ import MatchesList from './MatchesList';
 import MatchesResultsCount from './MatchesResultsCount';
 import MatchesLoading from './MatchesLoading';
 import MatchesError from './MatchesError';
-import MatchesDebug from './MatchesDebug';
 import MatchesAccessInfo from './MatchesAccessInfo';
 
 interface MatchesContentProps {
@@ -177,16 +176,6 @@ export default function MatchesContent({
         selectedRound={selectedRound}
         totalMatches={matches.length}
       />
-
-      {/* Debug Info - only show for super admins */}
-      {isSuperAdmin && (
-        <MatchesDebug
-          selectedTournamentId={selectedTournamentId}
-          matches={filteredMatches}
-          tournaments={tournaments}
-          selectedTournament={selectedTournament}
-        />
-      )}
     </div>
   );
 }
