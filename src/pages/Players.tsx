@@ -73,7 +73,7 @@ export default function PlayersPage() {
       {hasNoPlayers ? (
         <p className="text-m text-muted-foreground">Er zijn nog geen spelers toegevoegd.</p>
       ) : (
-        <div className="grid-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <section className="stack-m">
             <h2 className="h2">Linker rij</h2>
             {leftSidePlayers.length === 0 ? (
