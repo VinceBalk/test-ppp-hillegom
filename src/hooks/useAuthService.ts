@@ -73,6 +73,33 @@ export function useAuthService() {
     setLoading(false);
   };
 
+  const signInWithMagicLink = async (email: string) => {
+    try {
+      setLoading(true);
+      const redirectUrl = `${window.location.origin}/`;
+      
+      console.log('Sending magic link to:', email, 'with redirect:', redirectUrl);
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: redirectUrl
+        }
+      });
+
+      if (error) {
+        console.error('Magic link error:', error.message);
+      }
+
+      return { error };
+    } catch (error: any) {
+      console.error('Magic link exception:', error);
+      return { error };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     user,
     session,
@@ -80,6 +107,7 @@ export function useAuthService() {
     signIn,
     signUp,
     signOut,
+    signInWithMagicLink,
     setUser,
     setSession,
     setLoading,

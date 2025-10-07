@@ -13,7 +13,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const authService = useAuthService();
   const userProfile = useUserProfile();
 
-  const { user, session, loading, signIn, signUp, signOut, setUser, setSession, setLoading } = authService;
+  const { user, session, loading, signIn, signUp, signOut, signInWithMagicLink, setUser, setSession, setLoading } = authService;
   const { profile, adminUser, fetchUserProfile, fetchAdminUser, clearProfile } = userProfile;
 
   console.log('AuthProvider render state BEFORE useEffect:', {
@@ -156,6 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     signIn: enhancedSignIn,
     signUp: enhancedSignUp,
+    signInWithMagicLink,
     signOut: enhancedSignOut,
     hasRole: (role: string) => hasRole(profile, role),
     isSuperAdmin: () => isSuperAdmin(adminUser),
