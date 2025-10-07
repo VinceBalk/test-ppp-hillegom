@@ -6,7 +6,7 @@ import MatchesList from "@/components/matches/MatchesList";
 
 export default function TournamentMatches() {
   const { tournamentId } = useParams<{ tournamentId: string }>();
-  const { tournament, isLoading: loadingTournament } = useTournament(tournamentId);
+  const { data: tournament, isLoading: loadingTournament } = useTournament(tournamentId);
   const { matches, isLoading: loadingMatches } = useMatches(tournamentId);
 
   if (loadingTournament || loadingMatches) {
@@ -26,14 +26,19 @@ export default function TournamentMatches() {
     );
   }
 
+  const tournamentStatus = 
+    tournament.status === 'in_progress' ? 'active' :
+    tournament.status === 'completed' ? 'completed' :
+    'not_started' as const;
+
   return (
     <MatchesList
       matches={matches}
-      editMode={tournament.status === "active"}
+      editMode={tournament.status === "in_progress"}
       selectedTournamentId={tournamentId!}
       tournament={{
         id: tournament.id,
-        status: tournament.status,
+        status: tournamentStatus,
         is_simulation: tournament.is_simulation ?? false,
       }}
     />

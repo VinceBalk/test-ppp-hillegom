@@ -27,7 +27,10 @@ export interface Match {
   created_at?: string;
   updated_at?: string;
   tournament?: {
+    id: string;
     name: string;
+    status?: string;
+    is_simulation?: boolean;
     start_date?: string;
   };
   player1?: {

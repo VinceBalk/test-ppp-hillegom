@@ -12,6 +12,7 @@ export interface Tournament {
   max_players?: number;
   entry_fee?: number;
   status?: 'draft' | 'open' | 'in_progress' | 'completed' | 'cancelled';
+  is_simulation?: boolean;
   current_round?: number;
   total_rounds?: number;
   round_1_generated?: boolean;

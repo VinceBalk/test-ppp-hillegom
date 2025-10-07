@@ -109,7 +109,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament }
           </Button>
         </div>
         <MatchScoreInput
-          match={match}
+          match={match as any}
           tournament={effectiveTournament}
           round={round}
         />

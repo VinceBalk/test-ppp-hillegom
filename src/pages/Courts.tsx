@@ -12,13 +12,9 @@ export default function Courts() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCourt, setEditingCourt] = useState(null);
 
-  const handleSubmit = async (formData) => {
-    if (editingCourt) {
-      await updateCourt(editingCourt.id, formData);
-    } else {
-      await createCourt(formData);
-    }
-    
+  const handleSave = async () => {
+    // Refetch courts after save
+    // The dialog component will handle the actual save
     setDialogOpen(false);
     setEditingCourt(null);
   };
@@ -43,9 +39,8 @@ export default function Courts() {
         <CourtDialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}
-          court={editingCourt}
-          courts={courts}
-          onSubmit={handleSubmit}
+          initialData={editingCourt}
+          onSave={handleSave}
         />
       </Dialog>
 

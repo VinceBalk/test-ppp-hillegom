@@ -135,14 +135,15 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
       })
       .eq("id", match.id);
 
-    const playerRows = players.map((p) => ({
-      match_id: match.id,
-      player_id: p.id,
-      games_won:
-        match.team1_player1_id === p.id || match.team1_player2_id === p.id
-          ? Number(team1Score)
-          : Number(team2Score),
-    }));
+    const playerRows = players.map((p) => {
+      const isTeam1 = match.team1_player1_id === p.id || match.team1_player2_id === p.id;
+      return {
+        match_id: match.id,
+        player_id: p.id,
+        team_number: isTeam1 ? 1 : 2,
+        games_won: isTeam1 ? Number(team1Score) : Number(team2Score),
+      };
+    });
 
     const { error: statsError } = await supabase
       .from("player_match_stats")
