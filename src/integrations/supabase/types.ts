@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }
   public: {
     Tables: {
       admin_users: {
@@ -39,6 +44,7 @@ export type Database = {
       courts: {
         Row: {
           background_color: string | null
+          court_number: number | null
           created_at: string | null
           created_by: string | null
           id: string
@@ -51,6 +57,7 @@ export type Database = {
         }
         Insert: {
           background_color?: string | null
+          court_number?: number | null
           created_at?: string | null
           created_by?: string | null
           id?: string
@@ -63,6 +70,7 @@ export type Database = {
         }
         Update: {
           background_color?: string | null
+          court_number?: number | null
           created_at?: string | null
           created_by?: string | null
           id?: string
@@ -284,6 +292,48 @@ export type Database = {
           {
             foreignKeyName: "matches_winner_id_fkey"
             columns: ["winner_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_match_stats: {
+        Row: {
+          created_at: string | null
+          games_won: number | null
+          id: string
+          match_id: string
+          player_id: string
+          team_number: number
+        }
+        Insert: {
+          created_at?: string | null
+          games_won?: number | null
+          id?: string
+          match_id: string
+          player_id: string
+          team_number: number
+        }
+        Update: {
+          created_at?: string | null
+          games_won?: number | null
+          id?: string
+          match_id?: string
+          player_id?: string
+          team_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_match_stats_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_match_stats_player_id_fkey"
+            columns: ["player_id"]
             isOneToOne: false
             referencedRelation: "players"
             referencedColumns: ["id"]
@@ -741,6 +791,7 @@ export type Database = {
           end_date: string
           entry_fee: number | null
           id: string
+          is_simulation: boolean | null
           live_scoring_enabled: boolean | null
           max_players: number | null
           name: string
@@ -764,6 +815,7 @@ export type Database = {
           end_date: string
           entry_fee?: number | null
           id?: string
+          is_simulation?: boolean | null
           live_scoring_enabled?: boolean | null
           max_players?: number | null
           name: string
@@ -787,6 +839,7 @@ export type Database = {
           end_date?: string
           entry_fee?: number | null
           id?: string
+          is_simulation?: boolean | null
           live_scoring_enabled?: boolean | null
           max_players?: number | null
           name?: string
@@ -801,6 +854,30 @@ export type Database = {
           status?: string | null
           total_rounds?: number | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
         }
         Relationships: []
       }
@@ -846,11 +923,11 @@ export type Database = {
     }
     Functions: {
       calculate_player_tournament_ranking: {
-        Args: { p_tournament_id: string; p_player_id: string }
+        Args: { p_player_id: string; p_tournament_id: string }
         Returns: {
+          ranking_position: number
           total_games_won: number
           total_tiebreaker_specials: number
-          ranking_position: number
         }[]
       }
       check_login_rate_limit: {
@@ -874,7 +951,7 @@ export type Database = {
         Returns: string
       }
       has_role_or_higher: {
-        Args: { user_id: string; required_role: string }
+        Args: { required_role: string; user_id: string }
         Returns: boolean
       }
       is_super_admin: {
@@ -883,42 +960,42 @@ export type Database = {
       }
       log_comprehensive_security_event: {
         Args: {
-          p_user_id: string
-          p_event_type: Database["public"]["Enums"]["security_event_type"]
           p_action: string
-          p_resource_type?: string
-          p_resource_id?: string
           p_details?: Json
-          p_risk_level?: string
+          p_event_type: Database["public"]["Enums"]["security_event_type"]
           p_ip_address?: unknown
+          p_resource_id?: string
+          p_resource_type?: string
+          p_risk_level?: string
           p_user_agent?: string
+          p_user_id: string
         }
         Returns: undefined
       }
       log_login_attempt: {
-        Args: { p_email: string; p_success: boolean; p_ip_address?: unknown }
+        Args: { p_email: string; p_ip_address?: unknown; p_success: boolean }
         Returns: undefined
       }
       log_security_event: {
         Args:
           | Record<PropertyKey, never>
           | {
-              p_user_id: string
               p_action: string
-              p_resource_type?: string
-              p_resource_id?: string
               p_details?: Json
+              p_resource_id?: string
+              p_resource_type?: string
+              p_user_id: string
             }
         Returns: undefined
       }
       log_security_event_enhanced: {
         Args: {
-          p_user_id: string
           p_action: string
-          p_resource_type?: string
-          p_resource_id?: string
           p_details?: Json
+          p_resource_id?: string
+          p_resource_type?: string
           p_risk_level?: string
+          p_user_id: string
         }
         Returns: undefined
       }
@@ -928,25 +1005,39 @@ export type Database = {
       }
       save_individual_match: {
         Args: {
+          p_court_id?: string
+          p_court_number?: string
           p_match_id: string
+          p_round_within_group?: number
           p_team1_player1_id: string
           p_team1_player2_id: string
           p_team2_player1_id: string
           p_team2_player2_id: string
-          p_court_id?: string
-          p_court_number?: string
-          p_round_within_group?: number
         }
         Returns: Json
       }
       update_match_numbers: {
         Args: {
-          p_tournament_id: string
-          p_round_number: number
           p_match_ids: string[]
           p_match_numbers: number[]
+          p_round_number: number
+          p_tournament_id: string
         }
         Returns: undefined
+      }
+      user_has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      user_has_role_or_higher: {
+        Args: {
+          _required_role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
       }
       validate_email_format: {
         Args: { email: string }
@@ -954,6 +1045,7 @@ export type Database = {
       }
     }
     Enums: {
+      app_role: "speler" | "organisator" | "beheerder"
       security_event_type:
         | "login_attempt"
         | "password_change"
@@ -969,21 +1061,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -1001,14 +1097,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -1024,14 +1122,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -1047,14 +1147,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -1062,14 +1164,16 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
@@ -1077,6 +1181,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["speler", "organisator", "beheerder"],
       security_event_type: [
         "login_attempt",
         "password_change",

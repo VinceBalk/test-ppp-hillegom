@@ -12,14 +12,12 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   const { user, loading, hasRole, isSuperAdmin } = useAuth();
   const location = useLocation();
 
-  console.log('=== PROTECTED ROUTE CHECK ===');
-  console.log('Current path:', location.pathname);
-  console.log('User:', user?.email || 'No user');
-  console.log('User ID:', user?.id || 'No user ID');
-  console.log('Loading:', loading);
-  console.log('Required role:', requiredRole);
-  console.log('Has required role:', requiredRole ? hasRole(requiredRole) : 'No role required');
-  console.log('Is super admin:', isSuperAdmin());
+  if (import.meta.env.DEV) {
+    console.log('=== PROTECTED ROUTE CHECK ===');
+    console.log('Current path:', location.pathname);
+    console.log('Loading:', loading);
+    console.log('Required role:', requiredRole);
+  }
 
   // Show loading spinner while checking authentication
   if (loading) {
@@ -36,7 +34,6 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
 
   // Redirect to login if not authenticated
   if (!user) {
-    console.log('ProtectedRoute: No user found, redirecting to login from:', location.pathname);
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
@@ -45,20 +42,10 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     const hasRequiredRole = hasRole(requiredRole);
     const isSuper = isSuperAdmin();
     
-    console.log('Role check details:', {
-      requiredRole,
-      hasRequiredRole,
-      isSuper,
-      userRole: user?.email
-    });
-    
     // Super admin bypasses all role requirements
     if (!isSuper && !hasRequiredRole) {
-      console.log('ProtectedRoute: Insufficient permissions for role:', requiredRole);
       return <Navigate to="/" replace />;
     }
   }
-
-  console.log('ProtectedRoute: Access granted to:', location.pathname);
   return <>{children}</>;
 }
