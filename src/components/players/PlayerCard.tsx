@@ -24,36 +24,36 @@ export default function PlayerCard({ player }: PlayerCardProps) {
     <Link to={`/players/${player.id}`} className="block transition-transform hover:scale-105">
       <Card className="h-full hover:shadow-md transition-shadow">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-semibold">{player.name}</CardTitle>
+          <CardTitle className="text-xl font-semibold">{player.name}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {player.ranking_score !== undefined && (
-            <div className="text-sm text-muted-foreground">
+            <div className="text-base text-muted-foreground">
               <span className="font-medium">Rating:</span> {player.ranking_score}
             </div>
           )}
           
           {player.email && (
-            <div className="text-sm text-muted-foreground">
+            <div className="text-base text-muted-foreground">
               <span className="font-medium">Email:</span> {player.email}
             </div>
           )}
           
           {player.phone && (
-            <div className="text-sm text-muted-foreground">
+            <div className="text-base text-muted-foreground">
               <span className="font-medium">Telefoon:</span> {player.phone}
             </div>
           )}
           
           <div className="flex items-center justify-between pt-2">
             {player.group_side && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-sm">
                 {player.group_side === 'left' ? 'Links' : 'Rechts'}
               </Badge>
             )}
             
             {player.position !== undefined && (
-              <div className="text-sm font-medium text-primary">
+              <div className="text-base font-medium text-primary">
                 #{player.position}
               </div>
             )}
