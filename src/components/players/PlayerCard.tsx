@@ -2,15 +2,18 @@
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Player } from '@/hooks/usePlayers';
-import { Trophy, Award, Star } from 'lucide-react';
+import { Trophy, Award, Star, Pencil } from 'lucide-react';
 import { usePlayerSpecials } from '@/hooks/usePlayerSpecials';
 
 interface PlayerCardProps {
   player: Player;
+  canEdit?: boolean;
+  onEdit?: (player: Player) => void;
 }
 
-export default function PlayerCard({ player }: PlayerCardProps) {
+export default function PlayerCard({ player, canEdit, onEdit }: PlayerCardProps) {
   const currentYear = new Date().getFullYear();
   const { data: specialsStats } = usePlayerSpecials(player.id, currentYear);
 
@@ -26,10 +29,23 @@ export default function PlayerCard({ player }: PlayerCardProps) {
   };
 
   return (
-    <Link to={`/players/${player.id}`} className="block transition-transform hover:scale-105">
-      <Card className="h-full hover:shadow-md transition-shadow">
+    <Card className="h-full hover:shadow-md transition-shadow relative">
+      {canEdit && onEdit && (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="absolute top-2 right-2 h-8 w-8 p-0"
+          onClick={(e) => {
+            e.preventDefault();
+            onEdit(player);
+          }}
+        >
+          <Pencil className="h-4 w-4" />
+        </Button>
+      )}
+      <Link to={`/players/${player.id}`} className="block">
         <CardHeader className="pb-3">
-          <CardTitle className="text-xl font-semibold">{player.name}</CardTitle>
+          <CardTitle className="text-xl font-semibold pr-10">{player.name}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {player.ranking_score !== undefined && (
@@ -89,7 +105,7 @@ export default function PlayerCard({ player }: PlayerCardProps) {
             )}
           </div>
         </CardContent>
-      </Card>
-    </Link>
+      </Link>
+    </Card>
   );
 }

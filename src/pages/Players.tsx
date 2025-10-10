@@ -6,14 +6,39 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertCircle, Plus } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function PlayersPage() {
-  const { players, isLoading, error, createPlayer } = usePlayers();
+  const { players, isLoading, error, createPlayer, updatePlayer } = usePlayers();
+  const { hasRole, isSuperAdmin } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+
+  const canEdit = hasRole('organisator') || isSuperAdmin();
 
   const handleCreatePlayer = async (playerData: Omit<Player, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => {
     createPlayer(playerData);
     setDialogOpen(false);
+  };
+
+  const handleUpdatePlayer = async (playerData: Omit<Player, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => {
+    if (editingPlayer) {
+      updatePlayer({ ...playerData, id: editingPlayer.id });
+      setEditingPlayer(null);
+      setDialogOpen(false);
+    }
+  };
+
+  const handleEditClick = (player: Player) => {
+    setEditingPlayer(player);
+    setDialogOpen(true);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      setEditingPlayer(null);
+    }
   };
 
   if (isLoading) {
@@ -54,20 +79,26 @@ export default function PlayersPage() {
       <div className="flex items-center justify-between">
         <h1 className="h1">Spelers</h1>
         
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Speler toevoegen
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Nieuwe speler toevoegen</DialogTitle>
-            </DialogHeader>
-            <PlayerForm onSubmit={handleCreatePlayer} />
-          </DialogContent>
-        </Dialog>
+        {canEdit && (
+          <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Speler toevoegen
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>{editingPlayer ? 'Speler bewerken' : 'Nieuwe speler toevoegen'}</DialogTitle>
+              </DialogHeader>
+              <PlayerForm 
+                player={editingPlayer || undefined}
+                onSubmit={editingPlayer ? handleUpdatePlayer : handleCreatePlayer} 
+                onCancel={() => handleDialogClose(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {hasNoPlayers ? (
@@ -82,7 +113,7 @@ export default function PlayersPage() {
               <ul className="stack-s">
                 {leftSidePlayers.map((player: Player) => (
                   <li key={player.id}>
-                    <PlayerCard player={player} />
+                    <PlayerCard player={player} canEdit={canEdit} onEdit={handleEditClick} />
                   </li>
                 ))}
               </ul>
@@ -97,7 +128,7 @@ export default function PlayersPage() {
               <ul className="stack-s">
                 {rightSidePlayers.map((player: Player) => (
                   <li key={player.id}>
-                    <PlayerCard player={player} />
+                    <PlayerCard player={player} canEdit={canEdit} onEdit={handleEditClick} />
                   </li>
                 ))}
               </ul>
