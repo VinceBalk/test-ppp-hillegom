@@ -20,6 +20,11 @@ export default function MatchEditorView({ match, onEdit }: MatchEditorViewProps)
       </Button>
       
       <div className="font-medium text-center">
+        {match.match_number && (
+          <div className="font-bold text-xs text-muted-foreground mb-2">
+            Wedstrijd #{match.match_number}
+          </div>
+        )}
         <div className="text-blue-600">
           {match.team1_player1_name} & {match.team1_player2_name}
         </div>

@@ -7,6 +7,7 @@ import { ScheduleMatch } from '@/types/schedule';
 import CourtSelector from './CourtSelector';
 import TeamSelector from './TeamSelector';
 import RoundInput from './RoundInput';
+import MatchNumberInput from './MatchNumberInput';
 
 interface MatchEditorFormProps {
   editedMatch: ScheduleMatch;
@@ -27,6 +28,7 @@ interface MatchEditorFormProps {
   onUpdatePlayer: (position: 'team1_player1' | 'team1_player2' | 'team2_player1' | 'team2_player2', playerId: string) => void;
   onUpdateCourt: (courtId: string) => void;
   onUpdateRound: (round: number) => void;
+  onUpdateMatchNumber?: (matchNumber: number) => void;
   isSaving?: boolean;
 }
 
@@ -43,6 +45,7 @@ export default function MatchEditorForm({
   onUpdatePlayer,
   onUpdateCourt,
   onUpdateRound,
+  onUpdateMatchNumber,
   isSaving = false
 }: MatchEditorFormProps) {
   const handleTeam1PlayerChange = (position: string, playerId: string) => {
@@ -128,6 +131,13 @@ export default function MatchEditorForm({
           round={editedMatch.round_within_group}
           onRoundChange={onUpdateRound}
         />
+
+        {onUpdateMatchNumber && (
+          <MatchNumberInput
+            value={editedMatch.match_number}
+            onChange={onUpdateMatchNumber}
+          />
+        )}
       </CardContent>
     </Card>
   );

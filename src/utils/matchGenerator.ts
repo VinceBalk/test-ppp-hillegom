@@ -6,15 +6,19 @@ interface Court {
   id: string;
   name: string;
   is_active: boolean;
+  menu_order?: number;
 }
 
 export const generateGroupMatches = (
   players: TournamentPlayer[], 
   courtPrefix: string, 
-  courts: Court[]
-): ScheduleMatch[] => {
+  courts: Court[],
+  startMatchNumber: number = 1
+): { matches: ScheduleMatch[], nextMatchNumber: number } => {
   const matches: ScheduleMatch[] = [];
-  const activeCourts = courts.filter(court => court.is_active);
+  const activeCourts = courts
+    .filter(court => court.is_active)
+    .sort((a, b) => (a.menu_order || 0) - (b.menu_order || 0));
   
   // Group players into groups of 4 for round-robin style matches
   for (let groupStart = 0; groupStart < players.length; groupStart += 4) {
@@ -29,6 +33,7 @@ export const generateGroupMatches = (
         `${assignedCourt.name} (${courtPrefix})` : 
         `${courtPrefix} Baan ${courtIndex + 1}`;
       const courtId = assignedCourt ? assignedCourt.id : undefined;
+      const courtMenuOrder = assignedCourt?.menu_order || 0;
       
       // Based on the Excel pattern:
       // Round 1: Player 1&3 vs Player 2&4
@@ -46,7 +51,8 @@ export const generateGroupMatches = (
         court_number: courtIndex + 1,
         court_id: courtId,
         round_within_group: 1,
-      });
+        courtMenuOrder,
+      } as any);
 
       // Round 2: Player 1&4 vs Player 2&3 
       matches.push({
@@ -63,7 +69,8 @@ export const generateGroupMatches = (
         court_number: courtIndex + 1,
         court_id: courtId,
         round_within_group: 2,
-      });
+        courtMenuOrder,
+      } as any);
 
       // Round 3: Player 1&2 vs Player 3&4
       matches.push({
@@ -80,9 +87,29 @@ export const generateGroupMatches = (
         court_number: courtIndex + 1,
         court_id: courtId,
         round_within_group: 3,
-      });
+        courtMenuOrder,
+      } as any);
     }
   }
   
-  return matches;
+  // Sort round-robin style: first by round_within_group, then by court menu_order
+  matches.sort((a: any, b: any) => {
+    if (a.round_within_group !== b.round_within_group) {
+      return a.round_within_group - b.round_within_group;
+    }
+    return a.courtMenuOrder - b.courtMenuOrder;
+  });
+  
+  // Assign sequential match numbers
+  const numberedMatches = matches.map((match, index) => ({
+    ...match,
+    match_number: startMatchNumber + index,
+  }));
+  
+  const nextMatchNumber = startMatchNumber + numberedMatches.length;
+  
+  return { 
+    matches: numberedMatches, 
+    nextMatchNumber 
+  };
 };

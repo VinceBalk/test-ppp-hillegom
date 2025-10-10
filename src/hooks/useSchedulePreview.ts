@@ -6,6 +6,7 @@ import { ScheduleMatch, SchedulePreview } from '@/types/schedule';
 import { checkIfScheduleExists, savePreviewToDatabase, clearPreviewFromDatabase } from '@/services/schedulePreviewService';
 import { generateGroupMatches } from '@/utils/matchGenerator';
 import { generateRound3Schedule } from '@/services/round3Generator';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useSchedulePreview = (tournamentId?: string) => {
   const [preview, setPreview] = useState<SchedulePreview | null>(null);
@@ -34,6 +35,17 @@ export const useSchedulePreview = (tournamentId?: string) => {
       let leftMatches: ScheduleMatch[];
       let rightMatches: ScheduleMatch[];
 
+      // Get highest existing match number for this tournament
+      const { data: existingMatches } = await supabase
+        .from('matches')
+        .select('match_number')
+        .eq('tournament_id', tournamentId)
+        .order('match_number', { ascending: false })
+        .limit(1);
+      
+      const highestMatchNumber = existingMatches?.[0]?.match_number || 0;
+      const startMatchNumber = roundNumber === 1 ? 1 : highestMatchNumber + 1;
+
       // Round 3 uses stats-based generation
       if (roundNumber === 3) {
         const round3Result = await generateRound3Schedule(tournamentId, courts);
@@ -57,12 +69,15 @@ export const useSchedulePreview = (tournamentId?: string) => {
         console.log('Right players for 2v2:', rightPlayers.length);
         console.log('Available courts:', courts);
 
-        leftMatches = generateGroupMatches(leftPlayers, 'Links', courts);
-        rightMatches = generateGroupMatches(rightPlayers, 'Rechts', courts);
+        const leftResult = generateGroupMatches(leftPlayers, 'Links', courts, startMatchNumber);
+        const rightResult = generateGroupMatches(rightPlayers, 'Rechts', courts, leftResult.nextMatchNumber);
         
+        leftMatches = leftResult.matches;
+        rightMatches = rightResult.matches;
         allMatches = [...leftMatches, ...rightMatches];
         
-        console.log('Generated 2v2 matches with court assignments from database:', allMatches.length);
+        console.log('Generated 2v2 matches with court assignments and match numbers:', allMatches.length);
+        console.log('Match numbers range:', startMatchNumber, 'to', rightResult.nextMatchNumber - 1);
       }
 
       const schedulePreview: SchedulePreview = {

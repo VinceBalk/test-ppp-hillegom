@@ -29,6 +29,11 @@ export default function CourtMatchList({
             className="p-3 border rounded-lg bg-white hover:bg-gray-50 transition-colors"
           >
             <div className="text-sm font-medium text-left">
+              {match.match_number && (
+                <div className="font-bold text-xs text-muted-foreground mb-1">
+                  Wedstrijd #{match.match_number}
+                </div>
+              )}
               <div className="text-blue-600 mb-1">
                 {match.team1_player1_name}
                 {match.team1_player2_name && ` & ${match.team1_player2_name}`}
