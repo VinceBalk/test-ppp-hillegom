@@ -101,11 +101,13 @@ export const useSchedulePreview = (tournamentId?: string) => {
   };
 
   const updateMatch = (matchId: string, updates: Partial<ScheduleMatch>) => {
+    console.log('useSchedulePreview updateMatch called', { matchId, updates, hasPreview: !!preview });
     if (!preview) return;
     
     const updatedMatches = preview.matches.map(match => 
       match.id === matchId ? { ...match, ...updates } : match
     );
+    console.log('Preview updated, updatedMatches count:', updatedMatches.length);
     
     const updatedLeftMatches = updatedMatches.filter(m => 
       m.court_name?.includes('Links') || m.id.includes('links')

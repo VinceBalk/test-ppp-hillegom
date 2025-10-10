@@ -8,13 +8,19 @@ interface MatchEditorViewProps {
 }
 
 export default function MatchEditorView({ match, onEdit }: MatchEditorViewProps) {
+  const handleEditClick = () => {
+    console.log('Edit button clicked for match', match.id);
+    onEdit();
+  };
+
   return (
     <div className="p-3 border rounded-lg bg-muted/30 relative">
       <Button
         variant="ghost"
         size="sm"
-        className="absolute top-2 right-2 h-6 w-6 p-0"
-        onClick={onEdit}
+        className="absolute top-2 right-2 h-6 w-6 p-0 hover:bg-blue-100"
+        onClick={handleEditClick}
+        title="Bewerk wedstrijd"
       >
         <Edit className="h-3 w-3" />
       </Button>

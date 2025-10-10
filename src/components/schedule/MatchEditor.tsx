@@ -32,6 +32,7 @@ export default function MatchEditor({ match, tournamentId, onUpdate }: MatchEdit
   });
 
   const handleSave = () => {
+    console.log('MatchEditor handleSave called', { matchId: match.id, editedMatch });
     onUpdate(match.id, editedMatch);
     setIsEditing(false);
   };
