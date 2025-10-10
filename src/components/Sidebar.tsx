@@ -9,7 +9,8 @@ import {
   Map,
   User,
   Sliders,
-  Shield
+  Shield,
+  BarChart3
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 

@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import Standings from "./pages/Standings";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
@@ -58,6 +59,7 @@ const App = () => {
                 <Route path="matches" element={<Matches />} />
                 <Route path="schedule" element={<Schedule />} />
                 <Route path="schedule/:tournamentId" element={<Schedule />} />
+                <Route path="standings/:tournamentId" element={<Standings />} />
                 <Route path="scores" element={<Scores />} />
                 <Route path="scores/:matchId" element={<Scores />} />
                 <Route path="specials" element={<Specials />} />
