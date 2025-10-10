@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ScheduleMatch } from '@/types/schedule';
 import { useTournamentPlayers } from '@/hooks/useTournamentPlayers';
 import { useCourts } from '@/hooks/useCourts';
+import { useIndividualMatchSaveMutation } from '@/hooks/useIndividualMatchSaveMutation';
 import MatchEditorView from './MatchEditorView';
 import MatchEditorForm from './MatchEditorForm';
 
@@ -17,6 +18,7 @@ export default function MatchEditor({ match, tournamentId, onUpdate }: MatchEdit
   const [editedMatch, setEditedMatch] = useState<ScheduleMatch>(match);
   const { tournamentPlayers } = useTournamentPlayers(tournamentId);
   const { courts } = useCourts();
+  const { mutate: saveMatch, isPending: isSaving } = useIndividualMatchSaveMutation();
 
   const activeCourts = courts.filter(court => court.is_active);
 
@@ -32,9 +34,28 @@ export default function MatchEditor({ match, tournamentId, onUpdate }: MatchEdit
   });
 
   const handleSave = () => {
-    console.log('MatchEditor handleSave called', { matchId: match.id, editedMatch });
+    console.log('MatchEditor handleSave called - local update', { matchId: match.id, editedMatch });
     onUpdate(match.id, editedMatch);
     setIsEditing(false);
+  };
+
+  const handleSaveToDatabase = () => {
+    console.log('MatchEditor handleSaveToDatabase called', { matchId: match.id, editedMatch });
+    saveMatch({
+      matchId: match.id,
+      team1Player1Id: editedMatch.team1_player1_id,
+      team1Player2Id: editedMatch.team1_player2_id,
+      team2Player1Id: editedMatch.team2_player1_id,
+      team2Player2Id: editedMatch.team2_player2_id,
+      courtId: editedMatch.court_id,
+      courtNumber: editedMatch.court_number?.toString(),
+      roundWithinGroup: editedMatch.round_within_group
+    }, {
+      onSuccess: () => {
+        onUpdate(match.id, editedMatch);
+        setIsEditing(false);
+      }
+    });
   };
 
   const handleCancel = () => {
@@ -94,12 +115,15 @@ export default function MatchEditor({ match, tournamentId, onUpdate }: MatchEdit
       activeCourts={activeCourts}
       isLeftGroup={isLeftGroup}
       isRightGroup={isRightGroup}
+      showSaveButton={true}
       onSave={handleSave}
+      onSaveToDatabase={handleSaveToDatabase}
       onCancel={handleCancel}
       onUpdatePlayer={updatePlayer}
       onUpdateCourt={updateCourt}
       onUpdateRound={updateRound}
       onUpdateMatchNumber={updateMatchNumber}
+      isSaving={isSaving}
     />
   );
 }
