@@ -442,7 +442,7 @@ export default function Scores() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {filteredMatches.map((match) => {
             const team1Player1Specials = getPlayerSpecialsCount(match, getPlayerName(match.team1_player1));
             const team1Player2Specials = match.team1_player2 ? getPlayerSpecialsCount(match, getPlayerName(match.team1_player2)) : 0;
@@ -451,7 +451,7 @@ export default function Scores() {
             
             return (
               <Card key={match.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-2 pt-4">
+                <CardHeader className="pb-3 pt-5">
                   <div className="flex justify-between items-start">
                     <span className="text-xs font-medium">
                       Ronde {match.round_number} - #{match.match_number || '?'}
@@ -462,10 +462,10 @@ export default function Scores() {
                   </div>
                 </CardHeader>
                 
-                <CardContent className="pb-3 pt-0">
+                <CardContent className="pb-4 pt-0">
                   <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
                     {/* Team 1 kolom - rechts uitgelijnd */}
-                    <div className="text-right space-y-1.5">
+                    <div className="text-right space-y-2">
                       <p className="text-xs font-semibold text-blue-600">Team 1</p>
                       
                       {/* Speler 1 met specials badge ACHTER naam */}
@@ -503,7 +503,7 @@ export default function Scores() {
                     </div>
 
                     {/* Team 2 kolom - links uitgelijnd */}
-                    <div className="text-left space-y-1.5">
+                    <div className="text-left space-y-2">
                       <p className="text-xs font-semibold text-red-600">Team 2</p>
                       
                       {/* Speler 1 met specials badge VOOR naam */}
@@ -535,7 +535,7 @@ export default function Scores() {
                   </div>
 
                   {/* Footer - zelfde als MatchCard */}
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t">
                     <div className="text-xs text-muted-foreground">
                       {match.tournament?.name || "Onbekend toernooi"}
                     </div>
