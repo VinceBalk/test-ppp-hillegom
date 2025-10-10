@@ -257,92 +257,155 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament }
     );
   }
 
+  // Not completed matches - same visual structure as completed but with buttons
+  const team1Player1Specials = getPlayerSpecialsCount(match.team1_player1_id);
+  const team1Player2Specials = getPlayerSpecialsCount(match.team1_player2_id);
+  const team2Player1Specials = getPlayerSpecialsCount(match.team2_player1_id);
+  const team2Player2Specials = getPlayerSpecialsCount(match.team2_player2_id);
+
   return (
     <Card className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
-        {displayMatchNumber && (
-          <div className="flex justify-start mb-2">
+      <CardHeader className="pb-2 pt-4">
+        <div className="flex justify-between items-start">
+          {displayMatchNumber && (
             <Badge variant="secondary" className="text-xs">
               Wedstrijd #{displayMatchNumber}
             </Badge>
+          )}
+          <div className="text-xs text-muted-foreground">
+            {match.court?.name || (match.court_number ? `Baan ${match.court_number}` : "Onbekende baan")}
           </div>
-        )}
+        </div>
+      </CardHeader>
 
-        <div className="flex items-start justify-end mb-2">
-          <div className="flex gap-1">
+      <CardContent className="pb-3 pt-0">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+          {/* Team 1 - right aligned */}
+          <div className="text-right space-y-1.5">
+            <p className="text-xs font-semibold text-blue-600">Team 1</p>
+            {match.team1_player1 && (
+              <div className="flex items-center justify-end gap-2">
+                <span className="text-sm text-muted-foreground truncate max-w-[140px] sm:max-w-[200px]">
+                  {getShortTeamName(match.team1_player1)}
+                </span>
+                {team1Player1Specials > 0 && (
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-500 text-black text-xs font-bold flex-shrink-0">
+                    {team1Player1Specials}
+                  </span>
+                )}
+              </div>
+            )}
+            {match.team1_player2 && (
+              <div className="flex items-center justify-end gap-2">
+                <span className="text-sm text-muted-foreground truncate max-w-[140px] sm:max-w-[200px]">
+                  {getShortTeamName(match.team1_player2)}
+                </span>
+                {team1Player2Specials > 0 && (
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-500 text-black text-xs font-bold flex-shrink-0">
+                    {team1Player2Specials}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Center - status badge or action buttons */}
+          <div className="text-center px-3 flex flex-col items-center gap-1">
+            {getStatusBadge(match.status)}
             {toernooiStatus === "active" && (
-              <>
+              <div className="flex gap-1 mt-1">
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => setShowScoreInput(true)}
-                  className="text-green-600 border-green-600 hover:bg-green-50"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowScoreInput(true);
+                  }}
+                  className="text-green-600 border-green-600 hover:bg-green-50 h-7 text-xs px-2"
                 >
                   <CheckSquare className="h-3 w-3 mr-1" />
-                  Score Invoeren
+                  Score
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => setShowSpecials(true)}
-                  className="text-purple-600 border-purple-600 hover:bg-purple-50"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowSpecials(true);
+                  }}
+                  className="text-purple-600 border-purple-600 hover:bg-purple-50 h-7 text-xs px-2"
                 >
                   <Star className="h-3 w-3 mr-1" />
                   Specials
                 </Button>
-              </>
+              </div>
             )}
-
             {toernooiStatus === "not_started" && isSimulation && (
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setShowSimulator(true)}
-                className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowSimulator(true);
+                }}
+                className="text-blue-600 border-blue-600 hover:bg-blue-50 h-7 text-xs px-2 mt-1"
               >
                 <Play className="h-3 w-3 mr-1" />
                 Simuleren
               </Button>
             )}
+          </div>
 
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowEditor(true)}
-              className="text-orange-600 border-orange-600 hover:bg-orange-50"
-            >
-              <Edit className="h-3 w-3 mr-1" />
-              Bewerken
-            </Button>
+          {/* Team 2 - left aligned */}
+          <div className="text-left space-y-1.5">
+            <p className="text-xs font-semibold text-red-600">Team 2</p>
+            {match.team2_player1 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground truncate max-w-[140px] sm:max-w-[200px]">
+                  {getShortTeamName(match.team2_player1)}
+                </span>
+                {team2Player1Specials > 0 && (
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-500 text-black text-xs font-bold flex-shrink-0">
+                    {team2Player1Specials}
+                  </span>
+                )}
+              </div>
+            )}
+            {match.team2_player2 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground truncate max-w-[140px] sm:max-w-[200px]">
+                  {getShortTeamName(match.team2_player2)}
+                </span>
+                {team2Player2Specials > 0 && (
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-500 text-black text-xs font-bold flex-shrink-0">
+                    {team2Player2Specials}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        <CardTitle className="text-base leading-tight">
-          {team2 ? (
-            <div className="space-y-1 text-left">
-              <div>{team1}</div>
-              <div className="text-sm text-muted-foreground font-normal">vs</div>
-              <div>{team2}</div>
-            </div>
-          ) : (
-            <div className="text-left">{team1}</div>
-          )}
-        </CardTitle>
-
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center gap-3">
-            <span>{match.tournament?.name || "Onbekend toernooi"}</span>
-            <span>•</span>
-            <span>{getTournamentDate()}</span>
-            <span>•</span>
-            {getStatusBadge(match.status)}
+        {/* Bottom info row */}
+        <div className="flex items-center justify-between mt-3 pt-3 border-t">
+          <div className="text-xs text-muted-foreground">
+            {match.tournament?.name || "Onbekend toernooi"}
           </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowEditor(true);
+            }}
+            className="h-8 w-8 p-0"
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
         </div>
-      </CardHeader>
 
-      <CardContent className="pt-0">
         {match.notes && (
-          <div className="text-xs text-orange-600 mb-3 p-2 bg-orange-50 rounded">
+          <div className="text-xs text-orange-600 mt-2 p-2 bg-orange-50 rounded">
             {match.notes}
           </div>
         )}
