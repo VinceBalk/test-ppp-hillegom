@@ -35,6 +35,10 @@ export default function Tournaments() {
     navigate(`/tournaments/${tournamentId}/assign-players`);
   };
 
+  const handleViewStandings = (tournamentId: string) => {
+    navigate(`/tournaments/${tournamentId}/standings`);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -110,6 +114,7 @@ export default function Tournaments() {
             onEdit={setEditingTournament}
             onDelete={handleDeleteTournament}
             onAssignPlayers={handleAssignPlayers}
+            onViewStandings={handleViewStandings}
             isDeleting={isDeleting}
           />
         ))}
@@ -124,6 +129,7 @@ export default function Tournaments() {
           editingTournament={editingTournament}
           setEditingTournament={setEditingTournament}
           onAssignPlayers={handleAssignPlayers}
+          onViewStandings={handleViewStandings}
           onUpdateTournament={handleUpdateTournament}
           onDeleteTournament={handleDeleteTournament}
           isUpdating={isUpdating}

@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tournament } from '@/hooks/useTournaments';
-import { Pencil, Trash2, Users } from 'lucide-react';
+import { Pencil, Trash2, Users, TrendingUp } from 'lucide-react';
 import { TournamentStatusBadge } from './TournamentStatusBadge';
 
 interface TournamentMobileCardProps {
@@ -11,6 +11,7 @@ interface TournamentMobileCardProps {
   onEdit: (tournament: Tournament) => void;
   onDelete: (id: string) => void;
   onAssignPlayers: (id: string) => void;
+  onViewStandings: (id: string) => void;
   isDeleting: boolean;
 }
 
@@ -19,6 +20,7 @@ export function TournamentMobileCard({
   onEdit,
   onDelete,
   onAssignPlayers,
+  onViewStandings,
   isDeleting
 }: TournamentMobileCardProps) {
   return (
@@ -53,15 +55,24 @@ export function TournamentMobileCard({
         </div>
 
         <div className="flex flex-col gap-2 pt-3 border-t">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => onAssignPlayers(tournament.id)}
-            className="w-full"
-          >
-            <Users className="h-4 w-4 mr-2" />
-            Spelers Toewijzen
-          </Button>
+          <div className="grid grid-cols-2 gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => onViewStandings(tournament.id)}
+            >
+              <TrendingUp className="h-4 w-4 mr-2" />
+              Stand
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => onAssignPlayers(tournament.id)}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Spelers
+            </Button>
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <Button 
               variant="outline" 

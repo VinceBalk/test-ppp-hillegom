@@ -12,6 +12,7 @@ interface TournamentTableProps {
   editingTournament: Tournament | null;
   setEditingTournament: (tournament: Tournament | null) => void;
   onAssignPlayers: (tournamentId: string) => void;
+  onViewStandings: (tournamentId: string) => void;
   onUpdateTournament: (tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => void;
   onDeleteTournament: (id: string) => void;
   isUpdating: boolean;
@@ -25,6 +26,7 @@ export function TournamentTable({
   editingTournament,
   setEditingTournament,
   onAssignPlayers,
+  onViewStandings,
   onUpdateTournament,
   onDeleteTournament,
   isUpdating,
@@ -71,6 +73,7 @@ export function TournamentTable({
                     editingTournament={editingTournament}
                     setEditingTournament={setEditingTournament}
                     onAssignPlayers={onAssignPlayers}
+                    onViewStandings={onViewStandings}
                     onUpdateTournament={onUpdateTournament}
                     onDeleteTournament={onDeleteTournament}
                     isUpdating={isUpdating}

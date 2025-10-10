@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Edit, MoreHorizontal, Trash2, Users, Calendar } from 'lucide-react';
+import { Edit, MoreHorizontal, Trash2, Users, Calendar, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -18,6 +18,7 @@ interface TournamentRowProps {
   editingTournament: Tournament | null;
   setEditingTournament: (tournament: Tournament | null) => void;
   onAssignPlayers: (tournamentId: string) => void;
+  onViewStandings: (tournamentId: string) => void;
   onUpdateTournament: (tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => void;
   onDeleteTournament: (id: string) => void;
   isUpdating: boolean;
@@ -29,6 +30,7 @@ export function TournamentRow({
   editingTournament,
   setEditingTournament,
   onAssignPlayers,
+  onViewStandings,
   onUpdateTournament,
   onDeleteTournament,
   isUpdating,
@@ -73,6 +75,16 @@ export function TournamentRow({
         </TableCell>
         <TableCell onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onViewStandings(tournament.id)}
+              title="Bekijk stand"
+            >
+              <TrendingUp className="h-4 w-4 mr-1" />
+              Stand
+            </Button>
+            
             <Button
               variant="outline"
               size="sm"
