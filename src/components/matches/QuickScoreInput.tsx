@@ -105,16 +105,70 @@ export default function QuickScoreInput({ match, tournament, onSaved }: Props) {
     setLoading(true);
 
     try {
-      const { error } = await supabase
+      // 1. Mark match as completed
+      const { error: matchError } = await supabase
         .from("matches")
         .update({ status: "completed" })
         .eq("id", match.id);
 
-      if (error) throw error;
+      if (matchError) throw matchError;
+
+      // 2. Get current match data to update tournament stats
+      const { data: matchData } = await supabase
+        .from("matches")
+        .select("team1_score, team2_score, tournament_id, round_number")
+        .eq("id", match.id)
+        .single();
+
+      if (matchData && matchData.team1_score !== null && matchData.team2_score !== null) {
+        // 3. Update player_tournament_stats
+        const players = [
+          { id: match.team1_player1_id, isTeam1: true },
+          { id: match.team1_player2_id, isTeam1: true },
+          { id: match.team2_player1_id, isTeam1: false },
+          { id: match.team2_player2_id, isTeam1: false },
+        ];
+
+        for (const player of players) {
+          const gamesWon = player.isTeam1 ? matchData.team1_score : matchData.team2_score;
+          const gamesLost = player.isTeam1 ? matchData.team2_score : matchData.team1_score;
+
+          // Check if stats already exist for this player/tournament/round
+          const { data: existing } = await supabase
+            .from("player_tournament_stats")
+            .select("id, games_won, games_lost")
+            .eq("tournament_id", matchData.tournament_id)
+            .eq("player_id", player.id)
+            .eq("round_number", matchData.round_number)
+            .maybeSingle();
+
+          if (existing) {
+            // Update: add to existing totals
+            await supabase
+              .from("player_tournament_stats")
+              .update({
+                games_won: existing.games_won + gamesWon,
+                games_lost: existing.games_lost + gamesLost,
+              })
+              .eq("id", existing.id);
+          } else {
+            // Insert new record
+            await supabase
+              .from("player_tournament_stats")
+              .insert({
+                tournament_id: matchData.tournament_id,
+                player_id: player.id,
+                round_number: matchData.round_number,
+                games_won: gamesWon,
+                games_lost: gamesLost,
+              });
+          }
+        }
+      }
 
       toast({
         title: "✓ Wedstrijd voltooid!",
-        description: "De match is succesvol afgesloten",
+        description: "Stats zijn bijgewerkt voor ranking",
         duration: 2000,
       });
 

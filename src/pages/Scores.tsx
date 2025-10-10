@@ -552,6 +552,29 @@ export default function Scores() {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            const { error } = await supabase
+                              .from("matches")
+                              .update({ status: "in_progress" })
+                              .eq("id", match.id);
+                            
+                            if (error) throw error;
+                            
+                            window.location.reload();
+                          } catch (error: any) {
+                            console.error("Fout bij heropenen:", error);
+                          }
+                        }}
+                        className="h-8 px-2 text-xs text-orange-600 border-orange-600 hover:bg-orange-50"
+                        title="Wedstrijd heropenen voor correcties"
+                      >
+                        Heropenen
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
