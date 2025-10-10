@@ -9,6 +9,8 @@ import { Match } from '@/hooks/useMatches';
 import { useSpecialTypes } from '@/hooks/useSpecialTypes';
 import { getShortTeamName } from '@/utils/matchUtils';
 import { ArrowLeft, Plus, Minus, Star } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface SpecialsManagerProps {
   match: Match;
@@ -27,6 +29,8 @@ interface PlayerSpecial {
 export default function SpecialsManager({ match, onClose, onBack }: SpecialsManagerProps) {
   const { specialTypes, loading } = useSpecialTypes();
   const [playerSpecials, setPlayerSpecials] = useState<PlayerSpecial[]>([]);
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
 
   const is2v2 = !!(match.team1_player1 && match.team2_player1);
   
@@ -122,18 +126,50 @@ export default function SpecialsManager({ match, onClose, onBack }: SpecialsMana
     return special?.count || 0;
   };
 
-  const handleSave = () => {
-    console.log('=== SPECIALS SAVE ===');
-    console.log('Match ID:', match.id);
-    console.log('Player Specials:', playerSpecials);
-    console.log('=== SPECIALS SAVED (NOT IN DATABASE) ===');
-    
-    // Show confirmation
-    alert(`Specials geregistreerd!\n\n${playerSpecials.map(ps => 
-      `${ps.playerName}: ${ps.count}x ${ps.specialName}`
-    ).join('\n')}\n\n(Niet opgeslagen in database)`);
-    
-    onBack();
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      
+      // Delete existing specials for this match
+      const { error: deleteError } = await supabase
+        .from('match_specials')
+        .delete()
+        .eq('match_id', match.id);
+
+      if (deleteError) throw deleteError;
+
+      // Insert new specials
+      if (playerSpecials.length > 0) {
+        const { error: insertError } = await supabase
+          .from('match_specials')
+          .insert(
+            playerSpecials.map(ps => ({
+              match_id: match.id,
+              player_id: ps.playerId,
+              special_type_id: ps.specialTypeId,
+              count: ps.count
+            }))
+          );
+
+        if (insertError) throw insertError;
+      }
+
+      toast({
+        title: "Specials opgeslagen",
+        description: `${playerSpecials.length} special${playerSpecials.length !== 1 ? 's' : ''} succesvol opgeslagen.`,
+      });
+      
+      onBack();
+    } catch (error) {
+      console.error('Error saving specials:', error);
+      toast({
+        title: "Fout bij opslaan",
+        description: "Er is een fout opgetreden bij het opslaan van specials.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -247,17 +283,17 @@ export default function SpecialsManager({ match, onClose, onBack }: SpecialsMana
 
         {/* Actions */}
         <div className="flex gap-2 pt-2">
-          <Button onClick={handleSave} className="flex-1">
+          <Button onClick={handleSave} className="flex-1" disabled={saving}>
             <Star className="h-4 w-4 mr-2" />
-            Specials Opslaan
+            {saving ? 'Opslaan...' : 'Specials Opslaan'}
           </Button>
-          <Button onClick={onBack} variant="outline">
+          <Button onClick={onBack} variant="outline" disabled={saving}>
             Terug
           </Button>
         </div>
 
         <div className="text-xs text-purple-600 bg-purple-100 p-2 rounded">
-          💡 Specials worden per speler geregistreerd - data wordt niet opgeslagen in de database
+          💡 Specials worden direct opgeslagen in de database en tellen mee voor de Chef Special ranking
         </div>
       </CardContent>
     </Card>

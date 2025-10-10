@@ -946,6 +946,25 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      get_player_specials_by_year: {
+        Args: { p_player_id: string; p_year: number }
+        Returns: {
+          chef_special_titles: number
+          sous_chef_titles: number
+          total_specials: number
+          tournaments_count: number
+        }[]
+      }
+      get_tournament_specials_ranking: {
+        Args: { p_tournament_id: string }
+        Returns: {
+          player_id: string
+          player_name: string
+          rank_position: number
+          title: string
+          total_specials: number
+        }[]
+      }
       get_user_role: {
         Args: Record<PropertyKey, never> | { user_id: string }
         Returns: string
