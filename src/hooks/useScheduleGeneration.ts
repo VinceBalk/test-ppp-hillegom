@@ -30,6 +30,7 @@ export const useScheduleGeneration = () => {
           team1_player2_id: match.team1_player2_id,
           team2_player1_id: match.team2_player1_id,
           team2_player2_id: match.team2_player2_id,
+          match_number: match.match_number,
           court_id: match.court_id || null,
           court_number: match.court_number?.toString() || '1',
           round_number: roundNumber,
