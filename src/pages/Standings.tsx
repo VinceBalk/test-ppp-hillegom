@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Trophy, TrendingUp, TrendingDown, Minus, ChefHat, Award } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface PlayerStats {
@@ -397,24 +397,37 @@ export default function Standings() {
       </Card>
 
       {chefSpecials.length > 0 && (
-        <Card>
+        <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
           <CardHeader>
-            <CardTitle>Chef Special Rankings</CardTitle>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <Trophy className="h-6 w-6 text-yellow-500" />
+              Chef Special Rankings
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {chefSpecials.slice(0, 2).map((chef) => (
-                <div key={chef.player_id} className="flex items-center gap-3 p-4 bg-muted rounded-lg">
-                  <div className="text-2xl">
-                    {chef.rank_position === 1 ? "👨‍🍳" : "🧑‍🍳"}
+                <div 
+                  key={chef.player_id} 
+                  className="relative flex flex-col items-center gap-4 p-8 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border-2 border-primary/30 shadow-lg"
+                >
+                  {chef.rank_position === 1 ? (
+                    <ChefHat className="h-20 w-20 text-orange-600" strokeWidth={1.5} />
+                  ) : (
+                    <Award className="h-20 w-20 text-amber-600" strokeWidth={1.5} />
+                  )}
+                  <div className="text-center">
+                    <div className="font-bold text-2xl mb-1">{chef.player_name}</div>
+                    <Badge 
+                      variant={chef.rank_position === 1 ? "default" : "secondary"}
+                      className="text-base px-4 py-1"
+                    >
+                      {chef.title}
+                    </Badge>
                   </div>
-                  <div className="flex-1">
-                    <div className="font-bold text-lg">{chef.player_name}</div>
-                    <div className="text-sm text-muted-foreground">{chef.title}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-orange-600">{chef.total_specials}</div>
-                    <div className="text-xs text-muted-foreground">specials</div>
+                  <div className="text-center mt-2">
+                    <div className="text-4xl font-bold text-orange-600">{chef.total_specials}</div>
+                    <div className="text-sm text-muted-foreground font-medium">specials</div>
                   </div>
                 </div>
               ))}
