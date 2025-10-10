@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Play, Edit, CheckSquare, Eye } from "lucide-react";
+import { Play, Edit, CheckSquare, Eye, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Match } from "@/hooks/useMatches";
 import { getShortTeamName } from "@/utils/matchUtils";
@@ -10,6 +10,7 @@ import MatchSimulator from "./MatchSimulator";
 import SavedMatchEditor from "./SavedMatchEditor";
 import MatchScoreInput from "./MatchScoreInput";
 import QuickScoreInput from "./QuickScoreInput";
+import SpecialsManager from "./SpecialsManager";
 
 interface MatchCardProps {
   match: Match;
@@ -26,6 +27,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament }
   const [showSimulator, setShowSimulator] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [showScoreInput, setShowScoreInput] = useState(false);
+  const [showSpecials, setShowSpecials] = useState(false);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -121,6 +123,22 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament }
     );
   }
 
+  if (showSpecials) {
+    return (
+      <SpecialsManager
+        match={match}
+        onClose={() => {
+          setShowSpecials(false);
+          window.location.reload();
+        }}
+        onBack={() => {
+          setShowSpecials(false);
+          window.location.reload();
+        }}
+      />
+    );
+  }
+
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
@@ -143,6 +161,18 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament }
               >
                 <CheckSquare className="h-3 w-3 mr-1" />
                 Score Invoeren
+              </Button>
+            )}
+
+            {toernooiStatus === "active" && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowSpecials(true)}
+                className="text-purple-600 border-purple-600 hover:bg-purple-50"
+              >
+                <Star className="h-3 w-3 mr-1" />
+                Specials
               </Button>
             )}
 
