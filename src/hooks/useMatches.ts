@@ -57,6 +57,18 @@ export interface Match {
     background_color?: string;
     row_side?: string;
   };
+  match_specials?: {
+    id: string;
+    player_id: string;
+    special_type_id: string;
+    count: number;
+    player: {
+      name: string;
+    };
+    special_type: {
+      name: string;
+    };
+  }[];
 }
 
 export const useMatches = (tournamentId?: string) => {

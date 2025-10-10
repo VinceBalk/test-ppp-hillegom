@@ -20,7 +20,15 @@ export const useMatchesFetch = (tournamentId?: string) => {
           team1_player2:players!matches_team1_player2_id_fkey(name),
           team2_player1:players!matches_team2_player1_id_fkey(name),
           team2_player2:players!matches_team2_player2_id_fkey(name),
-          court:courts(name, menu_order, background_color, row_side)
+          court:courts(name, menu_order, background_color, row_side),
+          match_specials:match_specials(
+            id,
+            player_id,
+            special_type_id,
+            count,
+            player:players(name),
+            special_type:special_types(name)
+          )
         `);
 
       if (tournamentId) {
