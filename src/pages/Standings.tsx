@@ -129,6 +129,25 @@ export default function Standings() {
 
     const { data } = await query;
 
+    // Fetch match specials with round info for tie-breaker logic
+    let specialsQuery = supabase
+      .from("match_specials")
+      .select(`
+        player_id,
+        count,
+        matches!inner (
+          tournament_id,
+          round_number
+        )
+      `)
+      .eq("matches.tournament_id", selectedTournament);
+
+    if (selectedRound !== "all") {
+      specialsQuery = specialsQuery.lte("matches.round_number", parseInt(selectedRound));
+    }
+
+    const { data: specialsData } = await specialsQuery;
+
     // Also fetch previous round data if we're viewing a specific round > 1
     let previousData = null;
     if (selectedRound !== "all" && parseInt(selectedRound) > 1) {
@@ -146,6 +165,33 @@ export default function Standings() {
       
       previousData = prevData;
     }
+
+    // Create a map of player specials by round for tie-breaker logic
+    const playerSpecialsByRound = new Map<string, Map<number, number>>();
+    specialsData?.forEach((special: any) => {
+      const playerId = special.player_id;
+      const roundNumber = special.matches.round_number;
+      const count = special.count;
+      
+      if (!playerSpecialsByRound.has(playerId)) {
+        playerSpecialsByRound.set(playerId, new Map());
+      }
+      const roundsMap = playerSpecialsByRound.get(playerId)!;
+      roundsMap.set(roundNumber, (roundsMap.get(roundNumber) || 0) + count);
+    });
+
+    // Helper functions for tie-breaker logic
+    const getEarliestRound = (playerId: string): number => {
+      const rounds = playerSpecialsByRound.get(playerId);
+      if (!rounds || rounds.size === 0) return 999;
+      return Math.min(...Array.from(rounds.keys()));
+    };
+
+    const getSpecialsInRound = (playerId: string, round: number): number => {
+      const rounds = playerSpecialsByRound.get(playerId);
+      if (!rounds) return 0;
+      return rounds.get(round) || 0;
+    };
 
     if (data) {
       const playerMap: { [key: string]: { name: string; won: number; lost: number; specials: number; row_side: string } } = {};
@@ -233,16 +279,42 @@ export default function Standings() {
       const leftStats = allStats
         .filter(s => s.row_side === "left")
         .sort((a, b) => {
+          // Primary: games won
           if (b.games_won !== a.games_won) return b.games_won - a.games_won;
-          return b.specials_count - a.specials_count;
+          
+          // Secondary: total specials
+          if (b.specials_count !== a.specials_count) return b.specials_count - a.specials_count;
+          
+          // Tie-breaker 1: earliest round with specials (lower is better)
+          const aEarliest = getEarliestRound(a.player_id);
+          const bEarliest = getEarliestRound(b.player_id);
+          if (aEarliest !== bEarliest) return aEarliest - bEarliest;
+          
+          // Tie-breaker 2: most specials in earliest round (higher is better)
+          const aCountInEarliest = getSpecialsInRound(a.player_id, aEarliest);
+          const bCountInEarliest = getSpecialsInRound(b.player_id, bEarliest);
+          return bCountInEarliest - aCountInEarliest;
         })
         .map((s, idx) => ({ ...s, position: idx + 1 }));
 
       const rightStats = allStats
         .filter(s => s.row_side === "right")
         .sort((a, b) => {
+          // Primary: games won
           if (b.games_won !== a.games_won) return b.games_won - a.games_won;
-          return b.specials_count - a.specials_count;
+          
+          // Secondary: total specials
+          if (b.specials_count !== a.specials_count) return b.specials_count - a.specials_count;
+          
+          // Tie-breaker 1: earliest round with specials (lower is better)
+          const aEarliest = getEarliestRound(a.player_id);
+          const bEarliest = getEarliestRound(b.player_id);
+          if (aEarliest !== bEarliest) return aEarliest - bEarliest;
+          
+          // Tie-breaker 2: most specials in earliest round (higher is better)
+          const aCountInEarliest = getSpecialsInRound(a.player_id, aEarliest);
+          const bCountInEarliest = getSpecialsInRound(b.player_id, bEarliest);
+          return bCountInEarliest - aCountInEarliest;
         })
         .map((s, idx) => ({ ...s, position: idx + 1 }));
 
