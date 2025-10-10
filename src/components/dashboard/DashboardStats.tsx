@@ -16,7 +16,7 @@ export function DashboardStats({ stats, recentTournaments }: DashboardStatsProps
   const navigate = useNavigate();
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid-4">
       <StatsCard
         title="Actieve Toernooien"
         value={stats.activeTournaments}

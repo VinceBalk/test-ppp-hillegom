@@ -79,7 +79,7 @@ export default function SchedulePreview({
       <div className="space-y-8">
         <div className="border-t pt-8">
           <h3 className="text-lg font-semibold text-gray-700 mb-4">Gedetailleerde Weergave per Groep</h3>
-          <div className="grid gap-8 lg:grid-cols-2">
+          <div className="grid-2">
             <ScheduleGroupSection
               title="Linker rijtje"
               matches={preview.leftGroupMatches}

@@ -82,7 +82,7 @@ export default function ScheduleMatchesDisplay({ matches, roundNumber }: Schedul
       </CardHeader>
       
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid-2">
           {/* Left Column - Courts with row_side = 'left' */}
           <div className="space-y-6">
             <div className="text-center">
