@@ -1,9 +1,11 @@
-
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Match } from '@/hooks/useMatches';
 import { getMatchType, getOpponentNames, getPartnerName } from '@/utils/playerMatchUtils';
 import { getShortTeamName } from '@/utils/matchUtils';
+import { TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface PlayerMatchCardProps {
   match: Match;
@@ -11,6 +13,7 @@ interface PlayerMatchCardProps {
 }
 
 export default function PlayerMatchCard({ match, playerId }: PlayerMatchCardProps) {
+  const navigate = useNavigate();
   const isInTeam1 = match.team1_player1_id === playerId || match.team1_player2_id === playerId;
   const partnerName = getPartnerName(match, playerId);
 
@@ -128,14 +131,25 @@ export default function PlayerMatchCard({ match, playerId }: PlayerMatchCardProp
         </div>
 
         {/* Bottom info row */}
-        <div className="flex items-center justify-between mt-4 pt-4 border-t">
-          <div className="text-xs text-muted-foreground">
+        <div className="flex items-center justify-between mt-4 pt-4 border-t gap-2">
+          <div className="text-xs text-muted-foreground flex-1">
             {match.tournament?.name || "Onbekend toernooi"}
           </div>
           {partnerName && (
             <div className="text-xs text-muted-foreground">
               Partner: <span className="font-semibold">{partnerName}</span>
             </div>
+          )}
+          {match.tournament_id && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => navigate(`/tournaments/${match.tournament_id}/standings`)}
+            >
+              <TrendingUp className="h-3 w-3 mr-1" />
+              Stand
+            </Button>
           )}
         </div>
       </CardContent>
