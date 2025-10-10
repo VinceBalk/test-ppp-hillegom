@@ -4,6 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Match = {
   id: string;
@@ -40,6 +50,8 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
   const team2Score = team1Score !== "" ? 8 - Number(team1Score) : "";
   const [loading, setLoading] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [confirmMessage, setConfirmMessage] = useState("");
   const [blockMessage, setBlockMessage] = useState("");
 
   const players = [
@@ -144,7 +156,60 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
       return;
     }
 
+    // Check if there are existing scores or specials
+    const { data: existingMatch } = await supabase
+      .from("matches")
+      .select("team1_score, team2_score")
+      .eq("id", match.id)
+      .single();
+
+    const { data: existingSpecials } = await supabase
+      .from("match_specials")
+      .select("player_id, special_type_id, count, player:players(name)")
+      .eq("match_id", match.id);
+
+    // Build warning message
+    const warnings: string[] = [];
+
+    if (existingMatch?.team1_score !== null && existingMatch?.team2_score !== null) {
+      warnings.push(
+        `Je overschrijft de bestaande score ${existingMatch.team1_score} - ${existingMatch.team2_score} met ${team1Score} - ${team2Score}`
+      );
+    }
+
+    if (existingSpecials && existingSpecials.length > 0) {
+      const playerNames = [...new Set(existingSpecials.map(s => s.player?.name).filter(Boolean))];
+      warnings.push(
+        `Je overschrijft specials van: ${playerNames.join(", ")}`
+      );
+    }
+
+    // Check if new specials are being added
+    const newSpecialPlayers = Object.entries(specials)
+      .filter(([_, types]) => Object.values(types).some(count => count > 0))
+      .map(([playerId]) => players.find(p => p.id === playerId)?.name)
+      .filter(Boolean);
+
+    if (newSpecialPlayers.length > 0) {
+      warnings.push(
+        `Je voegt specials toe voor: ${newSpecialPlayers.join(", ")}`
+      );
+    }
+
+    // Show confirmation if there are warnings
+    if (warnings.length > 0) {
+      setConfirmMessage(warnings.join("\n\n"));
+      setShowConfirmDialog(true);
+      return;
+    }
+
+    // If no warnings, proceed directly
+    await performSave();
+  };
+
+  const performSave = async () => {
     setLoading(true);
+    setShowConfirmDialog(false);
 
     const { error: matchError } = await supabase
       .from("matches")
@@ -214,75 +279,94 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
   }
 
   return (
-    <div className="mt-4 space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm text-muted-foreground mb-1">
-            {players[0].name} & {players[1].name}
-          </label>
-          <Input
-            type="number"
-            value={team1Score}
-            max={8}
-            min={0}
-            onChange={(e) => {
-              const val = Number(e.target.value);
-              if (val >= 0 && val <= 8) {
-                setTeam1Score(val);
-              }
-            }}
-            disabled={isLocked || loading}
-            className="w-full"
-          />
+    <>
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Let op: Data wordt overschreven</AlertDialogTitle>
+            <AlertDialogDescription className="whitespace-pre-line text-base">
+              {confirmMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction onClick={performSave}>
+              Doorgaan en opslaan
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div className="mt-4 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-muted-foreground mb-1">
+              {players[0].name} & {players[1].name}
+            </label>
+            <Input
+              type="number"
+              value={team1Score}
+              max={8}
+              min={0}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                if (val >= 0 && val <= 8) {
+                  setTeam1Score(val);
+                }
+              }}
+              disabled={isLocked || loading}
+              className="w-full"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-muted-foreground mb-1">
+              {players[2].name} & {players[3].name}
+            </label>
+            <Input
+              type="number"
+              value={team2Score}
+              disabled
+              className="w-full opacity-70"
+            />
+          </div>
         </div>
-        <div>
-          <label className="block text-sm text-muted-foreground mb-1">
-            {players[2].name} & {players[3].name}
-          </label>
-          <Input
-            type="number"
-            value={team2Score}
-            disabled
-            className="w-full opacity-70"
-          />
-        </div>
+
+        <Accordion type="multiple" className="w-full">
+          {players.map((p) => (
+            <AccordionItem key={p.id} value={p.id}>
+              <AccordionTrigger className="text-base font-semibold">{p.name}</AccordionTrigger>
+              <AccordionContent className="space-y-3 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {specialTypes.map((type) => (
+                    <div key={type.id}>
+                      <label className="block text-sm text-muted-foreground mb-1">
+                        {type.name}
+                      </label>
+                      <Input
+                        type="number"
+                        value={specials[p.id]?.[type.id] || 0}
+                        min={0}
+                        onChange={(e) =>
+                          handleSpecialChange(p.id, type.id, Number(e.target.value))
+                        }
+                        className="w-full"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+
+        <Button
+          onClick={handleSubmit}
+          disabled={isLocked || loading}
+          className="bg-green-600 hover:bg-green-700 text-white"
+        >
+          Opslaan
+        </Button>
       </div>
-
-      <Accordion type="multiple" className="w-full">
-        {players.map((p) => (
-          <AccordionItem key={p.id} value={p.id}>
-            <AccordionTrigger className="text-base font-semibold">{p.name}</AccordionTrigger>
-            <AccordionContent className="space-y-3 pt-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {specialTypes.map((type) => (
-                  <div key={type.id}>
-                    <label className="block text-sm text-muted-foreground mb-1">
-                      {type.name}
-                    </label>
-                    <Input
-                      type="number"
-                      value={specials[p.id]?.[type.id] || 0}
-                      min={0}
-                      onChange={(e) =>
-                        handleSpecialChange(p.id, type.id, Number(e.target.value))
-                      }
-                      className="w-full"
-                    />
-                  </div>
-                ))}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
-
-      <Button
-        onClick={handleSubmit}
-        disabled={isLocked || loading}
-        className="bg-green-600 hover:bg-green-700 text-white"
-      >
-        Opslaan
-      </Button>
-    </div>
+    </>
   );
 }
