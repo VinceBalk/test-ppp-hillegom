@@ -69,12 +69,33 @@ export const useSchedulePreview = (tournamentId?: string) => {
         console.log('Right players for 2v2:', rightPlayers.length);
         console.log('Available courts:', courts);
 
-        const leftResult = generateGroupMatches(leftPlayers, 'Links', courts, startMatchNumber);
-        const rightResult = generateGroupMatches(rightPlayers, 'Rechts', courts, leftResult.nextMatchNumber);
+        const leftResult = generateGroupMatches(leftPlayers, 'Links', courts, 0); // Tijdelijk nummer
+        const rightResult = generateGroupMatches(rightPlayers, 'Rechts', courts, 0); // Tijdelijk nummer
         
-        leftMatches = leftResult.matches;
-        rightMatches = rightResult.matches;
-        allMatches = [...leftMatches, ...rightMatches];
+        // Maak court menu_order lookup
+        const courtOrderMap = new Map(courts.map(c => [c.id, c.menu_order || 0]));
+        
+        // Combineer matches en sorteer HORIZONTAAL: eerst ronde, dan baan menu_order
+        const combinedMatches = [...leftResult.matches, ...rightResult.matches];
+        combinedMatches.sort((a, b) => {
+          if (a.round_within_group !== b.round_within_group) {
+            return a.round_within_group - b.round_within_group;
+          }
+          const orderA = a.court_id ? (courtOrderMap.get(a.court_id) || 0) : 0;
+          const orderB = b.court_id ? (courtOrderMap.get(b.court_id) || 0) : 0;
+          return orderA - orderB;
+        });
+        
+        // Nu horizontaal nummeren vanaf startMatchNumber
+        let currentMatchNumber = startMatchNumber;
+        combinedMatches.forEach(match => {
+          match.match_number = currentMatchNumber++;
+        });
+        
+        // Split terug voor display
+        leftMatches = combinedMatches.filter(m => m.court_name?.includes('Links'));
+        rightMatches = combinedMatches.filter(m => m.court_name?.includes('Rechts'));
+        allMatches = combinedMatches;
         
         console.log('Generated 2v2 matches with court assignments and match numbers:', allMatches.length);
         console.log('Match numbers range:', startMatchNumber, 'to', rightResult.nextMatchNumber - 1);
