@@ -10,7 +10,8 @@ import {
   User,
   Sliders,
   Shield,
-  BarChart3
+  BarChart3,
+  TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -18,6 +19,7 @@ const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/players', label: 'Spelers', icon: Users },
   { to: '/tournaments', label: 'Toernooien', icon: Trophy },
+  { to: '/standings', label: 'Standen', icon: TrendingUp },
   { to: '/matches', label: 'Wedstrijden', icon: Calendar },
   { to: '/schedule', label: 'Schema', icon: List },
   { to: '/scores', label: 'Scores', icon: Hash },
