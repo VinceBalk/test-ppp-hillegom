@@ -14,34 +14,36 @@ export default function MatchEditorView({ match, onEdit }: MatchEditorViewProps)
   };
 
   return (
-    <div className="p-3 border rounded-lg bg-muted/30 relative">
+    <div className="p-4 border-2 rounded-lg bg-white relative shadow-sm hover:shadow-md transition-shadow">
+      {/* GROTE DUIDELIJKE EDIT BUTTON */}
       <Button
-        variant="ghost"
+        variant="default"
         size="sm"
-        className="absolute top-2 right-2 h-6 w-6 p-0 hover:bg-blue-100"
+        className="absolute top-2 right-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 z-10"
         onClick={handleEditClick}
         title="Bewerk wedstrijd"
       >
-        <Edit className="h-3 w-3" />
+        <Edit className="h-4 w-4 mr-1" />
+        Bewerk
       </Button>
       
-      <div className="font-medium text-center">
+      <div className="font-medium text-center pr-20">
         {match.match_number && (
-          <div className="font-bold text-xs text-muted-foreground mb-2">
+          <div className="font-bold text-sm text-muted-foreground mb-2">
             Wedstrijd #{match.match_number}
           </div>
         )}
-        <div className="text-blue-600">
+        <div className="text-blue-600 font-semibold">
           {match.team1_player1_name} & {match.team1_player2_name}
         </div>
         <div className="text-sm text-muted-foreground my-1">vs</div>
-        <div className="text-red-600">
+        <div className="text-red-600 font-semibold">
           {match.team2_player1_name} & {match.team2_player2_name}
         </div>
       </div>
       
-      <div className="text-sm text-muted-foreground text-center mt-2">
-        <div>{match.court_name}</div>
+      <div className="text-sm text-muted-foreground text-center mt-3 pt-3 border-t">
+        <div className="font-medium">{match.court_name}</div>
         <div>Ronde {match.round_within_group}</div>
       </div>
     </div>
