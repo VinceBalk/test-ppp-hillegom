@@ -57,12 +57,32 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
   const isLocked = tournament.status !== "active" || match.status === "completed";
 
   useEffect(() => {
-    // init player specials
-    const initial: Record<string, Record<string, number>> = {};
-    players.forEach((p) => {
-      initial[p.id] = {};
-    });
-    setSpecials(initial);
+    const loadExistingSpecials = async () => {
+      // Fetch existing specials from database
+      const { data: existingSpecials } = await supabase
+        .from("match_specials")
+        .select("player_id, special_type_id, count")
+        .eq("match_id", match.id);
+
+      // Initialize specials object
+      const initial: Record<string, Record<string, number>> = {};
+      players.forEach((p) => {
+        initial[p.id] = {};
+      });
+
+      // Fill in existing specials from database
+      if (existingSpecials) {
+        existingSpecials.forEach((special) => {
+          if (initial[special.player_id]) {
+            initial[special.player_id][special.special_type_id] = special.count;
+          }
+        });
+      }
+
+      setSpecials(initial);
+    };
+
+    loadExistingSpecials();
   }, [match.id]);
 
   useEffect(() => {
@@ -160,10 +180,17 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
         }))
     );
 
+    // First, delete all existing specials for this match to avoid duplicates
+    await supabase
+      .from("match_specials")
+      .delete()
+      .eq("match_id", match.id);
+
+    // Then insert the new ones (only if there are any)
     const { error: specialError } = specialRows.length
       ? await supabase
           .from("match_specials")
-          .upsert(specialRows, { onConflict: "match_id,player_id,special_type_id" })
+          .insert(specialRows)
       : { error: null };
 
     setLoading(false);
