@@ -73,7 +73,7 @@ export default function Standings() {
     const { data } = await supabase
       .from("tournaments")
       .select("id, name")
-      .in("status", ["active", "completed"])
+      .in("status", ["in_progress", "completed"])
       .order("created_at", { ascending: false });
 
     if (data && data.length > 0) {
