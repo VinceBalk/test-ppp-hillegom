@@ -6,6 +6,7 @@ interface PlayerSpecialStats {
   tournaments_count: number;
   chef_special_titles: number;
   sous_chef_titles: number;
+  year_rank: number;
 }
 
 export const usePlayerSpecials = (playerId: string, year: number) => {
@@ -26,7 +27,8 @@ export const usePlayerSpecials = (playerId: string, year: number) => {
         total_specials: 0,
         tournaments_count: 0,
         chef_special_titles: 0,
-        sous_chef_titles: 0
+        sous_chef_titles: 0,
+        year_rank: 999
       };
     },
     enabled: !!playerId,

@@ -953,6 +953,7 @@ export type Database = {
           sous_chef_titles: number
           total_specials: number
           tournaments_count: number
+          year_rank: number
         }[]
       }
       get_tournament_specials_ranking: {
