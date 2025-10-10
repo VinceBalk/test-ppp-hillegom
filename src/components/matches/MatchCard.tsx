@@ -147,7 +147,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament }
 
     return (
       <Card className="hover:shadow-md transition-shadow">
-        <CardHeader className="pb-2 pt-4">
+        <CardHeader className="pb-3 pt-5">
           <div className="flex justify-between items-start">
             {displayMatchNumber && (
               <Badge variant="secondary" className="text-xs">
@@ -160,10 +160,10 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament }
           </div>
         </CardHeader>
 
-        <CardContent className="pb-3 pt-0">
+        <CardContent className="pb-4 pt-0">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
             {/* Team 1 - right aligned */}
-            <div className="text-right space-y-1.5">
+            <div className="text-right space-y-2">
               <p className="text-xs font-semibold text-blue-600">Team 1</p>
               {match.team1_player1 && (
                 <div className="flex items-center justify-end gap-2">
@@ -199,7 +199,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament }
             </div>
 
             {/* Team 2 - left aligned */}
-            <div className="text-left space-y-1.5">
+            <div className="text-left space-y-2">
               <p className="text-xs font-semibold text-red-600">Team 2</p>
               {match.team2_player1 && (
                 <div className="flex items-center gap-2">
@@ -229,7 +229,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament }
           </div>
 
           {/* Compact buttons row */}
-          <div className="flex items-center justify-between mt-3 pt-3 border-t">
+          <div className="flex items-center justify-between mt-4 pt-4 border-t">
             <div className="text-xs text-muted-foreground">
               {match.tournament?.name || "Onbekend toernooi"}
             </div>
@@ -288,7 +288,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament }
 
   return (
     <Card className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-2 pt-4">
+      <CardHeader className="pb-3 pt-5">
         <div className="flex justify-between items-start">
           {displayMatchNumber && (
             <Badge variant="secondary" className="text-xs">
@@ -301,10 +301,10 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament }
         </div>
       </CardHeader>
 
-      <CardContent className="pb-3 pt-0">
+      <CardContent className="pb-4 pt-0">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
           {/* Team 1 - right aligned */}
-          <div className="text-right space-y-1.5">
+          <div className="text-right space-y-2">
             <p className="text-xs font-semibold text-blue-600">Team 1</p>
             {match.team1_player1 && (
               <div className="flex items-center justify-end gap-2">
@@ -380,7 +380,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament }
           </div>
 
           {/* Team 2 - left aligned */}
-          <div className="text-left space-y-1.5">
+          <div className="text-left space-y-2">
             <p className="text-xs font-semibold text-red-600">Team 2</p>
             {match.team2_player1 && (
               <div className="flex items-center gap-2">
@@ -410,7 +410,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament }
         </div>
 
         {/* Bottom info row */}
-        <div className="flex items-center justify-between mt-3 pt-3 border-t">
+        <div className="flex items-center justify-between mt-4 pt-4 border-t">
           <div className="text-xs text-muted-foreground">
             {match.tournament?.name || "Onbekend toernooi"}
           </div>
