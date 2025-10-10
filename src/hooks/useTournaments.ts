@@ -18,6 +18,9 @@ export interface Tournament {
   round_1_generated?: boolean;
   round_2_generated?: boolean;
   round_3_generated?: boolean;
+  round_1_schedule_generated?: boolean;
+  round_2_schedule_generated?: boolean;
+  round_3_schedule_generated?: boolean;
   created_at?: string;
   updated_at?: string;
   created_by?: string;

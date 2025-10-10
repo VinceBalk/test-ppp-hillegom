@@ -5,6 +5,7 @@ import { useCourts } from './useCourts';
 import { ScheduleMatch, SchedulePreview } from '@/types/schedule';
 import { checkIfScheduleExists, savePreviewToDatabase, clearPreviewFromDatabase } from '@/services/schedulePreviewService';
 import { generateGroupMatches } from '@/utils/matchGenerator';
+import { generateRound3Schedule } from '@/services/round3Generator';
 
 export const useSchedulePreview = (tournamentId?: string) => {
   const [preview, setPreview] = useState<SchedulePreview | null>(null);
@@ -29,19 +30,40 @@ export const useSchedulePreview = (tournamentId?: string) => {
         return existingPreview;
       }
 
-      const leftPlayers = tournamentPlayers.filter(tp => tp.group === 'left');
-      const rightPlayers = tournamentPlayers.filter(tp => tp.group === 'right');
-      
-      console.log('Left players for 2v2:', leftPlayers.length);
-      console.log('Right players for 2v2:', rightPlayers.length);
-      console.log('Available courts:', courts);
+      let allMatches: ScheduleMatch[];
+      let leftMatches: ScheduleMatch[];
+      let rightMatches: ScheduleMatch[];
 
-      const leftMatches = generateGroupMatches(leftPlayers, 'Links', courts);
-      const rightMatches = generateGroupMatches(rightPlayers, 'Rechts', courts);
-      
-      const allMatches = [...leftMatches, ...rightMatches];
-      
-      console.log('Generated 2v2 matches with court assignments from database:', allMatches.length);
+      // Round 3 uses stats-based generation
+      if (roundNumber === 3) {
+        const round3Result = await generateRound3Schedule(tournamentId, courts);
+        allMatches = round3Result.matches;
+        
+        // Split matches by group for display
+        leftMatches = allMatches.filter(m => 
+          m.court_name?.includes('Links') || m.id.includes('links')
+        );
+        rightMatches = allMatches.filter(m => 
+          m.court_name?.includes('Rechts') || m.id.includes('rechts')
+        );
+        
+        console.log('Generated Round 3 matches:', allMatches.length);
+      } else {
+        // Rounds 1 and 2 use player group generation
+        const leftPlayers = tournamentPlayers.filter(tp => tp.group === 'left');
+        const rightPlayers = tournamentPlayers.filter(tp => tp.group === 'right');
+        
+        console.log('Left players for 2v2:', leftPlayers.length);
+        console.log('Right players for 2v2:', rightPlayers.length);
+        console.log('Available courts:', courts);
+
+        leftMatches = generateGroupMatches(leftPlayers, 'Links', courts);
+        rightMatches = generateGroupMatches(rightPlayers, 'Rechts', courts);
+        
+        allMatches = [...leftMatches, ...rightMatches];
+        
+        console.log('Generated 2v2 matches with court assignments from database:', allMatches.length);
+      }
 
       const schedulePreview: SchedulePreview = {
         matches: allMatches,
@@ -94,10 +116,10 @@ export const useSchedulePreview = (tournamentId?: string) => {
     }
   };
 
-  const clearPreview = async () => {
+  const clearPreview = async (roundNumber: number = 1) => {
     if (tournamentId && preview) {
       try {
-        await clearPreviewFromDatabase(tournamentId, 1);
+        await clearPreviewFromDatabase(tournamentId, roundNumber);
       } catch (error) {
         console.error('Error clearing preview from database:', error);
       }

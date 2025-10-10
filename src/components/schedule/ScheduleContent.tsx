@@ -83,6 +83,18 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
         return;
       }
 
+      // For round 3, verify rounds 1 and 2 are complete
+      if (selectedRound === 3) {
+        if (!tournament.round_1_schedule_generated || !tournament.round_2_schedule_generated) {
+          toast({
+            title: "Vorige rondes niet compleet",
+            description: "Ronde 1 en 2 moeten eerst gegenereerd zijn voordat je ronde 3 kunt genereren.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       await generatePreview(selectedRound);
     } catch (error) {
       console.error('Error generating preview:', error);
@@ -159,7 +171,7 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
             />
           )}
 
-          {!preview && !isRoundGenerated && !hasExistingMatches && selectedRound <= 2 && (
+          {!preview && !isRoundGenerated && !hasExistingMatches && (
             <PreviewGenerator
               selectedRound={selectedRound}
               onGeneratePreview={handleGeneratePreview}
@@ -180,19 +192,6 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
             </div>
           )}
 
-          {selectedRound === 3 && !hasExistingMatches && (
-            <div className="text-center py-8">
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-amber-900 mb-2">
-                  Ronde 3 wordt automatisch bepaald
-                </h3>
-                <p className="text-amber-700">
-                  Ronde 3 wordt automatisch gegenereerd na het tellen van de uitslag van ronde 1 en 2, 
-                  inclusief eventuele tiebreakers als beslisser.
-                </p>
-              </div>
-            </div>
-          )}
 
           {preview && (
             <SchedulePreview
