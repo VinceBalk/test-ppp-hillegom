@@ -22,7 +22,7 @@ export default function Layout() {
       <div className="flex-1 w-full lg:ml-72 flex flex-col">
         <Header onMenuClick={() => setMobileMenuOpen(true)} />
         
-        <main className="flex-1 px-4 py-6 lg:px-8 lg:py-8">
+        <main className="flex-1 px-3 py-4 sm:px-4 sm:py-6 md:px-6 lg:px-8 lg:py-8">
           <div className="mx-auto max-w-7xl">
             <Outlet />
           </div>

@@ -64,7 +64,7 @@ export default function Dashboard() {
         onTournamentClick={handleTournamentClick} 
       />
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid-2">
         <PlayerRankings
           title="Rankings - Linker Rijtje"
           description="Top 10 spelers van de linker kant"
