@@ -387,14 +387,19 @@ export default function Scores() {
     );
   }
 
+  // Conditionele logica voor filters
+  const isFilteredByRound = selectedRound !== "all";
+  
   // Overzichtspagina - Match Cards
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Scores</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {isFilteredByRound ? `Ronde ${selectedRound} - Scores` : 'Alle Scores'}
+          </h1>
           <p className="text-muted-foreground">
-            Bekijk wedstrijdscores en uitslagen ({filteredMatches.length} wedstrijden)
+            {filteredMatches.length} {filteredMatches.length === 1 ? 'wedstrijd' : 'wedstrijden'}
           </p>
         </div>
         
@@ -437,89 +442,93 @@ export default function Scores() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {filteredMatches.map((match) => (
-            <Card key={match.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/scores/${match.id}`)}>
-              <CardContent className="pt-4">
-                {/* Header */}
-                <div className="flex justify-between items-center mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">Ronde {match.round_number}</span>
-                    <span className="text-muted-foreground">•</span>
-                    <span className="text-sm text-muted-foreground">#{match.match_number || '?'}</span>
+          {filteredMatches.map((match) => {
+            const team1Player1Specials = getPlayerSpecialsCount(match, getPlayerName(match.team1_player1));
+            const team1Player2Specials = match.team1_player2 ? getPlayerSpecialsCount(match, getPlayerName(match.team1_player2)) : 0;
+            const team2Player1Specials = getPlayerSpecialsCount(match, getPlayerName(match.team2_player1));
+            const team2Player2Specials = match.team2_player2 ? getPlayerSpecialsCount(match, getPlayerName(match.team2_player2)) : 0;
+            
+            return (
+              <Card key={match.id} className="w-full hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(`/scores/${match.id}`)}>
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="inline-block border border-muted rounded px-2 py-0.5 text-xs font-medium mb-1">
+                        {isFilteredByRound 
+                          ? `#${match.match_number || '?'}`
+                          : `Ronde ${match.round_number} • #${match.match_number || '?'}`
+                        }
+                      </div>
+                      {match.tournament?.name && (
+                        <p className="text-sm text-muted-foreground mt-1">{match.tournament.name}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <MapPin className="h-3 w-3" />
+                      {getCourtInfo(match)}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <MapPin className="h-3 w-3" />
-                    {getCourtInfo(match)}
-                  </div>
-                </div>
-
-                {/* Tournament info */}
-                <div className="text-xs text-muted-foreground mb-3">
-                  {match.tournament?.name}
-                </div>
-
-                {/* Teams en Score - Simple Team Layout */}
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  {/* Team 1 */}
-                  <div className="text-left">
-                    <p className="text-xs text-muted-foreground mb-1">Team 1</p>
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <p className="font-medium text-sm leading-tight">{getPlayerName(match.team1_player1)}</p>
-                        {getPlayerSpecialsCount(match, getPlayerName(match.team1_player1)) > 0 && (
-                          <span className="text-xs font-semibold text-orange-600">
-                            ({getPlayerSpecialsCount(match, getPlayerName(match.team1_player1))})
+                </CardHeader>
+                
+                <CardContent className="pb-3">
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                    {/* Team 1 - rechts uitgelijnd */}
+                    <div className="text-right">
+                      <p className="font-semibold text-sm mb-1">Team 1</p>
+                      <div className="flex items-center justify-end gap-1">
+                        <p className="text-xs text-muted-foreground">{getPlayerName(match.team1_player1)}</p>
+                        {team1Player1Specials > 0 && (
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-orange-500 text-black text-xs font-bold">
+                            {team1Player1Specials}
                           </span>
                         )}
                       </div>
                       {match.team1_player2 && (
-                        <div className="flex items-center gap-1.5">
-                          <p className="font-medium text-sm leading-tight">{getPlayerName(match.team1_player2)}</p>
-                          {getPlayerSpecialsCount(match, getPlayerName(match.team1_player2)) > 0 && (
-                            <span className="text-xs font-semibold text-orange-600">
-                              ({getPlayerSpecialsCount(match, getPlayerName(match.team1_player2))})
+                        <div className="flex items-center justify-end gap-1">
+                          <p className="text-xs text-muted-foreground">{getPlayerName(match.team1_player2)}</p>
+                          {team1Player2Specials > 0 && (
+                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-orange-500 text-black text-xs font-bold">
+                              {team1Player2Specials}
                             </span>
                           )}
                         </div>
                       )}
                     </div>
-                  </div>
-                  
-                  {/* Score */}
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">
-                      {match.team1_score ?? 0} - {match.team2_score ?? 0}
+                    
+                    {/* Score - centraal */}
+                    <div className="text-center px-3">
+                      <p className="text-3xl font-bold tabular-nums">
+                        {match.team1_score ?? 0} - {match.team2_score ?? 0}
+                      </p>
                     </div>
-                  </div>
-                  
-                  {/* Team 2 */}
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground mb-1">Team 2</p>
-                    <div className="space-y-0.5">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <p className="font-medium text-sm leading-tight">{getPlayerName(match.team2_player1)}</p>
-                        {getPlayerSpecialsCount(match, getPlayerName(match.team2_player1)) > 0 && (
-                          <span className="text-xs font-semibold text-orange-600">
-                            ({getPlayerSpecialsCount(match, getPlayerName(match.team2_player1))})
+                    
+                    {/* Team 2 - links uitgelijnd */}
+                    <div className="text-left">
+                      <p className="font-semibold text-sm mb-1">Team 2</p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-xs text-muted-foreground">{getPlayerName(match.team2_player1)}</p>
+                        {team2Player1Specials > 0 && (
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-orange-500 text-black text-xs font-bold">
+                            {team2Player1Specials}
                           </span>
                         )}
                       </div>
                       {match.team2_player2 && (
-                        <div className="flex items-center justify-end gap-1.5">
-                          <p className="font-medium text-sm leading-tight">{getPlayerName(match.team2_player2)}</p>
-                          {getPlayerSpecialsCount(match, getPlayerName(match.team2_player2)) > 0 && (
-                            <span className="text-xs font-semibold text-orange-600">
-                              ({getPlayerSpecialsCount(match, getPlayerName(match.team2_player2))})
+                        <div className="flex items-center gap-1">
+                          <p className="text-xs text-muted-foreground">{getPlayerName(match.team2_player2)}</p>
+                          {team2Player2Specials > 0 && (
+                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-orange-500 text-black text-xs font-bold">
+                              {team2Player2Specials}
                             </span>
                           )}
                         </div>
                       )}
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
