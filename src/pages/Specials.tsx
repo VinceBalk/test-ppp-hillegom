@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useSpecialTypes } from '@/hooks/useSpecialTypes';
+import { SpecialMobileCard } from '@/components/specials/SpecialMobileCard';
 
 export default function Specials() {
   const { specialTypes, loading, createSpecialType, updateSpecialType, deleteSpecialType } = useSpecialTypes();
@@ -79,17 +80,16 @@ export default function Specials() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Specials</h1>
           <p className="text-muted-foreground">
             Beheer special types en tiebreakers ({specialTypes.length} specials)
           </p>
         </div>
-        
         <Dialog open={showForm} onOpenChange={setShowForm}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full md:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Nieuwe Special
             </Button>
@@ -143,98 +143,125 @@ export default function Specials() {
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Specials Overzicht</CardTitle>
-          <div className="flex items-center space-x-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Zoek specials..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
+      {/* Mobile Cards View */}
+      <div className="grid grid-cols-1 gap-4 md:hidden">
+        {filteredSpecials.length === 0 ? (
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-center text-muted-foreground">
+                {searchTerm ? 'Geen specials gevonden die voldoen aan de zoekterm.' : 'Nog geen specials toegevoegd.'}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          filteredSpecials.map((special) => (
+            <SpecialMobileCard
+              key={special.id}
+              special={special}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
             />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Naam</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Aangemaakt</TableHead>
-                <TableHead>Acties</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredSpecials.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    {searchTerm ? 'Geen specials gevonden die voldoen aan de zoekterm.' : 'Nog geen specials toegevoegd.'}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredSpecials.map((special) => (
-                  <TableRow key={special.id}>
-                    <TableCell className="font-medium">{special.name}</TableCell>
-                    <TableCell>
-                      {special.is_tiebreaker ? (
-                        <Badge variant="secondary">Tiebreaker</Badge>
-                      ) : (
-                        <Badge variant="outline">Normaal</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {special.is_active ? (
-                        <Badge variant="default">Actief</Badge>
-                      ) : (
-                        <Badge variant="destructive">Inactief</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(special.created_at).toLocaleDateString('nl-NL')}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(special)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+          ))
+        )}
+      </div>
 
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Special verwijderen</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Weet je zeker dat je "{special.name}" wilt verwijderen? Deze actie kan niet ongedaan gemaakt worden.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(special.id)}>
-                                Verwijderen
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
+      {/* Desktop Table View */}
+      <div className="hidden md:block">
+        <Card>
+          <CardHeader>
+            <CardTitle>Specials Overzicht</CardTitle>
+            <div className="flex items-center space-x-2">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Zoek specials..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="p-0 md:p-6">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[150px]">Naam</TableHead>
+                    <TableHead className="min-w-[100px]">Type</TableHead>
+                    <TableHead className="min-w-[90px]">Status</TableHead>
+                    <TableHead className="min-w-[120px]">Aangemaakt</TableHead>
+                    <TableHead className="min-w-[120px]">Acties</TableHead>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {filteredSpecials.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        {searchTerm ? 'Geen specials gevonden die voldoen aan de zoekterm.' : 'Nog geen specials toegevoegd.'}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredSpecials.map((special) => (
+                      <TableRow key={special.id}>
+                        <TableCell className="font-medium">{special.name}</TableCell>
+                        <TableCell>
+                          {special.is_tiebreaker ? (
+                            <Badge variant="secondary">Tiebreaker</Badge>
+                          ) : (
+                            <Badge variant="outline">Normaal</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {special.is_active ? (
+                            <Badge variant="default">Actief</Badge>
+                          ) : (
+                            <Badge variant="destructive">Inactief</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {new Date(special.created_at).toLocaleDateString('nl-NL')}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(special)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Special verwijderen</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Weet je zeker dat je "{special.name}" wilt verwijderen? Deze actie kan niet ongedaan gemaakt worden.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDelete(special.id)}>
+                                    Verwijderen
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
