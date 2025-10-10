@@ -95,6 +95,17 @@ export default function Standings() {
   const fetchStandings = async () => {
     setLoading(true);
 
+    // First fetch tournament players to get their group/side
+    const { data: tournamentPlayers } = await supabase
+      .from("tournament_players")
+      .select("player_id, group")
+      .eq("tournament_id", selectedTournament);
+
+    const playerGroups: { [key: string]: string } = {};
+    tournamentPlayers?.forEach(tp => {
+      playerGroups[tp.player_id] = tp.group;
+    });
+
     // Fetch current round/all rounds standings
     let query = supabase
       .from("player_tournament_stats")
@@ -104,7 +115,7 @@ export default function Standings() {
         games_lost,
         tiebreaker_specials_count,
         round_number,
-        players:player_id (name, row_side)
+        players:player_id (name)
       `)
       .eq("tournament_id", selectedTournament);
 
@@ -124,7 +135,7 @@ export default function Standings() {
           games_won,
           games_lost,
           tiebreaker_specials_count,
-          players:player_id (name, row_side)
+          players:player_id (name)
         `)
         .eq("tournament_id", selectedTournament)
         .lte("round_number", parseInt(selectedRound) - 1);
@@ -139,7 +150,7 @@ export default function Standings() {
         if (!playerMap[d.player_id]) {
           playerMap[d.player_id] = {
             name: (d.players as any)?.name || "Onbekend",
-            row_side: (d.players as any)?.row_side || "left",
+            row_side: playerGroups[d.player_id] || "left",
             won: 0,
             lost: 0,
             specials: 0,
@@ -156,7 +167,7 @@ export default function Standings() {
         previousData.forEach(d => {
           if (!previousPlayerMap[d.player_id]) {
             previousPlayerMap[d.player_id] = {
-              row_side: (d.players as any)?.row_side || "left",
+              row_side: playerGroups[d.player_id] || "left",
               won: 0,
               lost: 0,
               specials: 0,
