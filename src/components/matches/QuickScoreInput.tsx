@@ -2,7 +2,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Check } from "lucide-react";
+import { Check, Edit } from "lucide-react";
 
 type Match = {
   id: string;
@@ -131,13 +131,56 @@ export default function QuickScoreInput({ match, tournament, onSaved }: Props) {
     }
   };
 
+  const handleReopen = async () => {
+    setLoading(true);
+
+    try {
+      const { error } = await supabase
+        .from("matches")
+        .update({ status: "in_progress" })
+        .eq("id", match.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "✓ Wedstrijd heropend",
+        description: "Je kunt nu de score aanpassen",
+        duration: 2000,
+      });
+
+      setLoading(false);
+    } catch (error: any) {
+      toast({
+        title: "Fout bij heropenen",
+        description: error.message,
+        variant: "destructive",
+      });
+      setLoading(false);
+    }
+  };
+
   if (isLocked && match.status === "completed") {
     return (
-      <div className="flex items-center justify-center gap-2 py-4">
-        <Check className="h-5 w-5 text-green-600" />
-        <span className="text-base font-medium">
-          {match.team1_score} - {match.team2_score}
-        </span>
+      <div className="py-4 space-y-4">
+        <div className="flex items-center justify-center gap-2">
+          <Check className="h-5 w-5 text-green-600" />
+          <span className="text-base font-medium">
+            {match.team1_score} - {match.team2_score}
+          </span>
+        </div>
+        
+        {/* Reopen button for corrections */}
+        <div className="pt-3 border-t">
+          <Button
+            onClick={handleReopen}
+            disabled={loading}
+            className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold"
+            size="lg"
+          >
+            <Edit className="h-5 w-5 mr-2" />
+            Wedstrijd Bewerken (Score Corrigeren)
+          </Button>
+        </div>
       </div>
     );
   }
