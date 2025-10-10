@@ -42,41 +42,43 @@ export function TournamentTable({
         <TournamentSearch searchTerm={searchTerm} onSearchChange={onSearchChange} />
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Naam</TableHead>
-              <TableHead>Datums</TableHead>
-              <TableHead>Max Spelers</TableHead>
-              <TableHead>Inschrijfgeld</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Acties</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredTournaments.length === 0 ? (
+        <div className="overflow-x-auto -mx-6 px-6 md:mx-0 md:px-0">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  {searchTerm ? 'Geen toernooien gevonden die voldoen aan de zoekterm.' : 'Nog geen toernooien toegevoegd.'}
-                </TableCell>
+                <TableHead className="min-w-[120px]">Naam</TableHead>
+                <TableHead className="min-w-[140px]">Datums</TableHead>
+                <TableHead className="min-w-[100px]">Max Spelers</TableHead>
+                <TableHead className="min-w-[110px]">Inschrijfgeld</TableHead>
+                <TableHead className="min-w-[90px]">Status</TableHead>
+                <TableHead className="min-w-[140px]">Acties</TableHead>
               </TableRow>
-            ) : (
-              filteredTournaments.map((tournament) => (
-                <TournamentRow
-                  key={tournament.id}
-                  tournament={tournament}
-                  editingTournament={editingTournament}
-                  setEditingTournament={setEditingTournament}
-                  onAssignPlayers={onAssignPlayers}
-                  onUpdateTournament={onUpdateTournament}
-                  onDeleteTournament={onDeleteTournament}
-                  isUpdating={isUpdating}
-                  isDeleting={isDeleting}
-                />
-              ))
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filteredTournaments.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    {searchTerm ? 'Geen toernooien gevonden die voldoen aan de zoekterm.' : 'Nog geen toernooien toegevoegd.'}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredTournaments.map((tournament) => (
+                  <TournamentRow
+                    key={tournament.id}
+                    tournament={tournament}
+                    editingTournament={editingTournament}
+                    setEditingTournament={setEditingTournament}
+                    onAssignPlayers={onAssignPlayers}
+                    onUpdateTournament={onUpdateTournament}
+                    onDeleteTournament={onDeleteTournament}
+                    isUpdating={isUpdating}
+                    isDeleting={isDeleting}
+                  />
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );
