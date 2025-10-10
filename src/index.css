@@ -85,7 +85,15 @@
   }
 
   body {
-    @apply bg-background text-foreground text-base leading-relaxed;
+    @apply bg-background text-foreground;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  @media (min-width: 769px) {
+    body {
+      font-size: 18px;
+    }
   }
 
   .mobile-menu-item {

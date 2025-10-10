@@ -15,6 +15,7 @@ import { TournamentStatusBadge } from './TournamentStatusBadge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TournamentRowProps {
   tournament: Tournament;
@@ -42,6 +43,7 @@ export function TournamentRow({
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+  const { isSuperAdmin } = useAuth();
 
   const handleCreateSchedule = () => {
     navigate(`/schedule/${tournament.id}`);
@@ -53,6 +55,16 @@ export function TournamentRow({
 
   const handleToggleStatus = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    if (!isSuperAdmin()) {
+      toast({
+        title: 'Geen toegang',
+        description: 'Alleen superadmins kunnen de toernooi status wijzigen',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const newStatus = tournament.status === 'completed' ? 'in_progress' : 'completed';
     setIsTogglingStatus(true);
 

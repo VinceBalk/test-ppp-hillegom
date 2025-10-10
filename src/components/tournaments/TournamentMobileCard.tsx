@@ -8,6 +8,7 @@ import { TournamentStatusBadge } from './TournamentStatusBadge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TournamentMobileCardProps {
   tournament: Tournament;
@@ -28,8 +29,18 @@ export function TournamentMobileCard({
 }: TournamentMobileCardProps) {
   const { toast } = useToast();
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+  const { isSuperAdmin } = useAuth();
 
   const handleToggleStatus = async () => {
+    if (!isSuperAdmin()) {
+      toast({
+        title: 'Geen toegang',
+        description: 'Alleen superadmins kunnen de toernooi status wijzigen',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const newStatus = tournament.status === 'completed' ? 'in_progress' : 'completed';
     setIsTogglingStatus(true);
 

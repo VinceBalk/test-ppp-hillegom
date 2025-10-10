@@ -9,6 +9,7 @@ import { getShortTeamName } from "@/utils/matchUtils";
 import MatchSimulator from "./MatchSimulator";
 import SavedMatchEditor from "./SavedMatchEditor";
 import MatchScoreInput from "./MatchScoreInput";
+import QuickScoreInput from "./QuickScoreInput";
 
 interface MatchCardProps {
   match: Match;
@@ -102,16 +103,19 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament }
   if (showScoreInput) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold">Score Invoeren</h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-lg font-semibold">Snelle Score Invoer</h3>
           <Button variant="outline" size="sm" onClick={() => setShowScoreInput(false)}>
-            Terug naar overzicht
+            Annuleren
           </Button>
         </div>
-        <MatchScoreInput
+        <QuickScoreInput
           match={match as any}
           tournament={effectiveTournament}
-          round={round}
+          onSaved={() => {
+            setShowScoreInput(false);
+            window.location.reload();
+          }}
         />
       </div>
     );
