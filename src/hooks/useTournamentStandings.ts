@@ -20,9 +20,13 @@ interface RoundStats {
   specials_count: number;
 }
 
-export const useTournamentStandings = (tournamentId?: string, roundNumber?: number) => {
+export const useTournamentStandings = (
+  tournamentId?: string, 
+  roundNumber?: number,
+  mode: 'cumulative' | 'round-only' = 'cumulative'
+) => {
   return useQuery({
-    queryKey: ['tournament-standings', tournamentId, roundNumber],
+    queryKey: ['tournament-standings', tournamentId, roundNumber, mode],
     queryFn: async () => {
       if (!tournamentId) return [];
 
@@ -68,9 +72,17 @@ export const useTournamentStandings = (tournamentId?: string, roundNumber?: numb
       allData?.forEach((stat: any) => {
         const playerId = stat.player_id;
         
-        // Filter based on roundNumber if specified
-        if (roundNumber && stat.round_number > roundNumber) {
-          return;
+        // Filter based on mode and roundNumber
+        if (mode === 'round-only' && roundNumber) {
+          // Show only stats from this specific round
+          if (stat.round_number !== roundNumber) {
+            return;
+          }
+        } else if (mode === 'cumulative' && roundNumber) {
+          // Show cumulative stats up to and including this round
+          if (stat.round_number > roundNumber) {
+            return;
+          }
         }
 
         if (!playerMap.has(playerId)) {

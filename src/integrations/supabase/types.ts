@@ -957,7 +957,7 @@ export type Database = {
         }[]
       }
       get_tournament_specials_ranking: {
-        Args: { p_tournament_id: string }
+        Args: { p_round_number?: number; p_tournament_id: string }
         Returns: {
           player_id: string
           player_name: string

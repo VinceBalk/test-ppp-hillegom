@@ -14,10 +14,12 @@ export default function TournamentStandings() {
   const navigate = useNavigate();
   const { data: tournament, isLoading: loadingTournament } = useTournament(tournamentId);
   const [selectedRound, setSelectedRound] = useState<number | undefined>(undefined);
+  const [viewMode, setViewMode] = useState<'cumulative' | 'round-only'>('cumulative');
   
   const { data: standings = [], isLoading: loadingStandings } = useTournamentStandings(
     tournamentId,
-    selectedRound
+    selectedRound,
+    viewMode
   );
 
   if (loadingTournament || loadingStandings) {
@@ -50,10 +52,17 @@ export default function TournamentStandings() {
   const totalRounds = tournament.total_rounds || 3;
   const rounds = Array.from({ length: totalRounds }, (_, i) => i + 1);
 
-  const renderStandingsCard = (title: string, showTrend: boolean = false) => (
+  const renderStandingsCard = (
+    title: string, 
+    showTrend: boolean = false,
+    description?: string
+  ) => (
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">{title}</CardTitle>
+        {description && (
+          <p className="text-sm text-muted-foreground mt-1">{description}</p>
+        )}
       </CardHeader>
       <CardContent>
         {standings.length === 0 ? (
@@ -146,7 +155,13 @@ export default function TournamentStandings() {
       <Tabs 
         defaultValue="all" 
         onValueChange={(value) => {
-          setSelectedRound(value === 'all' ? undefined : parseInt(value));
+          if (value === 'all') {
+            setSelectedRound(undefined);
+            setViewMode('cumulative');
+          } else {
+            setSelectedRound(parseInt(value));
+            setViewMode('cumulative'); // Default to cumulative when switching rounds
+          }
         }}
       >
         <TabsList className="w-full grid grid-cols-4 h-auto">
@@ -161,14 +176,62 @@ export default function TournamentStandings() {
         </TabsList>
 
         <TabsContent value="all" className="space-y-4 mt-4">
-          {renderStandingsCard('Totale Stand', false)}
-          <ChefSpecialRanking tournamentId={tournamentId!} />
+          {renderStandingsCard(
+            'Totale Stand', 
+            false,
+            'Cumulatief overzicht van alle gespeelde rondes'
+          )}
+          <ChefSpecialRanking 
+            tournamentId={tournamentId!} 
+            title="Chef Special Ranking (Totaal)"
+          />
         </TabsContent>
 
         {rounds.map((round) => (
           <TabsContent key={round} value={round.toString()} className="space-y-4 mt-4">
-            {renderStandingsCard(`Stand na Ronde ${round}`, round > 1)}
-            <ChefSpecialRanking tournamentId={tournamentId!} />
+            <div className="flex gap-2 mb-4">
+              <Button
+                variant={viewMode === 'cumulative' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('cumulative')}
+              >
+                Cumulatief
+              </Button>
+              <Button
+                variant={viewMode === 'round-only' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('round-only')}
+              >
+                Alleen Ronde {round}
+              </Button>
+            </div>
+
+            {viewMode === 'cumulative' ? (
+              <>
+                {renderStandingsCard(
+                  `Stand na Ronde ${round}`, 
+                  round > 1,
+                  `Cumulatief totaal tot en met ronde ${round}`
+                )}
+                <ChefSpecialRanking 
+                  tournamentId={tournamentId!}
+                  title={`Chef Special Ranking (t/m Ronde ${round})`}
+                />
+              </>
+            ) : (
+              <>
+                {renderStandingsCard(
+                  `Resultaten Ronde ${round}`,
+                  false,
+                  `Alleen de resultaten van ronde ${round}`
+                )}
+                <ChefSpecialRanking 
+                  tournamentId={tournamentId!}
+                  roundNumber={round}
+                  title={`Chef Special Ranking (Ronde ${round})`}
+                />
+              </>
+            )}
           </TabsContent>
         ))}
       </Tabs>

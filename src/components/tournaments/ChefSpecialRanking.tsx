@@ -5,10 +5,16 @@ import { useChefSpecialRanking } from "@/hooks/useChefSpecialRanking";
 
 interface ChefSpecialRankingProps {
   tournamentId: string;
+  roundNumber?: number;
+  title?: string;
 }
 
-export default function ChefSpecialRanking({ tournamentId }: ChefSpecialRankingProps) {
-  const { data: ranking = [], isLoading } = useChefSpecialRanking(tournamentId);
+export default function ChefSpecialRanking({ 
+  tournamentId, 
+  roundNumber,
+  title = "Chef Special Ranking" 
+}: ChefSpecialRankingProps) {
+  const { data: ranking = [], isLoading } = useChefSpecialRanking(tournamentId, roundNumber);
 
   if (isLoading) {
     return (
@@ -16,7 +22,7 @@ export default function ChefSpecialRanking({ tournamentId }: ChefSpecialRankingP
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5" />
-            Chef Special Ranking
+            {title}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -32,7 +38,7 @@ export default function ChefSpecialRanking({ tournamentId }: ChefSpecialRankingP
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5" />
-            Chef Special Ranking
+            {title}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -49,7 +55,7 @@ export default function ChefSpecialRanking({ tournamentId }: ChefSpecialRankingP
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Trophy className="h-5 w-5" />
-          Chef Special Ranking
+          {title}
         </CardTitle>
       </CardHeader>
       <CardContent>
