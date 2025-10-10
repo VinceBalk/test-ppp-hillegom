@@ -26,11 +26,11 @@ export default function CourtsOverview({ leftGroupMatches, rightGroupMatches }: 
   const leftGroupCourts = groupMatchesByCourt(leftGroupMatches);
   const rightGroupCourts = groupMatchesByCourt(rightGroupMatches);
 
-  // Get all unique court names from both groups
-  const allCourtNames = Array.from(new Set([
-    ...Object.keys(leftGroupCourts),
-    ...Object.keys(rightGroupCourts)
-  ])).sort();
+  // Get all unique court names and sort them
+  const leftCourtNames = Object.keys(leftGroupCourts).sort();
+  const rightCourtNames = Object.keys(rightGroupCourts).sort();
+
+  const hasMatches = leftCourtNames.length > 0 || rightCourtNames.length > 0;
 
   return (
     <div className="space-y-6">
@@ -39,38 +39,43 @@ export default function CourtsOverview({ leftGroupMatches, rightGroupMatches }: 
         <p className="text-gray-600">Wedstrijden gegroepeerd per baan in oplopende volgorde</p>
       </div>
 
-      {allCourtNames.length === 0 ? (
+      {!hasMatches ? (
         <div className="text-center py-12 border-2 border-dashed rounded-lg bg-gray-50">
           <p className="text-lg text-muted-foreground">Geen banen gevonden</p>
         </div>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
-          {allCourtNames.map((courtName) => {
-            const leftMatches = leftGroupCourts[courtName] || [];
-            const rightMatches = rightGroupCourts[courtName] || [];
-            const totalMatches = leftMatches.length + rightMatches.length;
+        <div className="grid-2">
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-foreground border-b pb-2">Linker rijtje</h3>
+            {leftCourtNames.length > 0 ? (
+              leftCourtNames.map((courtName) => (
+                <CourtMatchList
+                  key={courtName}
+                  courtName={courtName}
+                  matches={leftGroupCourts[courtName]}
+                  groupColor="bg-green-500"
+                />
+              ))
+            ) : (
+              <p className="text-muted-foreground text-sm">Geen wedstrijden</p>
+            )}
+          </div>
 
-            if (totalMatches === 0) return null;
-
-            return (
-              <div key={courtName} className="space-y-4">
-                {leftMatches.length > 0 && (
-                  <CourtMatchList
-                    courtName={`${courtName} - Linker rijtje`}
-                    matches={leftMatches}
-                    groupColor="bg-green-500"
-                  />
-                )}
-                {rightMatches.length > 0 && (
-                  <CourtMatchList
-                    courtName={`${courtName} - Rechter rijtje`}
-                    matches={rightMatches}
-                    groupColor="bg-purple-500"
-                  />
-                )}
-              </div>
-            );
-          })}
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-foreground border-b pb-2">Rechter rijtje</h3>
+            {rightCourtNames.length > 0 ? (
+              rightCourtNames.map((courtName) => (
+                <CourtMatchList
+                  key={courtName}
+                  courtName={courtName}
+                  matches={rightGroupCourts[courtName]}
+                  groupColor="bg-purple-500"
+                />
+              ))
+            ) : (
+              <p className="text-muted-foreground text-sm">Geen wedstrijden</p>
+            )}
+          </div>
         </div>
       )}
     </div>
