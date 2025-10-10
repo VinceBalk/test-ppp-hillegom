@@ -54,14 +54,14 @@ const App = () => {
                 <Route path="players" element={<Players />} />
                 <Route path="players/:id" element={<PlayerDetail />} />
                 <Route path="tournaments" element={<Tournaments />} />
-                <Route path="tournaments/:id/standings" element={<TournamentStandings />} />
+                
                 <Route path="tournaments/:id/assign-players" element={<AssignPlayers />} />
                 <Route path="matches" element={<Matches />} />
                 <Route path="schedule" element={<Schedule />} />
                 <Route path="schedule/:tournamentId" element={<Schedule />} />
                 <Route path="standings" element={<Standings />} />
                 <Route path="tournaments/:tournamentId/standings" element={<Standings />} />
-                <Route path="tournament-standings/:tournamentId" element={<TournamentStandings />} />
+                
                 <Route path="scores" element={<Scores />} />
                 <Route path="scores/:matchId" element={<Scores />} />
                 <Route path="specials" element={<Specials />} />
