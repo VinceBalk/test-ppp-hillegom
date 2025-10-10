@@ -16,9 +16,10 @@ interface MatchesListProps {
     status: "not_started" | "active" | "completed";
     is_simulation: boolean;
   };
+  onRefetch?: () => void;
 }
 
-export default function MatchesList({ matches, editMode, selectedTournamentId, tournament }: MatchesListProps) {
+export default function MatchesList({ matches, editMode, selectedTournamentId, tournament, onRefetch }: MatchesListProps) {
   const [showNumberManager, setShowNumberManager] = useState(false);
   const [selectedRound, setSelectedRound] = useState<number | null>(null);
 
@@ -150,6 +151,7 @@ export default function MatchesList({ matches, editMode, selectedTournamentId, t
                       match={match}
                       matchNumberInCourtRound={index + 1}
                       tournament={tournament}
+                      onRefetch={onRefetch}
                     />
                   ))}
                 </div>
@@ -181,6 +183,7 @@ export default function MatchesList({ matches, editMode, selectedTournamentId, t
                       match={match}
                       matchNumberInCourtRound={index + 1}
                       tournament={tournament}
+                      onRefetch={onRefetch}
                     />
                   ))}
                 </div>

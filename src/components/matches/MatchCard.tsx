@@ -20,9 +20,10 @@ interface MatchCardProps {
     status: "not_started" | "active" | "completed";
     is_simulation: boolean;
   };
+  onRefetch?: () => void;
 }
 
-export default function MatchCard({ match, matchNumberInCourtRound, tournament }: MatchCardProps) {
+export default function MatchCard({ match, matchNumberInCourtRound, tournament, onRefetch }: MatchCardProps) {
   const navigate = useNavigate();
   const [showSimulator, setShowSimulator] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
@@ -123,6 +124,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament }
           match={match as any}
           tournament={effectiveTournament}
           onSaved={() => setShowScoreInput(false)}
+          onRefetch={onRefetch}
         />
       </div>
     );

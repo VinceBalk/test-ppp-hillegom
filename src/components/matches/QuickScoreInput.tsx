@@ -31,9 +31,10 @@ type Props = {
   match: Match;
   tournament: Tournament;
   onSaved?: () => void;
+  onRefetch?: () => void;
 };
 
-export default function QuickScoreInput({ match, tournament, onSaved }: Props) {
+export default function QuickScoreInput({ match, tournament, onSaved, onRefetch }: Props) {
   const { toast } = useToast();
   const [selectedScore, setSelectedScore] = useState<number | null>(
     match.team1_score ?? null
@@ -95,6 +96,10 @@ export default function QuickScoreInput({ match, tournament, onSaved }: Props) {
         description: `Stand: ${score} - ${team2Score}`,
         duration: 2000,
       });
+
+      if (onRefetch) {
+        await onRefetch();
+      }
 
       setLoading(false);
     } catch (error: any) {
@@ -197,9 +202,13 @@ export default function QuickScoreInput({ match, tournament, onSaved }: Props) {
         duration: 2000,
       });
 
+      if (onRefetch) {
+        await onRefetch();
+      }
+
       setTimeout(() => {
         if (onSaved) onSaved();
-      }, 800);
+      }, 300);
     } catch (error: any) {
       toast({
         title: "Fout bij voltooien",

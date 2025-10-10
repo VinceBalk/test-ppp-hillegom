@@ -166,6 +166,7 @@ export default function MatchesContent({
           editMode={editMode}
           selectedTournamentId={selectedTournamentId}
           tournament={tournamentForMatches}
+          onRefetch={refetch}
         />
       )}
 
