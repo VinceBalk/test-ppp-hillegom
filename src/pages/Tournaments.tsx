@@ -36,7 +36,7 @@ export default function Tournaments() {
   };
 
   const handleViewStandings = (tournamentId: string) => {
-    navigate(`/standings?tournament=${tournamentId}`);
+    navigate(`/tournaments/${tournamentId}/standings`);
   };
 
   if (isLoading) {
