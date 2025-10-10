@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Trophy } from "lucide-react";
+import { Trophy, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface PlayerStats {
@@ -16,6 +16,8 @@ interface PlayerStats {
   specials_count: number;
   position: number;
   row_side: string;
+  previous_position?: number;
+  trend?: 'up' | 'down' | 'same';
 }
 
 interface Tournament {
@@ -44,6 +46,7 @@ export default function Standings() {
   const [leftRowStandings, setLeftRowStandings] = useState<PlayerStats[]>([]);
   const [rightRowStandings, setRightRowStandings] = useState<PlayerStats[]>([]);
   const [chefSpecials, setChefSpecials] = useState<ChefSpecial[]>([]);
+  const [previousRoundStandings, setPreviousRoundStandings] = useState<{left: PlayerStats[], right: PlayerStats[]}>({left: [], right: []});
   
   const [loading, setLoading] = useState(true);
 
@@ -92,6 +95,7 @@ export default function Standings() {
   const fetchStandings = async () => {
     setLoading(true);
 
+    // Fetch current round/all rounds standings
     let query = supabase
       .from("player_tournament_stats")
       .select(`
@@ -99,15 +103,34 @@ export default function Standings() {
         games_won,
         games_lost,
         tiebreaker_specials_count,
+        round_number,
         players:player_id (name, row_side)
       `)
       .eq("tournament_id", selectedTournament);
 
     if (selectedRound !== "all") {
-      query = query.eq("round_number", parseInt(selectedRound));
+      query = query.lte("round_number", parseInt(selectedRound));
     }
 
     const { data } = await query;
+
+    // Also fetch previous round data if we're viewing a specific round > 1
+    let previousData = null;
+    if (selectedRound !== "all" && parseInt(selectedRound) > 1) {
+      const { data: prevData } = await supabase
+        .from("player_tournament_stats")
+        .select(`
+          player_id,
+          games_won,
+          games_lost,
+          tiebreaker_specials_count,
+          players:player_id (name, row_side)
+        `)
+        .eq("tournament_id", selectedTournament)
+        .lte("round_number", parseInt(selectedRound) - 1);
+      
+      previousData = prevData;
+    }
 
     if (data) {
       const playerMap: { [key: string]: { name: string; won: number; lost: number; specials: number; row_side: string } } = {};
@@ -127,6 +150,24 @@ export default function Standings() {
         playerMap[d.player_id].specials += d.tiebreaker_specials_count || 0;
       });
 
+      // Process previous round data
+      let previousPlayerMap: { [key: string]: { won: number; lost: number; specials: number; row_side: string } } = {};
+      if (previousData) {
+        previousData.forEach(d => {
+          if (!previousPlayerMap[d.player_id]) {
+            previousPlayerMap[d.player_id] = {
+              row_side: (d.players as any)?.row_side || "left",
+              won: 0,
+              lost: 0,
+              specials: 0,
+            };
+          }
+          previousPlayerMap[d.player_id].won += d.games_won;
+          previousPlayerMap[d.player_id].lost += d.games_lost;
+          previousPlayerMap[d.player_id].specials += d.tiebreaker_specials_count || 0;
+        });
+      }
+
       const allStats: PlayerStats[] = Object.entries(playerMap)
         .map(([id, p]) => ({
           player_id: id,
@@ -137,6 +178,42 @@ export default function Standings() {
           row_side: p.row_side,
           position: 0,
         }));
+
+      // Calculate previous positions if we have previous data
+      const calculatePreviousPositions = (stats: PlayerStats[], side: string) => {
+        if (!previousData) return stats;
+        
+        const previousStats = Object.entries(previousPlayerMap)
+          .filter(([_, p]) => p.row_side === side)
+          .map(([id, p]) => ({
+            player_id: id,
+            won: p.won,
+            lost: p.lost,
+            specials: p.specials,
+          }))
+          .sort((a, b) => {
+            if (b.won !== a.won) return b.won - a.won;
+            return b.specials - a.specials;
+          });
+
+        return stats.map(s => {
+          const prevIndex = previousStats.findIndex(p => p.player_id === s.player_id);
+          const previousPosition = prevIndex >= 0 ? prevIndex + 1 : undefined;
+          
+          let trend: 'up' | 'down' | 'same' | undefined = undefined;
+          if (previousPosition !== undefined) {
+            if (s.position < previousPosition) trend = 'up';
+            else if (s.position > previousPosition) trend = 'down';
+            else trend = 'same';
+          }
+          
+          return {
+            ...s,
+            previous_position: previousPosition,
+            trend,
+          };
+        });
+      };
 
       const leftStats = allStats
         .filter(s => s.row_side === "left")
@@ -154,8 +231,8 @@ export default function Standings() {
         })
         .map((s, idx) => ({ ...s, position: idx + 1 }));
 
-      setLeftRowStandings(leftStats);
-      setRightRowStandings(rightStats);
+      setLeftRowStandings(calculatePreviousPositions(leftStats, "left"));
+      setRightRowStandings(calculatePreviousPositions(rightStats, "right"));
     }
 
     setLoading(false);
@@ -193,6 +270,8 @@ export default function Standings() {
       );
     }
 
+    const showTrend = selectedRound !== "all" && parseInt(selectedRound) > 1;
+    
     return (
       <div className="space-y-3">
         <h3 className="text-lg font-semibold text-center">{title}</h3>
@@ -200,6 +279,7 @@ export default function Standings() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-16">#</TableHead>
+              {showTrend && <TableHead className="w-12"></TableHead>}
               <TableHead>Speler</TableHead>
               <TableHead className="text-center w-20">Won</TableHead>
               <TableHead className="text-center w-20">Verl</TableHead>
@@ -215,6 +295,19 @@ export default function Standings() {
                   {player.position === 3 && <span className="text-2xl">🥉</span>}
                   {player.position > 3 && <span className="text-base">{player.position}</span>}
                 </TableCell>
+                {showTrend && (
+                  <TableCell>
+                    {player.trend === 'up' && (
+                      <TrendingUp className="h-5 w-5 text-green-600" />
+                    )}
+                    {player.trend === 'down' && (
+                      <TrendingDown className="h-5 w-5 text-red-600" />
+                    )}
+                    {player.trend === 'same' && (
+                      <Minus className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </TableCell>
+                )}
                 <TableCell 
                   className="font-bold text-lg text-primary hover:underline cursor-pointer"
                   onClick={() => navigate(`/players/${player.player_id}`)}
