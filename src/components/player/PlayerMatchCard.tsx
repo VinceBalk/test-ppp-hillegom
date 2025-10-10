@@ -31,9 +31,16 @@ export default function PlayerMatchCard({ match, playerId }: PlayerMatchCardProp
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3 pt-5">
         <div className="flex justify-between items-start">
-          <Badge variant="secondary" className="text-xs">
-            Ronde {match.round_number}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="text-xs">
+              Ronde {match.round_number}
+            </Badge>
+            {match.match_number && (
+              <Badge variant="outline" className="text-xs">
+                #{match.match_number}
+              </Badge>
+            )}
+          </div>
           <div className="text-xs text-muted-foreground">
             {match.court?.name || (match.court_number ? `Baan ${match.court_number}` : "Baan onbekend")}
           </div>

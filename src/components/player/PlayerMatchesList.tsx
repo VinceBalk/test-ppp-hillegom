@@ -34,13 +34,15 @@ export default function PlayerMatchesList({ matches, playerId }: PlayerMatchesLi
               </div>
               
               <div className="space-y-3">
-                {roundMatches.map((match) => (
-                  <PlayerMatchCard 
-                    key={match.id} 
-                    match={match} 
-                    playerId={playerId}
-                  />
-                ))}
+                {roundMatches
+                  .sort((a, b) => (a.match_number || 0) - (b.match_number || 0))
+                  .map((match) => (
+                    <PlayerMatchCard 
+                      key={match.id} 
+                      match={match} 
+                      playerId={playerId}
+                    />
+                  ))}
               </div>
             </div>
           );
