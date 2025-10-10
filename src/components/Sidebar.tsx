@@ -61,12 +61,12 @@ export function Sidebar() {
               <NavLink
                 to={to}
                 className={({ isActive }) =>
-                  `flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground ${
+                  `flex items-center gap-3 px-4 py-3 rounded-md text-base font-medium transition-colors hover:bg-accent hover:text-accent-foreground ${
                     isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
                   }`
                 }
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className="h-5 w-5 shrink-0" />
                 {label}
               </NavLink>
             </li>
@@ -75,9 +75,9 @@ export function Sidebar() {
       </nav>
 
       {/* Footer met e-mailadres of user info */}
-      <div className="border-t border-border p-4 text-xs text-muted-foreground">
-        <div className="text-[13px] font-medium">{user?.email || 'Gebruiker'}</div>
-        <div className="text-[12px]">
+      <div className="border-t border-border p-4 text-muted-foreground">
+        <div className="text-sm font-medium">{user?.email || 'Gebruiker'}</div>
+        <div className="text-sm">
           {adminUser?.is_super_admin ? 'Super Admin' : (profile?.role || 'Speler')}
         </div>
       </div>
