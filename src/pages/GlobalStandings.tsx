@@ -12,6 +12,7 @@ interface PlayerStats {
   player_name: string;
   games_won: number;
   games_lost: number;
+  specials_count: number;
   position: number;
 }
 
@@ -86,12 +87,13 @@ export default function GlobalStandings() {
         player_id,
         games_won,
         games_lost,
+        tiebreaker_specials_count,
         players:player_id (name)
       `);
 
     if (!error && data) {
       // Aggregate across ALL tournaments and rounds
-      const playerMap: { [key: string]: { name: string; won: number; lost: number } } = {};
+      const playerMap: { [key: string]: { name: string; won: number; lost: number; specials: number } } = {};
 
       data.forEach(d => {
         if (!playerMap[d.player_id]) {
@@ -99,10 +101,12 @@ export default function GlobalStandings() {
             name: (d.players as any)?.name || "Onbekend",
             won: 0,
             lost: 0,
+            specials: 0,
           };
         }
         playerMap[d.player_id].won += d.games_won;
         playerMap[d.player_id].lost += d.games_lost;
+        playerMap[d.player_id].specials += d.tiebreaker_specials_count || 0;
       });
 
       const stats: PlayerStats[] = Object.entries(playerMap)
@@ -111,9 +115,13 @@ export default function GlobalStandings() {
           player_name: p.name,
           games_won: p.won,
           games_lost: p.lost,
+          specials_count: p.specials,
           position: 0,
         }))
-        .sort((a, b) => b.games_won - a.games_won)
+        .sort((a, b) => {
+          if (b.games_won !== a.games_won) return b.games_won - a.games_won;
+          return b.specials_count - a.specials_count;
+        })
         .map((s, idx) => ({ ...s, position: idx + 1 }));
 
       setTotalStandings(stats);
@@ -131,12 +139,13 @@ export default function GlobalStandings() {
         player_id,
         games_won,
         games_lost,
+        tiebreaker_specials_count,
         players:player_id (name)
       `)
       .eq("tournament_id", selectedTournament);
 
     if (!error && data) {
-      const playerMap: { [key: string]: { name: string; won: number; lost: number } } = {};
+      const playerMap: { [key: string]: { name: string; won: number; lost: number; specials: number } } = {};
 
       data.forEach(d => {
         if (!playerMap[d.player_id]) {
@@ -144,10 +153,12 @@ export default function GlobalStandings() {
             name: (d.players as any)?.name || "Onbekend",
             won: 0,
             lost: 0,
+            specials: 0,
           };
         }
         playerMap[d.player_id].won += d.games_won;
         playerMap[d.player_id].lost += d.games_lost;
+        playerMap[d.player_id].specials += d.tiebreaker_specials_count || 0;
       });
 
       const stats: PlayerStats[] = Object.entries(playerMap)
@@ -156,9 +167,13 @@ export default function GlobalStandings() {
           player_name: p.name,
           games_won: p.won,
           games_lost: p.lost,
+          specials_count: p.specials,
           position: 0,
         }))
-        .sort((a, b) => b.games_won - a.games_won)
+        .sort((a, b) => {
+          if (b.games_won !== a.games_won) return b.games_won - a.games_won;
+          return b.specials_count - a.specials_count;
+        })
         .map((s, idx) => ({ ...s, position: idx + 1 }));
 
       setTournamentStandings(stats);
@@ -176,6 +191,7 @@ export default function GlobalStandings() {
         player_id,
         games_won,
         games_lost,
+        tiebreaker_specials_count,
         players:player_id (name)
       `)
       .eq("tournament_id", selectedTournament)
@@ -188,9 +204,13 @@ export default function GlobalStandings() {
           player_name: (d.players as any)?.name || "Onbekend",
           games_won: d.games_won,
           games_lost: d.games_lost,
+          specials_count: d.tiebreaker_specials_count || 0,
           position: 0,
         }))
-        .sort((a, b) => b.games_won - a.games_won)
+        .sort((a, b) => {
+          if (b.games_won !== a.games_won) return b.games_won - a.games_won;
+          return b.specials_count - a.specials_count;
+        })
         .map((s, idx) => ({ ...s, position: idx + 1 }));
 
       setRoundStandings(stats);
@@ -225,6 +245,7 @@ export default function GlobalStandings() {
             <TableHead>Speler</TableHead>
             <TableHead className="text-right">Gewonnen</TableHead>
             <TableHead className="text-right">Verloren</TableHead>
+            <TableHead className="text-right">Specials</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -242,6 +263,9 @@ export default function GlobalStandings() {
               </TableCell>
               <TableCell className="text-right text-red-600">
                 {player.games_lost}
+              </TableCell>
+              <TableCell className="text-right font-semibold text-orange-600">
+                {player.specials_count}
               </TableCell>
             </TableRow>
           ))}
