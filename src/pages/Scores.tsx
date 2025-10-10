@@ -200,6 +200,13 @@ export default function Scores() {
     return "Geen baan";
   };
 
+  const getPlayerSpecialsCount = (match: MatchDetail, playerName: string) => {
+    if (!match.match_specials) return 0;
+    return match.match_specials
+      .filter(special => special.player?.name === playerName)
+      .reduce((total, special) => total + special.count, 0);
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -457,9 +464,23 @@ export default function Scores() {
                   <div className="text-left">
                     <p className="text-xs text-muted-foreground mb-1">Team 1</p>
                     <div className="space-y-0.5">
-                      <p className="font-medium text-sm leading-tight">{getPlayerName(match.team1_player1)}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-medium text-sm leading-tight">{getPlayerName(match.team1_player1)}</p>
+                        {getPlayerSpecialsCount(match, getPlayerName(match.team1_player1)) > 0 && (
+                          <span className="text-xs font-semibold text-orange-600">
+                            ({getPlayerSpecialsCount(match, getPlayerName(match.team1_player1))})
+                          </span>
+                        )}
+                      </div>
                       {match.team1_player2 && (
-                        <p className="font-medium text-sm leading-tight">{getPlayerName(match.team1_player2)}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-medium text-sm leading-tight">{getPlayerName(match.team1_player2)}</p>
+                          {getPlayerSpecialsCount(match, getPlayerName(match.team1_player2)) > 0 && (
+                            <span className="text-xs font-semibold text-orange-600">
+                              ({getPlayerSpecialsCount(match, getPlayerName(match.team1_player2))})
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -475,28 +496,27 @@ export default function Scores() {
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground mb-1">Team 2</p>
                     <div className="space-y-0.5">
-                      <p className="font-medium text-sm leading-tight">{getPlayerName(match.team2_player1)}</p>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <p className="font-medium text-sm leading-tight">{getPlayerName(match.team2_player1)}</p>
+                        {getPlayerSpecialsCount(match, getPlayerName(match.team2_player1)) > 0 && (
+                          <span className="text-xs font-semibold text-orange-600">
+                            ({getPlayerSpecialsCount(match, getPlayerName(match.team2_player1))})
+                          </span>
+                        )}
+                      </div>
                       {match.team2_player2 && (
-                        <p className="font-medium text-sm leading-tight">{getPlayerName(match.team2_player2)}</p>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <p className="font-medium text-sm leading-tight">{getPlayerName(match.team2_player2)}</p>
+                          {getPlayerSpecialsCount(match, getPlayerName(match.team2_player2)) > 0 && (
+                            <span className="text-xs font-semibold text-orange-600">
+                              ({getPlayerSpecialsCount(match, getPlayerName(match.team2_player2))})
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
                 </div>
-
-                {/* Specials Summary */}
-                {match.match_specials && match.match_specials.length > 0 && (
-                  <div className="mt-3 pt-3 border-t">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        {match.match_specials.reduce((total, special) => total + special.count, 0)} special{match.match_specials.reduce((total, special) => total + special.count, 0) !== 1 ? 's' : ''}
-                      </span>
-                      <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
-                        <Eye className="h-3 w-3 mr-1" />
-                        Details
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           ))}
