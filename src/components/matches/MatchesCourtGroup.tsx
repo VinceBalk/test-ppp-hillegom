@@ -21,11 +21,10 @@ export default function MatchesCourtGroup({
         {courtName}
       </h3>
       <div className="space-y-4">
-        {matches.map((match, index) => (
+        {matches.map((match) => (
           <MatchCard 
             key={match.id} 
-            match={match} 
-            matchNumberInCourtRound={index + 1} // This gives 1, 2, 3... per court/round
+            match={match}
           />
         ))}
       </div>
