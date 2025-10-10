@@ -60,6 +60,7 @@ const App = () => {
                 <Route path="schedule" element={<Schedule />} />
                 <Route path="schedule/:tournamentId" element={<Schedule />} />
                 <Route path="standings" element={<Standings />} />
+                <Route path="tournaments/:tournamentId/standings" element={<Standings />} />
                 <Route path="tournament-standings/:tournamentId" element={<TournamentStandings />} />
                 <Route path="scores" element={<Scores />} />
                 <Route path="scores/:matchId" element={<Scores />} />

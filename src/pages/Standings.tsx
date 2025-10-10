@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -34,9 +34,8 @@ interface ChefSpecial {
 }
 
 export default function Standings() {
-  const [searchParams] = useSearchParams();
+  const { tournamentId } = useParams();
   const navigate = useNavigate();
-  const tournamentParam = searchParams.get("tournament");
   
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [selectedTournament, setSelectedTournament] = useState<string>("");
@@ -55,10 +54,12 @@ export default function Standings() {
   }, []);
 
   useEffect(() => {
-    if (tournamentParam && tournaments.length > 0) {
-      setSelectedTournament(tournamentParam);
+    if (tournamentId) {
+      setSelectedTournament(tournamentId);
+    } else if (tournaments.length > 0) {
+      setSelectedTournament(tournaments[0].id);
     }
-  }, [tournamentParam, tournaments]);
+  }, [tournamentId, tournaments]);
 
   useEffect(() => {
     if (selectedTournament) {
@@ -72,11 +73,14 @@ export default function Standings() {
     const { data } = await supabase
       .from("tournaments")
       .select("id, name")
+      .in("status", ["active", "completed"])
       .order("created_at", { ascending: false });
 
     if (data && data.length > 0) {
       setTournaments(data);
-      setSelectedTournament(data[0].id);
+      if (!tournamentId) {
+        setSelectedTournament(data[0].id);
+      }
     }
   };
 
