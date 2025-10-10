@@ -441,7 +441,7 @@ export default function Scores() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {filteredMatches.map((match) => {
             const team1Player1Specials = getPlayerSpecialsCount(match, getPlayerName(match.team1_player1));
             const team1Player2Specials = match.team1_player2 ? getPlayerSpecialsCount(match, getPlayerName(match.team1_player2)) : 0;
@@ -450,77 +450,93 @@ export default function Scores() {
             
             return (
               <Card key={match.id} className="w-full hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(`/scores/${match.id}`)}>
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="inline-block border border-muted rounded px-2 py-0.5 text-xs font-medium mb-1">
-                        {isFilteredByRound 
-                          ? `#${match.match_number || '?'}`
-                          : `Ronde ${match.round_number} • #${match.match_number || '?'}`
-                        }
-                      </div>
-                      {match.tournament?.name && (
-                        <p className="text-sm text-muted-foreground mt-1">{match.tournament.name}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <CardHeader className="pb-3 space-y-2">
+                  {/* Rij 1: Toernooi naam - gecentreerd */}
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {match.tournament?.name || "Onbekend toernooi"}
+                    </p>
+                  </div>
+                  
+                  {/* Rij 2: Ronde info (links) en Baan (rechts) */}
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium">
+                      Ronde {match.round_number} - #{match.match_number || '?'}
+                    </span>
+                    <span className="text-muted-foreground flex items-center gap-1">
                       <MapPin className="h-3 w-3" />
                       {getCourtInfo(match)}
-                    </div>
+                    </span>
                   </div>
                 </CardHeader>
                 
-                <CardContent className="pb-3">
-                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                    {/* Team 1 - rechts uitgelijnd */}
-                    <div className="text-right">
-                      <p className="font-semibold text-sm mb-1">Team 1</p>
-                      <div className="flex items-center justify-end gap-1">
-                        <p className="text-xs text-muted-foreground">{getPlayerName(match.team1_player1)}</p>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+                    {/* Team 1 kolom - rechts uitgelijnd */}
+                    <div className="text-right space-y-2">
+                      <p className="text-xs font-semibold text-blue-600">Team 1</p>
+                      
+                      {/* Speler 1 met specials badge ACHTER naam */}
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="text-sm truncate">
+                          {getPlayerName(match.team1_player1)}
+                        </span>
                         {team1Player1Specials > 0 && (
-                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-orange-500 text-black text-xs font-bold">
+                          <span className="inline-flex items-center justify-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 shrink-0">
                             {team1Player1Specials}
                           </span>
                         )}
                       </div>
+                      
+                      {/* Speler 2 als aanwezig */}
                       {match.team1_player2 && (
-                        <div className="flex items-center justify-end gap-1">
-                          <p className="text-xs text-muted-foreground">{getPlayerName(match.team1_player2)}</p>
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-sm truncate">
+                            {getPlayerName(match.team1_player2)}
+                          </span>
                           {team1Player2Specials > 0 && (
-                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-orange-500 text-black text-xs font-bold">
+                            <span className="inline-flex items-center justify-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 shrink-0">
                               {team1Player2Specials}
                             </span>
                           )}
                         </div>
                       )}
                     </div>
-                    
-                    {/* Score - centraal */}
-                    <div className="text-center px-3">
+
+                    {/* Score centrum */}
+                    <div className="text-center px-4">
                       <p className="text-3xl font-bold tabular-nums">
                         {match.team1_score ?? 0} - {match.team2_score ?? 0}
                       </p>
                     </div>
-                    
-                    {/* Team 2 - links uitgelijnd */}
-                    <div className="text-left">
-                      <p className="font-semibold text-sm mb-1">Team 2</p>
-                      <div className="flex items-center gap-1">
-                        <p className="text-xs text-muted-foreground">{getPlayerName(match.team2_player1)}</p>
+
+                    {/* Team 2 kolom - links uitgelijnd */}
+                    <div className="text-left space-y-2">
+                      <p className="text-xs font-semibold text-red-600">Team 2</p>
+                      
+                      {/* Speler 1 met specials badge VOOR naam */}
+                      <div className="flex items-center gap-2">
                         {team2Player1Specials > 0 && (
-                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-orange-500 text-black text-xs font-bold">
+                          <span className="inline-flex items-center justify-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 shrink-0">
                             {team2Player1Specials}
                           </span>
                         )}
+                        <span className="text-sm truncate">
+                          {getPlayerName(match.team2_player1)}
+                        </span>
                       </div>
+                      
+                      {/* Speler 2 als aanwezig */}
                       {match.team2_player2 && (
-                        <div className="flex items-center gap-1">
-                          <p className="text-xs text-muted-foreground">{getPlayerName(match.team2_player2)}</p>
+                        <div className="flex items-center gap-2">
                           {team2Player2Specials > 0 && (
-                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-orange-500 text-black text-xs font-bold">
+                            <span className="inline-flex items-center justify-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 shrink-0">
                               {team2Player2Specials}
                             </span>
                           )}
+                          <span className="text-sm truncate">
+                            {getPlayerName(match.team2_player2)}
+                          </span>
                         </div>
                       )}
                     </div>
