@@ -1,8 +1,10 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trophy } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Trophy, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
 
 interface Tournament {
   id: string;
@@ -21,19 +23,18 @@ interface CurrentTournamentProps {
 }
 
 export function CurrentTournament({ tournament, onTournamentClick }: CurrentTournamentProps) {
+  const navigate = useNavigate();
+  
   return (
-    <Card 
-      className={tournament ? "cursor-pointer hover:shadow-md transition-shadow" : ""} 
-      onClick={() => tournament && onTournamentClick()}
-    >
-      <CardHeader>
+    <Card className={tournament ? "cursor-pointer hover:shadow-md transition-shadow" : ""}>
+      <CardHeader onClick={() => tournament && onTournamentClick()}>
         <CardTitle className="flex items-center gap-2">
           <Trophy className="h-5 w-5" />
           Huidig Toernooi
         </CardTitle>
         <CardDescription>{tournament?.name || 'Geen actief toernooi'}</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent onClick={() => tournament && onTournamentClick()}>
         {tournament ? (
           <div className="space-y-2">
             <p className="text-sm">
@@ -56,6 +57,22 @@ export function CurrentTournament({ tournament, onTournamentClick }: CurrentTour
           <p className="text-muted-foreground">Geen actief toernooi beschikbaar</p>
         )}
       </CardContent>
+      {tournament && (
+        <CardFooter className="pt-0">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/tournaments/${tournament.id}/standings`);
+            }}
+          >
+            <TrendingUp className="h-4 w-4 mr-2" />
+            Bekijk Stand
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 }

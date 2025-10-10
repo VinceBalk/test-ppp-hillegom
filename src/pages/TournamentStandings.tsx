@@ -5,7 +5,7 @@ import { useTournamentStandings } from '@/hooks/useTournamentStandings';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Trophy, Award } from 'lucide-react';
+import { ArrowLeft, Trophy, Award, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import ChefSpecialRanking from '@/components/tournaments/ChefSpecialRanking';
 
@@ -50,7 +50,7 @@ export default function TournamentStandings() {
   const totalRounds = tournament.total_rounds || 3;
   const rounds = Array.from({ length: totalRounds }, (_, i) => i + 1);
 
-  const renderStandingsCard = (title: string) => (
+  const renderStandingsCard = (title: string, showTrend: boolean = false) => (
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">{title}</CardTitle>
@@ -81,8 +81,28 @@ export default function TournamentStandings() {
                   }`}>
                     {index === 0 ? <Trophy className="h-4 w-4" /> : player.position}
                   </div>
+                  
+                  {showTrend && player.trend && (
+                    <div className="flex items-center justify-center w-6 h-6">
+                      {player.trend === 'up' && (
+                        <TrendingUp className="h-5 w-5 text-green-600" />
+                      )}
+                      {player.trend === 'down' && (
+                        <TrendingDown className="h-5 w-5 text-red-600" />
+                      )}
+                      {player.trend === 'same' && (
+                        <Minus className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                  )}
+                  
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{player.player_name}</p>
+                    {showTrend && player.position_change !== undefined && player.position_change !== 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {player.position_change > 0 ? `+${player.position_change}` : player.position_change} positie{Math.abs(player.position_change) !== 1 ? 's' : ''}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
@@ -141,13 +161,14 @@ export default function TournamentStandings() {
         </TabsList>
 
         <TabsContent value="all" className="space-y-4 mt-4">
-          {renderStandingsCard('Totale Stand')}
+          {renderStandingsCard('Totale Stand', false)}
           <ChefSpecialRanking tournamentId={tournamentId!} />
         </TabsContent>
 
         {rounds.map((round) => (
           <TabsContent key={round} value={round.toString()} className="space-y-4 mt-4">
-            {renderStandingsCard(`Stand na Ronde ${round}`)}
+            {renderStandingsCard(`Stand na Ronde ${round}`, round > 1)}
+            <ChefSpecialRanking tournamentId={tournamentId!} />
           </TabsContent>
         ))}
       </Tabs>

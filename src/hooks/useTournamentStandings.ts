@@ -8,6 +8,16 @@ interface PlayerStanding {
   games_lost: number;
   specials_count: number;
   position: number;
+  trend?: 'up' | 'down' | 'same';
+  position_change?: number;
+}
+
+interface RoundStats {
+  player_id: string;
+  round_number: number;
+  games_won: number;
+  games_lost: number;
+  specials_count: number;
 }
 
 export const useTournamentStandings = (tournamentId?: string, roundNumber?: number) => {
@@ -16,8 +26,8 @@ export const useTournamentStandings = (tournamentId?: string, roundNumber?: numb
     queryFn: async () => {
       if (!tournamentId) return [];
 
-      // Fetch player stats for this tournament and round
-      let query = supabase
+      // Fetch ALL stats to calculate trends
+      const { data: allData, error: allError } = await supabase
         .from('player_tournament_stats')
         .select(`
           player_id,
@@ -27,24 +37,42 @@ export const useTournamentStandings = (tournamentId?: string, roundNumber?: numb
           round_number,
           player:players(name)
         `)
-        .eq('tournament_id', tournamentId);
+        .eq('tournament_id', tournamentId)
+        .order('round_number', { ascending: true });
 
-      if (roundNumber) {
-        query = query.eq('round_number', roundNumber);
+      if (allError) {
+        console.error('Error fetching tournament standings:', allError);
+        throw allError;
       }
 
-      const { data, error } = await query;
+      // Build stats per round per player
+      const playerRoundStats = new Map<string, RoundStats[]>();
+      
+      allData?.forEach((stat: any) => {
+        const playerId = stat.player_id;
+        if (!playerRoundStats.has(playerId)) {
+          playerRoundStats.set(playerId, []);
+        }
+        playerRoundStats.get(playerId)!.push({
+          player_id: playerId,
+          round_number: stat.round_number,
+          games_won: stat.games_won || 0,
+          games_lost: stat.games_lost || 0,
+          specials_count: stat.tiebreaker_specials_count || 0,
+        });
+      });
 
-      if (error) {
-        console.error('Error fetching tournament standings:', error);
-        throw error;
-      }
-
-      // Aggregate stats per player (sum across rounds if no specific round)
+      // Calculate standings for current view (specific round or cumulative)
       const playerMap = new Map<string, PlayerStanding>();
 
-      data?.forEach((stat: any) => {
+      allData?.forEach((stat: any) => {
         const playerId = stat.player_id;
+        
+        // Filter based on roundNumber if specified
+        if (roundNumber && stat.round_number > roundNumber) {
+          return;
+        }
+
         if (!playerMap.has(playerId)) {
           playerMap.set(playerId, {
             player_id: playerId,
@@ -62,7 +90,43 @@ export const useTournamentStandings = (tournamentId?: string, roundNumber?: numb
         player.specials_count += stat.tiebreaker_specials_count || 0;
       });
 
-      // Convert to array and sort by games won, then specials
+      // Calculate standings for previous round (for trend)
+      let previousStandings: PlayerStanding[] | null = null;
+      if (roundNumber && roundNumber > 1) {
+        const prevPlayerMap = new Map<string, PlayerStanding>();
+        
+        allData?.forEach((stat: any) => {
+          if (stat.round_number >= roundNumber) return;
+          
+          const playerId = stat.player_id;
+          if (!prevPlayerMap.has(playerId)) {
+            prevPlayerMap.set(playerId, {
+              player_id: playerId,
+              player_name: stat.player?.name || 'Onbekend',
+              games_won: 0,
+              games_lost: 0,
+              specials_count: 0,
+              position: 0,
+            });
+          }
+
+          const player = prevPlayerMap.get(playerId)!;
+          player.games_won += stat.games_won || 0;
+          player.games_lost += stat.games_lost || 0;
+          player.specials_count += stat.tiebreaker_specials_count || 0;
+        });
+
+        previousStandings = Array.from(prevPlayerMap.values()).sort((a, b) => {
+          if (b.games_won !== a.games_won) return b.games_won - a.games_won;
+          return b.specials_count - a.specials_count;
+        });
+
+        previousStandings.forEach((standing, index) => {
+          standing.position = index + 1;
+        });
+      }
+
+      // Convert to array and sort
       const standings = Array.from(playerMap.values()).sort((a, b) => {
         if (b.games_won !== a.games_won) {
           return b.games_won - a.games_won;
@@ -70,9 +134,25 @@ export const useTournamentStandings = (tournamentId?: string, roundNumber?: numb
         return b.specials_count - a.specials_count;
       });
 
-      // Assign positions
+      // Assign positions and calculate trends
       standings.forEach((standing, index) => {
         standing.position = index + 1;
+
+        if (previousStandings) {
+          const prevStanding = previousStandings.find(p => p.player_id === standing.player_id);
+          if (prevStanding) {
+            const positionChange = prevStanding.position - standing.position;
+            standing.position_change = positionChange;
+            
+            if (positionChange > 0) {
+              standing.trend = 'up';
+            } else if (positionChange < 0) {
+              standing.trend = 'down';
+            } else {
+              standing.trend = 'same';
+            }
+          }
+        }
       });
 
       return standings;
