@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { checkAndUpdateTournamentStatus } from "@/utils/tournamentStatusUtils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -336,6 +337,9 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
           });
       }
     }
+
+    // Check of toernooi automatisch voltooid moet worden
+    await checkAndUpdateTournamentStatus(tournament.id);
 
     setLoading(false);
 

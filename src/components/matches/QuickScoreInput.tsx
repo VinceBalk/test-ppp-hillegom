@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Check, Edit } from "lucide-react";
+import { checkAndUpdateTournamentStatus } from "@/utils/tournamentStatusUtils";
 
 type Match = {
   id: string;
@@ -209,29 +210,7 @@ export default function QuickScoreInput({ match, tournament, onSaved, onRefetch 
 
       // 4. Check of alle wedstrijden van dit toernooi voltooid zijn
       if (matchData) {
-        const { data: allMatches, error: checkError } = await supabase
-          .from("matches")
-          .select("id, status")
-          .eq("tournament_id", matchData.tournament_id);
-
-        if (!checkError && allMatches) {
-          const allCompleted = allMatches.every(m => m.status === "completed");
-          
-          if (allCompleted) {
-            // Alle wedstrijden zijn klaar - markeer toernooi als voltooid
-            const { error: tournamentError } = await supabase
-              .from("tournaments")
-              .update({ 
-                status: "completed",
-                current_round: matchData.round_number
-              })
-              .eq("id", matchData.tournament_id);
-            
-            if (!tournamentError) {
-              console.log("✓ Tournament automatically marked as completed!");
-            }
-          }
-        }
+        await checkAndUpdateTournamentStatus(matchData.tournament_id);
       }
 
       toast({
