@@ -114,10 +114,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament }
         <QuickScoreInput
           match={match as any}
           tournament={effectiveTournament}
-          onSaved={() => {
-            setShowScoreInput(false);
-            window.location.reload();
-          }}
+          onSaved={() => setShowScoreInput(false)}
         />
       </div>
     );
@@ -127,14 +124,8 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament }
     return (
       <SpecialsManager
         match={match}
-        onClose={() => {
-          setShowSpecials(false);
-          window.location.reload();
-        }}
-        onBack={() => {
-          setShowSpecials(false);
-          window.location.reload();
-        }}
+        onClose={() => setShowSpecials(false)}
+        onBack={() => setShowSpecials(false)}
       />
     );
   }
