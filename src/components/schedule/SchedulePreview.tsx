@@ -5,7 +5,6 @@ import { SchedulePreview as SchedulePreviewType } from '@/types/schedule';
 import SchedulePreviewHeader from './SchedulePreviewHeader';
 import SchedulePreviewActions from './SchedulePreviewActions';
 import ScheduleGroupSection from './ScheduleGroupSection';
-import CourtsOverview from './CourtsOverview';
 
 interface SchedulePreviewProps {
   preview: SchedulePreviewType;
@@ -69,16 +68,10 @@ export default function SchedulePreview({
         </CardContent>
       </Card>
 
-      {/* Main Courts Overview */}
-      <CourtsOverview 
-        leftGroupMatches={preview.leftGroupMatches}
-        rightGroupMatches={preview.rightGroupMatches}
-      />
-
-      {/* Detailed Group Sections for Editing */}
+      {/* Bewerkbare wedstrijden per groep */}
       <div className="space-y-8">
-        <div className="border-t pt-8">
-          <h3 className="text-lg font-semibold text-gray-700 mb-4">Gedetailleerde Weergave per Groep</h3>
+        <div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">Schema per Baan - Klik op "Bewerk" om wedstrijden aan te passen</h3>
           <div className="grid-2">
             <ScheduleGroupSection
               title="Linker rijtje"
