@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -33,6 +33,7 @@ interface ChefSpecial {
 
 export default function Standings() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const tournamentParam = searchParams.get("tournament");
   
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -214,7 +215,12 @@ export default function Standings() {
                   {player.position === 3 && <span className="text-2xl">🥉</span>}
                   {player.position > 3 && <span className="text-base">{player.position}</span>}
                 </TableCell>
-                <TableCell className="font-bold text-lg">{player.player_name}</TableCell>
+                <TableCell 
+                  className="font-bold text-lg text-primary hover:underline cursor-pointer"
+                  onClick={() => navigate(`/players/${player.player_id}`)}
+                >
+                  {player.player_name}
+                </TableCell>
                 <TableCell className="text-center font-semibold text-green-600">
                   {player.games_won}
                 </TableCell>
