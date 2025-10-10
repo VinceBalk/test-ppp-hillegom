@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, TrendingUp } from "lucide-react";
+import { Trophy, TrendingUp, ArrowUp, ArrowDown } from "lucide-react";
 
 interface PlayerStats {
   player_id: string;
@@ -14,6 +14,8 @@ interface PlayerStats {
   games_lost: number;
   specials_count: number;
   position: number;
+  previous_position?: number;
+  row_side?: string;
 }
 
 interface Tournament {
@@ -25,6 +27,7 @@ export default function GlobalStandings() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [selectedTournament, setSelectedTournament] = useState<string>("");
   const [selectedRound, setSelectedRound] = useState<number>(1);
+  const [selectedRowFilter, setSelectedRowFilter] = useState<string>("all");
   const [availableRounds, setAvailableRounds] = useState<number[]>([]);
   
   const [totalStandings, setTotalStandings] = useState<PlayerStats[]>([]);
@@ -81,24 +84,25 @@ export default function GlobalStandings() {
   const fetchTotalStandings = async () => {
     setLoading(true);
 
-    const { data, error } = await supabase
+    const { data: statsData } = await supabase
       .from("player_tournament_stats")
       .select(`
         player_id,
         games_won,
         games_lost,
         tiebreaker_specials_count,
-        players:player_id (name)
+        players:player_id (name, row_side)
       `);
 
-    if (!error && data) {
+    if (statsData) {
       // Aggregate across ALL tournaments and rounds
-      const playerMap: { [key: string]: { name: string; won: number; lost: number; specials: number } } = {};
+      const playerMap: { [key: string]: { name: string; won: number; lost: number; specials: number; row_side: string } } = {};
 
-      data.forEach(d => {
+      statsData.forEach(d => {
         if (!playerMap[d.player_id]) {
           playerMap[d.player_id] = {
             name: (d.players as any)?.name || "Onbekend",
+            row_side: (d.players as any)?.row_side || "left",
             won: 0,
             lost: 0,
             specials: 0,
@@ -109,13 +113,14 @@ export default function GlobalStandings() {
         playerMap[d.player_id].specials += d.tiebreaker_specials_count || 0;
       });
 
-      const stats: PlayerStats[] = Object.entries(playerMap)
+      let allStats: PlayerStats[] = Object.entries(playerMap)
         .map(([id, p]) => ({
           player_id: id,
           player_name: p.name,
           games_won: p.won,
           games_lost: p.lost,
           specials_count: p.specials,
+          row_side: p.row_side,
           position: 0,
         }))
         .sort((a, b) => {
@@ -124,7 +129,12 @@ export default function GlobalStandings() {
         })
         .map((s, idx) => ({ ...s, position: idx + 1 }));
 
-      setTotalStandings(stats);
+      // Filter by row if needed
+      if (selectedRowFilter !== "all") {
+        allStats = allStats.filter(s => s.row_side === selectedRowFilter);
+      }
+
+      setTotalStandings(allStats);
     }
 
     setLoading(false);
@@ -241,31 +251,44 @@ export default function GlobalStandings() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-16">#</TableHead>
-            <TableHead>Speler</TableHead>
-            <TableHead className="text-right">Gewonnen</TableHead>
-            <TableHead className="text-right">Verloren</TableHead>
-            <TableHead className="text-right">Specials</TableHead>
+            <TableHead className="w-20">#</TableHead>
+            <TableHead className="w-[300px]">Speler</TableHead>
+            <TableHead className="text-center w-24">Gewonnen</TableHead>
+            <TableHead className="text-center w-24">Verloren</TableHead>
+            <TableHead className="text-center w-24">Specials</TableHead>
+            <TableHead className="text-center w-20">Trend</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {standings.map((player) => (
             <TableRow key={player.player_id}>
-              <TableCell className="font-medium">
-                {player.position === 1 && <Badge className="bg-yellow-500">🥇</Badge>}
-                {player.position === 2 && <Badge className="bg-gray-400">🥈</Badge>}
-                {player.position === 3 && <Badge className="bg-orange-600">🥉</Badge>}
+              <TableCell className="font-bold text-lg">
+                {player.position === 1 && <Badge className="bg-yellow-500 text-lg px-3 py-1">🥇 1</Badge>}
+                {player.position === 2 && <Badge className="bg-gray-400 text-lg px-3 py-1">🥈 2</Badge>}
+                {player.position === 3 && <Badge className="bg-orange-600 text-lg px-3 py-1">🥉 3</Badge>}
                 {player.position > 3 && player.position}
               </TableCell>
-              <TableCell className="font-medium">{player.player_name}</TableCell>
-              <TableCell className="text-right font-semibold text-green-600">
+              <TableCell className="font-bold text-xl">{player.player_name}</TableCell>
+              <TableCell className="text-center font-semibold text-green-600 text-base">
                 {player.games_won}
               </TableCell>
-              <TableCell className="text-right text-red-600">
+              <TableCell className="text-center text-red-600 text-base">
                 {player.games_lost}
               </TableCell>
-              <TableCell className="text-right font-semibold text-orange-600">
+              <TableCell className="text-center font-semibold text-orange-600 text-base">
                 {player.specials_count}
+              </TableCell>
+              <TableCell className="text-center">
+                {player.previous_position && player.previous_position > player.position && (
+                  <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-500">
+                    <ArrowUp className="h-4 w-4 text-white" />
+                  </div>
+                )}
+                {player.previous_position && player.previous_position < player.position && (
+                  <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-500">
+                    <ArrowDown className="h-4 w-4 text-white" />
+                  </div>
+                )}
               </TableCell>
             </TableRow>
           ))}
@@ -297,10 +320,27 @@ export default function GlobalStandings() {
         <TabsContent value="total">
           <Card>
             <CardHeader>
-              <CardTitle>Totale Stand - Alle Toernooien</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Cumulatief overzicht van alle gespeelde rondes in alle toernooien
-              </p>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle>Totale Stand - Alle Toernooien</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Cumulatief overzicht van alle gespeelde rondes in alle toernooien
+                  </p>
+                </div>
+                <Select value={selectedRowFilter} onValueChange={(val) => {
+                  setSelectedRowFilter(val);
+                  fetchTotalStandings();
+                }}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Filter op rij" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Rijen</SelectItem>
+                    <SelectItem value="left">Linker Rij</SelectItem>
+                    <SelectItem value="right">Rechter Rij</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
               {renderStandingsTable(totalStandings)}
