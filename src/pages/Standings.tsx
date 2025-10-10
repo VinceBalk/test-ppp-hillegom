@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -31,6 +32,9 @@ interface ChefSpecial {
 }
 
 export default function Standings() {
+  const [searchParams] = useSearchParams();
+  const tournamentParam = searchParams.get("tournament");
+  
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [selectedTournament, setSelectedTournament] = useState<string>("");
   const [selectedRound, setSelectedRound] = useState<string>("all");
@@ -45,6 +49,12 @@ export default function Standings() {
   useEffect(() => {
     fetchTournaments();
   }, []);
+
+  useEffect(() => {
+    if (tournamentParam && tournaments.length > 0) {
+      setSelectedTournament(tournamentParam);
+    }
+  }, [tournamentParam, tournaments]);
 
   useEffect(() => {
     if (selectedTournament) {
@@ -199,9 +209,9 @@ export default function Standings() {
             {standings.map((player) => (
               <TableRow key={player.player_id}>
                 <TableCell className="font-bold">
-                  {player.position === 1 && <Badge className="bg-yellow-500 px-2 py-1">🥇</Badge>}
-                  {player.position === 2 && <Badge className="bg-gray-400 px-2 py-1">🥈</Badge>}
-                  {player.position === 3 && <Badge className="bg-orange-600 px-2 py-1">🥉</Badge>}
+                  {player.position === 1 && <span className="text-2xl">🥇</span>}
+                  {player.position === 2 && <span className="text-2xl">🥈</span>}
+                  {player.position === 3 && <span className="text-2xl">🥉</span>}
                   {player.position > 3 && <span className="text-base">{player.position}</span>}
                 </TableCell>
                 <TableCell className="font-bold text-lg">{player.player_name}</TableCell>
