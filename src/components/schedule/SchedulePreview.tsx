@@ -53,11 +53,11 @@ export default function SchedulePreview({
             </div>
             <div className="p-4 bg-green-100 rounded-lg border border-green-200">
               <div className="text-3xl font-bold text-green-700">{preview.leftGroupMatches.length}</div>
-              <div className="text-sm text-green-600 font-medium">Links Groep</div>
+              <div className="text-sm text-green-600 font-medium">Linker rijtje</div>
             </div>
             <div className="p-4 bg-purple-100 rounded-lg border border-purple-200">
               <div className="text-3xl font-bold text-purple-700">{preview.rightGroupMatches.length}</div>
-              <div className="text-sm text-purple-600 font-medium">Rechts Groep</div>
+              <div className="text-sm text-purple-600 font-medium">Rechter rijtje</div>
             </div>
           </div>
           
@@ -81,7 +81,7 @@ export default function SchedulePreview({
           <h3 className="text-lg font-semibold text-gray-700 mb-4">Gedetailleerde Weergave per Groep</h3>
           <div className="grid gap-8 lg:grid-cols-2">
             <ScheduleGroupSection
-              title="Links Groep"
+              title="Linker rijtje"
               matches={preview.leftGroupMatches}
               tournamentId={tournamentId}
               onUpdateMatch={onUpdateMatch}
@@ -90,7 +90,7 @@ export default function SchedulePreview({
             />
             
             <ScheduleGroupSection
-              title="Rechts Groep"
+              title="Rechter rijtje"
               matches={preview.rightGroupMatches}
               tournamentId={tournamentId}
               onUpdateMatch={onUpdateMatch}

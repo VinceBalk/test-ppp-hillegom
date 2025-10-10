@@ -113,21 +113,21 @@ export default function AssignPlayers() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <PlayerGroupTable
-          title="Links Groep"
+          title="Linker rijtje"
           players={leftPlayers}
           groupName="left"
           onGroupChange={handleGroupChange}
           onRemovePlayer={handleRemovePlayer}
-          emptyMessage="Nog geen spelers in de linker groep."
+          emptyMessage="Nog geen spelers in het linker rijtje."
         />
 
         <PlayerGroupTable
-          title="Rechts Groep"
+          title="Rechter rijtje"
           players={rightPlayers}
           groupName="right"
           onGroupChange={handleGroupChange}
           onRemovePlayer={handleRemovePlayer}
-          emptyMessage="Nog geen spelers in de rechter groep."
+          emptyMessage="Nog geen spelers in het rechter rijtje."
         />
       </div>
     </div>

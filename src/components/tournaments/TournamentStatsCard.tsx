@@ -31,11 +31,11 @@ export default function TournamentStatsCard({
         <div className="grid grid-cols-2 gap-4">
           <div className="text-center p-4 bg-muted rounded-lg">
             <div className="text-2xl font-bold">{leftPlayersCount}</div>
-            <div className="text-sm text-muted-foreground">Links Groep</div>
+            <div className="text-sm text-muted-foreground">Linker rijtje</div>
           </div>
           <div className="text-center p-4 bg-muted rounded-lg">
             <div className="text-2xl font-bold">{rightPlayersCount}</div>
-            <div className="text-sm text-muted-foreground">Rechts Groep</div>
+            <div className="text-sm text-muted-foreground">Rechter rijtje</div>
           </div>
           <div className="text-center p-4 bg-primary/10 rounded-lg col-span-2">
             <div className="text-2xl font-bold text-primary">{totalPlayersCount}</div>

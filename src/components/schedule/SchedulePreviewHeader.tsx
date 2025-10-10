@@ -25,8 +25,8 @@ export default function SchedulePreviewHeader({
       </CardTitle>
       <div className="flex gap-4 text-sm text-muted-foreground">
         <span>Totaal wedstrijden: {totalMatches}</span>
-        <span>Links groep: {leftGroupMatchesCount} wedstrijden</span>
-        <span>Rechts groep: {rightGroupMatchesCount} wedstrijden</span>
+        <span>Linker rijtje: {leftGroupMatchesCount} wedstrijden</span>
+        <span>Rechter rijtje: {rightGroupMatchesCount} wedstrijden</span>
       </div>
     </CardHeader>
   );

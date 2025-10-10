@@ -411,13 +411,13 @@ export default function Standings() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardContent className="pt-6">
-            {renderStandingsTable(leftRowStandings, "Linker Rij")}
+            {renderStandingsTable(leftRowStandings, "Linker rijtje")}
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="pt-6">
-            {renderStandingsTable(rightRowStandings, "Rechter Rij")}
+            {renderStandingsTable(rightRowStandings, "Rechter rijtje")}
           </CardContent>
         </Card>
       </div>

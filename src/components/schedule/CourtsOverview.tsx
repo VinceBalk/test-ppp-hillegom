@@ -56,14 +56,14 @@ export default function CourtsOverview({ leftGroupMatches, rightGroupMatches }: 
               <div key={courtName} className="space-y-4">
                 {leftMatches.length > 0 && (
                   <CourtMatchList
-                    courtName={`${courtName} - Links Groep`}
+                    courtName={`${courtName} - Linker rijtje`}
                     matches={leftMatches}
                     groupColor="bg-green-500"
                   />
                 )}
                 {rightMatches.length > 0 && (
                   <CourtMatchList
-                    courtName={`${courtName} - Rechts Groep`}
+                    courtName={`${courtName} - Rechter rijtje`}
                     matches={rightMatches}
                     groupColor="bg-purple-500"
                   />

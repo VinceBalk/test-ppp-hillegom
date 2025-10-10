@@ -41,7 +41,7 @@ export default function MatchEditorForm({
     <Card className="border-blue-200">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center justify-between">
-          Wedstrijd Bewerken - {isLeftGroup ? 'Links Groep' : isRightGroup ? 'Rechts Groep' : 'Onbekende Groep'}
+          Wedstrijd Bewerken - {isLeftGroup ? 'Linker rijtje' : isRightGroup ? 'Rechter rijtje' : 'Onbekende Groep'}
           <div className="flex gap-1">
             {showSaveButton && (
               <Button 
