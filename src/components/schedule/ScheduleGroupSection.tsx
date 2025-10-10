@@ -1,7 +1,7 @@
 
 import { ScheduleMatch } from '@/types/schedule';
 import { Badge } from '@/components/ui/badge';
-import CourtMatchList from './CourtMatchList';
+import MatchEditor from './MatchEditor';
 
 interface ScheduleGroupSectionProps {
   title: string;
@@ -42,11 +42,6 @@ export default function ScheduleGroupSection({
   const courtGroups = groupMatchesByCourt(matches);
   const sortedCourtNames = Object.keys(courtGroups).sort();
 
-  const handleEditMatch = (match: ScheduleMatch) => {
-    // For now, we'll just log the match - you can implement a modal or inline editing
-    console.log('Edit match:', match);
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
@@ -63,12 +58,25 @@ export default function ScheduleGroupSection({
       ) : (
         <div className="grid-3">
           {sortedCourtNames.map((courtName) => (
-            <CourtMatchList
-              key={courtName}
-              courtName={courtName}
-              matches={courtGroups[courtName]}
-              groupColor={groupColor}
-            />
+            <div key={courtName} className="space-y-3">
+              <div className="flex items-center gap-2 p-3 rounded-lg border bg-gray-50">
+                <h3 className="font-semibold text-gray-900">{courtName}</h3>
+                <Badge variant="secondary" className={`${groupColor} text-white`}>
+                  {courtGroups[courtName].length}
+                </Badge>
+              </div>
+              
+              <div className="space-y-2">
+                {courtGroups[courtName].map((match) => (
+                  <MatchEditor
+                    key={match.id}
+                    match={match}
+                    tournamentId={tournamentId}
+                    onUpdate={onUpdateMatch}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}

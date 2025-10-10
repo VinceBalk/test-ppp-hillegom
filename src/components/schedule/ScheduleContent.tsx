@@ -23,7 +23,8 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
   const [selectedRound, setSelectedRound] = useState(1);
   const { toast } = useToast();
   
-  const { tournaments } = useTournaments();
+  const { tournaments: allTournaments } = useTournaments();
+  const tournaments = allTournaments?.filter(t => t.status !== 'completed');
   const { tournamentPlayers } = useTournamentPlayers(selectedTournamentId);
   const { matches } = useMatches(selectedTournamentId);
   const { 

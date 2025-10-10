@@ -70,6 +70,13 @@ export default function MatchEditor({ match, tournamentId, onUpdate }: MatchEdit
     }));
   };
 
+  const updateMatchNumber = (matchNumber: number) => {
+    setEditedMatch(prev => ({
+      ...prev,
+      match_number: matchNumber
+    }));
+  };
+
   if (!isEditing) {
     return (
       <MatchEditorView 
@@ -91,6 +98,7 @@ export default function MatchEditor({ match, tournamentId, onUpdate }: MatchEdit
       onUpdatePlayer={updatePlayer}
       onUpdateCourt={updateCourt}
       onUpdateRound={updateRound}
+      onUpdateMatchNumber={updateMatchNumber}
     />
   );
 }
