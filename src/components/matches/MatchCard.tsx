@@ -234,19 +234,42 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament }
               {match.tournament?.name || "Onbekend toernooi"}
             </div>
             <div className="flex gap-1">
+              {/* Specials button - altijd beschikbaar tijdens actief toernooi */}
+              {toernooiStatus === "active" && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowSpecials(true);
+                  }}
+                  className="h-8 px-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                  title="Specials beheren"
+                >
+                  <Star className="h-4 w-4" />
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => navigate(`/scores/${match.id}`)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/scores/${match.id}`);
+                }}
                 className="h-8 w-8 p-0"
+                title="Score bekijken"
               >
                 <Eye className="h-4 w-4" />
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => setShowEditor(true)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowEditor(true);
+                }}
                 className="h-8 w-8 p-0"
+                title="Wedstrijd bewerken"
               >
                 <Edit className="h-4 w-4" />
               </Button>
