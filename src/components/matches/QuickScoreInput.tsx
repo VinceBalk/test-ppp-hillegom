@@ -50,12 +50,13 @@ export default function QuickScoreInput({ match, tournament, onSaved }: Props) {
     const team2Score = 8 - score;
 
     try {
+      // Save score WITHOUT completing the match
       const { error: matchError } = await supabase
         .from("matches")
         .update({
           team1_score: score,
           team2_score: team2Score,
-          status: "completed",
+          status: "in_progress",
         })
         .eq("id", match.id);
 
@@ -82,18 +83,47 @@ export default function QuickScoreInput({ match, tournament, onSaved }: Props) {
       if (statsError) throw statsError;
 
       toast({
-        title: "✓ Score succesvol opgeslagen!",
-        description: `Eindstand: ${score} - ${team2Score}`,
-        duration: 3000,
+        title: "✓ Score opgeslagen!",
+        description: `Stand: ${score} - ${team2Score}`,
+        duration: 2000,
       });
 
-      // Wait briefly to show success state before closing
+      setLoading(false);
+    } catch (error: any) {
+      toast({
+        title: "Fout bij opslaan",
+        description: error.message,
+        variant: "destructive",
+      });
+      setLoading(false);
+    }
+  };
+
+  const handleComplete = async () => {
+    if (selectedScore === null) return;
+    
+    setLoading(true);
+
+    try {
+      const { error } = await supabase
+        .from("matches")
+        .update({ status: "completed" })
+        .eq("id", match.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "✓ Wedstrijd voltooid!",
+        description: "De match is succesvol afgesloten",
+        duration: 2000,
+      });
+
       setTimeout(() => {
         if (onSaved) onSaved();
       }, 800);
     } catch (error: any) {
       toast({
-        title: "Fout bij opslaan",
+        title: "Fout bij voltooien",
         description: error.message,
         variant: "destructive",
       });
@@ -121,36 +151,52 @@ export default function QuickScoreInput({ match, tournament, onSaved }: Props) {
   }
 
   return (
-    <div className="py-4">
-      <p className="text-sm text-muted-foreground mb-3 text-center">
-        Score voor {match.team1_player1?.name} & {match.team1_player2?.name}:
-      </p>
-      <div className="grid grid-cols-9 gap-2">
-        {scores.map((score) => (
-          <Button
-            key={score}
-            size="lg"
-            variant={selectedScore === score ? "default" : "outline"}
-            onClick={() => handleSave(score)}
-            disabled={loading}
-            className={`text-lg font-bold h-14 w-full transition-all ${
-              loading && selectedScore === score
-                ? "bg-green-600 text-white animate-pulse"
-                : ""
-            }`}
-          >
-            {loading && selectedScore === score ? (
-              <Check className="h-5 w-5" />
-            ) : (
-              score
-            )}
-          </Button>
-        ))}
-      </div>
-      {loading && (
-        <p className="text-sm text-green-600 font-medium text-center mt-3 animate-pulse">
-          Bezig met opslaan...
+    <div className="py-4 space-y-4">
+      <div>
+        <p className="text-sm text-muted-foreground mb-3 text-center">
+          Score voor {match.team1_player1?.name} & {match.team1_player2?.name}:
         </p>
+        <div className="grid grid-cols-9 gap-2">
+          {scores.map((score) => (
+            <Button
+              key={score}
+              size="lg"
+              variant={selectedScore === score ? "default" : "outline"}
+              onClick={() => handleSave(score)}
+              disabled={loading}
+              className={`text-lg font-bold h-14 w-full transition-all ${
+                loading && selectedScore === score
+                  ? "bg-green-600 text-white animate-pulse"
+                  : ""
+              }`}
+            >
+              {loading && selectedScore === score ? (
+                <Check className="h-5 w-5" />
+              ) : (
+                score
+              )}
+            </Button>
+          ))}
+        </div>
+        {loading && (
+          <p className="text-sm text-green-600 font-medium text-center mt-3 animate-pulse">
+            Bezig met opslaan...
+          </p>
+        )}
+      </div>
+
+      {/* Complete match button - only show if score is selected */}
+      {selectedScore !== null && !loading && (
+        <div className="pt-3 border-t">
+          <Button
+            onClick={handleComplete}
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
+            size="lg"
+          >
+            <Check className="h-5 w-5 mr-2" />
+            Wedstrijd Voltooien ({selectedScore} - {8 - selectedScore})
+          </Button>
+        </div>
       )}
     </div>
   );
