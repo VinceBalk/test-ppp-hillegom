@@ -268,6 +268,75 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
           .insert(specialRows)
       : { error: null };
 
+    // HERBEREKEN player_tournament_stats voor alle spelers in deze ronde (inclusief specials!)
+    const allPlayers = [
+      match.team1_player1_id,
+      match.team1_player2_id,
+      match.team2_player1_id,
+      match.team2_player2_id,
+    ];
+
+    for (const playerId of allPlayers) {
+      // Haal alle matches op voor deze ronde
+      const { data: roundMatches } = await supabase
+        .from("matches")
+        .select("id")
+        .eq("tournament_id", tournament.id)
+        .eq("round_number", round);
+
+      const matchIds = roundMatches?.map(m => m.id) || [];
+
+      // Haal alle stats op voor deze speler in deze ronde
+      const { data: allMatchStats } = await supabase
+        .from("player_match_stats")
+        .select("games_won")
+        .eq("player_id", playerId)
+        .in("match_id", matchIds);
+
+      const totalGamesWon = allMatchStats?.reduce((sum, stat) => sum + stat.games_won, 0) || 0;
+      const totalGamesLost = allMatchStats ? (allMatchStats.length * 8 - totalGamesWon) : 0;
+
+      // Haal alle specials op voor deze speler in deze ronde
+      const { data: specialsData } = await supabase
+        .from("match_specials")
+        .select("count")
+        .eq("player_id", playerId)
+        .in("match_id", matchIds);
+
+      const totalSpecials = specialsData?.reduce((sum, s) => sum + (s.count || 0), 0) || 0;
+
+      // Update of insert player_tournament_stats
+      const { data: existing } = await supabase
+        .from("player_tournament_stats")
+        .select("id")
+        .eq("tournament_id", tournament.id)
+        .eq("player_id", playerId)
+        .eq("round_number", round)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from("player_tournament_stats")
+          .update({
+            games_won: totalGamesWon,
+            games_lost: totalGamesLost,
+            tiebreaker_specials_count: totalSpecials,
+          })
+          .eq("id", existing.id);
+      } else {
+        await supabase
+          .from("player_tournament_stats")
+          .insert({
+            tournament_id: tournament.id,
+            player_id: playerId,
+            round_number: round,
+            games_won: totalGamesWon,
+            games_lost: totalGamesLost,
+            tiebreaker_specials_count: totalSpecials,
+          });
+      }
+    }
+
     setLoading(false);
 
     if (matchError || statsError || specialError) {

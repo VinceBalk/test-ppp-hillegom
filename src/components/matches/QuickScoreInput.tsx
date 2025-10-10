@@ -163,6 +163,15 @@ export default function QuickScoreInput({ match, tournament, onSaved, onRefetch 
           const totalGamesWon = allMatchStats?.reduce((sum, stat) => sum + stat.games_won, 0) || 0;
           const totalGamesLost = allMatchStats ? (allMatchStats.length * 8 - totalGamesWon) : 0;
 
+          // HERBEREKEN ook de specials count voor deze speler in deze ronde
+          const { data: specialsData } = await supabase
+            .from("match_specials")
+            .select("count")
+            .eq("player_id", player.id)
+            .in("match_id", matchIds);
+
+          const totalSpecials = specialsData?.reduce((sum, s) => sum + (s.count || 0), 0) || 0;
+
           // Check of record bestaat
           const { data: existing } = await supabase
             .from("player_tournament_stats")
@@ -179,6 +188,7 @@ export default function QuickScoreInput({ match, tournament, onSaved, onRefetch 
               .update({
                 games_won: totalGamesWon,
                 games_lost: totalGamesLost,
+                tiebreaker_specials_count: totalSpecials,
               })
               .eq("id", existing.id);
           } else {
@@ -191,6 +201,7 @@ export default function QuickScoreInput({ match, tournament, onSaved, onRefetch 
                 round_number: matchData.round_number,
                 games_won: totalGamesWon,
                 games_lost: totalGamesLost,
+                tiebreaker_specials_count: totalSpecials,
               });
           }
         }
