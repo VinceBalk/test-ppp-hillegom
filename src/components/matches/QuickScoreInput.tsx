@@ -82,18 +82,21 @@ export default function QuickScoreInput({ match, tournament, onSaved }: Props) {
       if (statsError) throw statsError;
 
       toast({
-        title: "Score opgeslagen",
-        description: `${score} - ${team2Score}`,
+        title: "✓ Score succesvol opgeslagen!",
+        description: `Eindstand: ${score} - ${team2Score}`,
+        duration: 3000,
       });
 
-      if (onSaved) onSaved();
+      // Wait briefly to show success state before closing
+      setTimeout(() => {
+        if (onSaved) onSaved();
+      }, 800);
     } catch (error: any) {
       toast({
-        title: "Fout",
+        title: "Fout bij opslaan",
         description: error.message,
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
     }
   };
@@ -130,12 +133,25 @@ export default function QuickScoreInput({ match, tournament, onSaved }: Props) {
             variant={selectedScore === score ? "default" : "outline"}
             onClick={() => handleSave(score)}
             disabled={loading}
-            className="text-lg font-bold h-14 w-full"
+            className={`text-lg font-bold h-14 w-full transition-all ${
+              loading && selectedScore === score
+                ? "bg-green-600 text-white animate-pulse"
+                : ""
+            }`}
           >
-            {score}
+            {loading && selectedScore === score ? (
+              <Check className="h-5 w-5" />
+            ) : (
+              score
+            )}
           </Button>
         ))}
       </div>
+      {loading && (
+        <p className="text-sm text-green-600 font-medium text-center mt-3 animate-pulse">
+          Bezig met opslaan...
+        </p>
+      )}
     </div>
   );
 }
