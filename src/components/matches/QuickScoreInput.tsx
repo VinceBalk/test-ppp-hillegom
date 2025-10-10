@@ -148,7 +148,8 @@ export default function QuickScoreInput({ match, tournament, onSaved }: Props) {
         duration: 2000,
       });
 
-      setLoading(false);
+      // Reload de pagina om de nieuwe status te tonen
+      window.location.reload();
     } catch (error: any) {
       toast({
         title: "Fout bij heropenen",

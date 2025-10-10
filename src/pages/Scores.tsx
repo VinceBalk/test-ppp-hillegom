@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Eye, MapPin, Filter } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 
 interface MatchDetail {
@@ -449,40 +450,31 @@ export default function Scores() {
             const team2Player2Specials = match.team2_player2 ? getPlayerSpecialsCount(match, getPlayerName(match.team2_player2)) : 0;
             
             return (
-              <Card key={match.id} className="w-full hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(`/scores/${match.id}`)}>
-                <CardHeader className="pb-3 space-y-2">
-                  {/* Rij 1: Toernooi naam - gecentreerd */}
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-muted-foreground">
-                      {match.tournament?.name || "Onbekend toernooi"}
-                    </p>
-                  </div>
-                  
-                  {/* Rij 2: Ronde info (links) en Baan (rechts) */}
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium">
+              <Card key={match.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2 pt-4">
+                  <div className="flex justify-between items-start">
+                    <span className="text-xs font-medium">
                       Ronde {match.round_number} - #{match.match_number || '?'}
                     </span>
-                    <span className="text-muted-foreground flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
+                    <div className="text-xs text-muted-foreground">
                       {getCourtInfo(match)}
-                    </span>
+                    </div>
                   </div>
                 </CardHeader>
                 
-                <CardContent className="space-y-3">
+                <CardContent className="pb-3 pt-0">
                   <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
                     {/* Team 1 kolom - rechts uitgelijnd */}
-                    <div className="text-right space-y-2">
+                    <div className="text-right space-y-1.5">
                       <p className="text-xs font-semibold text-blue-600">Team 1</p>
                       
                       {/* Speler 1 met specials badge ACHTER naam */}
                       <div className="flex items-center justify-end gap-2">
-                        <span className="text-sm truncate">
+                        <span className="text-sm text-muted-foreground truncate max-w-[140px] sm:max-w-[200px]">
                           {getPlayerName(match.team1_player1)}
                         </span>
                         {team1Player1Specials > 0 && (
-                          <span className="inline-flex items-center justify-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 shrink-0">
+                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-500 text-black text-xs font-bold flex-shrink-0">
                             {team1Player1Specials}
                           </span>
                         )}
@@ -491,11 +483,11 @@ export default function Scores() {
                       {/* Speler 2 als aanwezig */}
                       {match.team1_player2 && (
                         <div className="flex items-center justify-end gap-2">
-                          <span className="text-sm truncate">
+                          <span className="text-sm text-muted-foreground truncate max-w-[140px] sm:max-w-[200px]">
                             {getPlayerName(match.team1_player2)}
                           </span>
                           {team1Player2Specials > 0 && (
-                            <span className="inline-flex items-center justify-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 shrink-0">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-500 text-black text-xs font-bold flex-shrink-0">
                               {team1Player2Specials}
                             </span>
                           )}
@@ -504,24 +496,24 @@ export default function Scores() {
                     </div>
 
                     {/* Score centrum */}
-                    <div className="text-center px-4">
-                      <p className="text-3xl font-bold tabular-nums">
+                    <div className="text-center px-3">
+                      <p className="text-2xl font-bold tabular-nums whitespace-nowrap">
                         {match.team1_score ?? 0} - {match.team2_score ?? 0}
                       </p>
                     </div>
 
                     {/* Team 2 kolom - links uitgelijnd */}
-                    <div className="text-left space-y-2">
+                    <div className="text-left space-y-1.5">
                       <p className="text-xs font-semibold text-red-600">Team 2</p>
                       
                       {/* Speler 1 met specials badge VOOR naam */}
                       <div className="flex items-center gap-2">
                         {team2Player1Specials > 0 && (
-                          <span className="inline-flex items-center justify-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 shrink-0">
+                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-500 text-black text-xs font-bold flex-shrink-0">
                             {team2Player1Specials}
                           </span>
                         )}
-                        <span className="text-sm truncate">
+                        <span className="text-sm text-muted-foreground truncate max-w-[140px] sm:max-w-[200px]">
                           {getPlayerName(match.team2_player1)}
                         </span>
                       </div>
@@ -530,15 +522,36 @@ export default function Scores() {
                       {match.team2_player2 && (
                         <div className="flex items-center gap-2">
                           {team2Player2Specials > 0 && (
-                            <span className="inline-flex items-center justify-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 shrink-0">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-500 text-black text-xs font-bold flex-shrink-0">
                               {team2Player2Specials}
                             </span>
                           )}
-                          <span className="text-sm truncate">
+                          <span className="text-sm text-muted-foreground truncate max-w-[140px] sm:max-w-[200px]">
                             {getPlayerName(match.team2_player2)}
                           </span>
                         </div>
                       )}
+                    </div>
+                  </div>
+
+                  {/* Footer - zelfde als MatchCard */}
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                    <div className="text-xs text-muted-foreground">
+                      {match.tournament?.name || "Onbekend toernooi"}
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/scores/${match.id}`);
+                        }}
+                        className="h-8 w-8 p-0"
+                        title="Score bekijken"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
