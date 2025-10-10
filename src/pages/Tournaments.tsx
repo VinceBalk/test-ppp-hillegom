@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTournaments, Tournament } from '@/hooks/useTournaments';
 import { TournamentHeader } from '@/components/tournaments/TournamentHeader';
 import { TournamentTable } from '@/components/tournaments/TournamentTable';
-import TournamentCard from '@/components/tournaments/TournamentCard';
+import { TournamentMobileCard } from '@/components/tournaments/TournamentMobileCard';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
@@ -86,6 +86,11 @@ export default function Tournaments() {
     );
   }
 
+  const filteredTournaments = tournaments.filter(tournament =>
+    tournament.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    tournament.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       <TournamentHeader
@@ -96,18 +101,35 @@ export default function Tournaments() {
         isCreating={isCreating}
       />
 
-      <TournamentTable
-        tournaments={tournaments}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        editingTournament={editingTournament}
-        setEditingTournament={setEditingTournament}
-        onAssignPlayers={handleAssignPlayers}
-        onUpdateTournament={handleUpdateTournament}
-        onDeleteTournament={handleDeleteTournament}
-        isUpdating={isUpdating}
-        isDeleting={isDeleting}
-      />
+      {/* Mobile Cards View */}
+      <div className="grid grid-cols-1 gap-4 md:hidden">
+        {filteredTournaments.map((tournament) => (
+          <TournamentMobileCard
+            key={tournament.id}
+            tournament={tournament}
+            onEdit={setEditingTournament}
+            onDelete={handleDeleteTournament}
+            onAssignPlayers={handleAssignPlayers}
+            isDeleting={isDeleting}
+          />
+        ))}
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden md:block">
+        <TournamentTable
+          tournaments={tournaments}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          editingTournament={editingTournament}
+          setEditingTournament={setEditingTournament}
+          onAssignPlayers={handleAssignPlayers}
+          onUpdateTournament={handleUpdateTournament}
+          onDeleteTournament={handleDeleteTournament}
+          isUpdating={isUpdating}
+          isDeleting={isDeleting}
+        />
+      </div>
     </div>
   );
 }

@@ -39,10 +39,12 @@ export function TournamentTable({
     <Card>
       <CardHeader>
         <CardTitle>Toernooien Overzicht</CardTitle>
-        <TournamentSearch searchTerm={searchTerm} onSearchChange={onSearchChange} />
+        <div className="w-full">
+          <TournamentSearch searchTerm={searchTerm} onSearchChange={onSearchChange} />
+        </div>
       </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto -mx-6 px-6 md:mx-0 md:px-0">
+      <CardContent className="p-0 md:p-6">
+        <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

@@ -21,17 +21,16 @@ export function TournamentHeader({
   isCreating 
 }: TournamentHeaderProps) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Toernooien</h1>
         <p className="text-muted-foreground">
           Beheer alle toernooien en competities ({tournamentCount} toernooien)
         </p>
       </div>
-      
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogTrigger asChild>
-          <Button>
+          <Button className="w-full md:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             Nieuw Toernooi
           </Button>
