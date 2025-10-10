@@ -129,46 +129,63 @@ export default function QuickScoreInput({ match, tournament, onSaved }: Props) {
         .single();
 
       if (matchData && matchData.team1_score !== null && matchData.team2_score !== null) {
-        // 3. Update player_tournament_stats
+        // 3. HERBEREKEN player_tournament_stats vanaf ALLE player_match_stats in deze ronde
         const players = [
-          { id: match.team1_player1_id, isTeam1: true },
-          { id: match.team1_player2_id, isTeam1: true },
-          { id: match.team2_player1_id, isTeam1: false },
-          { id: match.team2_player2_id, isTeam1: false },
+          { id: match.team1_player1_id },
+          { id: match.team1_player2_id },
+          { id: match.team2_player1_id },
+          { id: match.team2_player2_id },
         ];
 
         for (const player of players) {
-          const gamesWon = player.isTeam1 ? matchData.team1_score : matchData.team2_score;
-          const gamesLost = player.isTeam1 ? matchData.team2_score : matchData.team1_score;
+          // Haal ALLE matches op voor deze speler in deze ronde
+          const { data: roundMatches } = await supabase
+            .from("matches")
+            .select("id")
+            .eq("tournament_id", matchData.tournament_id)
+            .eq("round_number", matchData.round_number);
 
-          // Check if stats already exist for this player/tournament/round
+          const matchIds = roundMatches?.map(m => m.id) || [];
+
+          // Haal ALLE player_match_stats op voor deze speler in deze ronde
+          const { data: allMatchStats } = await supabase
+            .from("player_match_stats")
+            .select("games_won")
+            .eq("player_id", player.id)
+            .in("match_id", matchIds);
+
+          // Bereken totalen vanaf ALLE matches
+          const totalGamesWon = allMatchStats?.reduce((sum, stat) => sum + stat.games_won, 0) || 0;
+          const totalGamesLost = allMatchStats ? (allMatchStats.length * 8 - totalGamesWon) : 0;
+
+          // Check of record bestaat
           const { data: existing } = await supabase
             .from("player_tournament_stats")
-            .select("id, games_won, games_lost")
+            .select("id")
             .eq("tournament_id", matchData.tournament_id)
             .eq("player_id", player.id)
             .eq("round_number", matchData.round_number)
             .maybeSingle();
 
           if (existing) {
-            // Update: add to existing totals
+            // OVERSCHRIJF met herberekende totalen (niet optellen!)
             await supabase
               .from("player_tournament_stats")
               .update({
-                games_won: existing.games_won + gamesWon,
-                games_lost: existing.games_lost + gamesLost,
+                games_won: totalGamesWon,
+                games_lost: totalGamesLost,
               })
               .eq("id", existing.id);
           } else {
-            // Insert new record
+            // Insert nieuw record
             await supabase
               .from("player_tournament_stats")
               .insert({
                 tournament_id: matchData.tournament_id,
                 player_id: player.id,
                 round_number: matchData.round_number,
-                games_won: gamesWon,
-                games_lost: gamesLost,
+                games_won: totalGamesWon,
+                games_lost: totalGamesLost,
               });
           }
         }
