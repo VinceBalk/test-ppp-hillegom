@@ -11,22 +11,19 @@ interface PlayerStats {
 
 /**
  * Generates round-robin matches for a group of 4 players (3 matches)
- * Following the pattern from rounds 1 and 2
+ * Match numbers will be assigned later in round-robin fashion
  */
 const generateRoundRobinMatches = (
   players: PlayerStats[],
   groupPrefix: string,
   groupIndex: number,
-  courtId: string | undefined,
-  courtName: string,
-  startMatchNumber: number
+  groupCourtIndex: number
 ): ScheduleMatch[] => {
   if (players.length !== 4) {
     throw new Error('Round robin requires exactly 4 players');
   }
 
   const matches: ScheduleMatch[] = [];
-  const courtNumber = (startMatchNumber % 4) || 4; // Cycle through 1,2,3,4
 
   // Match 1: Player 1&3 vs Player 2&4
   matches.push({
@@ -39,11 +36,10 @@ const generateRoundRobinMatches = (
     team1_player2_name: players[2].name,
     team2_player1_name: players[1].name,
     team2_player2_name: players[3].name,
-    court_name: courtName,
-    court_number: courtNumber,
-    court_id: courtId,
     round_within_group: 3,
-  });
+    groupCourtIndex, // Used for sorting later
+    matchIndexWithinGroup: 0,
+  } as any);
 
   // Match 2: Player 1&4 vs Player 2&3
   matches.push({
@@ -56,11 +52,10 @@ const generateRoundRobinMatches = (
     team1_player2_name: players[3].name,
     team2_player1_name: players[1].name,
     team2_player2_name: players[2].name,
-    court_name: courtName,
-    court_number: ((courtNumber % 4) + 1) || 1,
-    court_id: courtId,
     round_within_group: 3,
-  });
+    groupCourtIndex,
+    matchIndexWithinGroup: 1,
+  } as any);
 
   // Match 3: Player 1&2 vs Player 3&4
   matches.push({
@@ -73,11 +68,10 @@ const generateRoundRobinMatches = (
     team1_player2_name: players[1].name,
     team2_player1_name: players[2].name,
     team2_player2_name: players[3].name,
-    court_name: courtName,
-    court_number: ((courtNumber + 1) % 4) + 1 || 1,
-    court_id: courtId,
     round_within_group: 3,
-  });
+    groupCourtIndex,
+    matchIndexWithinGroup: 2,
+  } as any);
 
   return matches;
 };
@@ -174,78 +168,61 @@ export const generateRound3Schedule = async (tournamentId: string, courts: any[]
   const startMatchNumber = (existingMatches?.[0]?.match_number || 0) + 1;
   console.log('Starting match numbers from:', startMatchNumber);
 
-  const activeCourts = courts.filter(c => c.is_active);
-  const matches: ScheduleMatch[] = [];
+  // Sort courts by menu_order for consistent assignment
+  const activeCourts = courts
+    .filter(c => c.is_active)
+    .sort((a, b) => (a.menu_order || 0) - (b.menu_order || 0));
 
-  // Generate matches for left group - best 4
-  if (leftPlayers.length >= 4) {
-    const leftBest4 = leftPlayers.slice(0, 4);
-    const courtIndex = 0;
-    const court = activeCourts[courtIndex % activeCourts.length];
+  console.log('Active courts sorted by menu_order:', activeCourts.map(c => `${c.name} (${c.menu_order})`));
+
+  const allMatches: any[] = [];
+
+  // Generate matches for all 4 groups (without match numbers yet)
+  const groups = [
+    { players: leftPlayers.slice(0, 4), prefix: 'Links-Top', index: 1, courtIndex: 0 },
+    { players: leftPlayers.slice(4, 8), prefix: 'Links-Bottom', index: 2, courtIndex: 1 },
+    { players: rightPlayers.slice(0, 4), prefix: 'Rechts-Top', index: 3, courtIndex: 2 },
+    { players: rightPlayers.slice(4, 8), prefix: 'Rechts-Bottom', index: 4, courtIndex: 3 },
+  ];
+
+  groups.forEach(group => {
+    if (group.players.length >= 4) {
+      const groupMatches = generateRoundRobinMatches(
+        group.players,
+        group.prefix,
+        group.index,
+        group.courtIndex
+      );
+      allMatches.push(...groupMatches);
+    }
+  });
+
+  // Sort matches: first all "match 1", then all "match 2", then all "match 3"
+  // Within each round, sort by groupCourtIndex (corresponds to court order)
+  allMatches.sort((a, b) => {
+    if (a.matchIndexWithinGroup !== b.matchIndexWithinGroup) {
+      return a.matchIndexWithinGroup - b.matchIndexWithinGroup;
+    }
+    return a.groupCourtIndex - b.groupCourtIndex;
+  });
+
+  // Assign match numbers and courts in round-robin fashion
+  const matches: ScheduleMatch[] = allMatches.map((match, index) => {
+    const matchNumber = startMatchNumber + index;
+    const court = activeCourts[match.groupCourtIndex % activeCourts.length];
     
-    const leftBestMatches = generateRoundRobinMatches(
-      leftBest4,
-      'Links-Top',
-      1,
-      court?.id,
-      court ? `${court.name} (Links Top 4)` : 'Baan 1 (Links Top 4)',
-      startMatchNumber
-    );
-    matches.push(...leftBestMatches);
-  }
+    return {
+      ...match,
+      match_number: matchNumber,
+      court_id: court?.id,
+      court_name: court?.name || `Baan ${match.groupCourtIndex + 1}`,
+      court_number: matchNumber.toString(),
+    };
+  });
 
-  // Generate matches for left group - worst 4
-  if (leftPlayers.length >= 8) {
-    const leftWorst4 = leftPlayers.slice(4, 8);
-    const courtIndex = 1;
-    const court = activeCourts[courtIndex % activeCourts.length];
-    
-    const leftWorstMatches = generateRoundRobinMatches(
-      leftWorst4,
-      'Links-Bottom',
-      2,
-      court?.id,
-      court ? `${court.name} (Links Bottom 4)` : 'Baan 2 (Links Bottom 4)',
-      startMatchNumber + 3
-    );
-    matches.push(...leftWorstMatches);
-  }
+  console.log('Generated', matches.length, 'round 3 matches with round-robin numbering');
+  console.log('Match numbering:', matches.map(m => `#${m.match_number} on ${m.court_name}`));
 
-  // Generate matches for right group - best 4
-  if (rightPlayers.length >= 4) {
-    const rightBest4 = rightPlayers.slice(0, 4);
-    const courtIndex = 2;
-    const court = activeCourts[courtIndex % activeCourts.length];
-    
-    const rightBestMatches = generateRoundRobinMatches(
-      rightBest4,
-      'Rechts-Top',
-      3,
-      court?.id,
-      court ? `${court.name} (Rechts Top 4)` : 'Baan 3 (Rechts Top 4)',
-      startMatchNumber + 6
-    );
-    matches.push(...rightBestMatches);
-  }
-
-  // Generate matches for right group - worst 4
-  if (rightPlayers.length >= 8) {
-    const rightWorst4 = rightPlayers.slice(4, 8);
-    const courtIndex = 3;
-    const court = activeCourts[courtIndex % activeCourts.length];
-    
-    const rightWorstMatches = generateRoundRobinMatches(
-      rightWorst4,
-      'Rechts-Bottom',
-      4,
-      court?.id,
-      court ? `${court.name} (Rechts Bottom 4)` : 'Baan 4 (Rechts Bottom 4)',
-      startMatchNumber + 9
-    );
-    matches.push(...rightWorstMatches);
-  }
-
-  console.log('Generated', matches.length, 'round 3 matches');
   return {
     matches,
     startMatchNumber,

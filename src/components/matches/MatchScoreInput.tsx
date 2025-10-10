@@ -220,6 +220,14 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
       })
       .eq("id", match.id);
 
+    // Delete existing stats first, then insert new ones
+    const { error: deleteError } = await supabase
+      .from("player_match_stats")
+      .delete()
+      .eq("match_id", match.id);
+
+    if (deleteError) throw deleteError;
+
     const playerRows = players.map((p) => {
       const isTeam1 = match.team1_player1_id === p.id || match.team1_player2_id === p.id;
       return {
@@ -232,7 +240,9 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
 
     const { error: statsError } = await supabase
       .from("player_match_stats")
-      .upsert(playerRows, { onConflict: "match_id,player_id" });
+      .insert(playerRows);
+
+    if (statsError) throw statsError;
 
     const specialRows = Object.entries(specials).flatMap(([playerId, types]) =>
       Object.entries(types)

@@ -10,9 +10,10 @@ export interface ScheduleMatch {
   team2_player1_name: string;
   team2_player2_name: string;
   court_name?: string;
-  court_number?: number;
+  court_number?: number | string;
   court_id?: string;
   round_within_group: number;
+  match_number?: number;
 }
 
 export interface SchedulePreview {

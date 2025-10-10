@@ -69,6 +69,14 @@ export default function QuickScoreInput({ match, tournament, onSaved }: Props) {
         { id: match.team2_player2_id, isTeam1: false },
       ];
 
+      // Delete existing stats first, then insert new ones
+      const { error: deleteError } = await supabase
+        .from("player_match_stats")
+        .delete()
+        .eq("match_id", match.id);
+
+      if (deleteError) throw deleteError;
+
       const playerRows = players.map((p) => ({
         match_id: match.id,
         player_id: p.id,
@@ -78,7 +86,7 @@ export default function QuickScoreInput({ match, tournament, onSaved }: Props) {
 
       const { error: statsError } = await supabase
         .from("player_match_stats")
-        .upsert(playerRows, { onConflict: "match_id,player_id" });
+        .insert(playerRows);
 
       if (statsError) throw statsError;
 
