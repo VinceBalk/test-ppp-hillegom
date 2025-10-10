@@ -17,19 +17,22 @@ export default function PlayerCard({ player, canEdit, onEdit }: PlayerCardProps)
   const currentYear = new Date().getFullYear();
   const { data: specialsStats } = usePlayerSpecials(player.id, currentYear);
 
-  const getStatusColor = (status?: string) => {
-    switch (status) {
-      case 'actief':
-        return 'bg-green-100 text-green-800';
-      case 'inactief':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  const getCardClassName = () => {
+    if (!specialsStats) return "h-full hover:shadow-md transition-shadow relative";
+    
+    if (specialsStats.year_rank === 1) {
+      return "h-full hover:shadow-xl transition-all relative bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30 shadow-lg";
     }
+    
+    if (specialsStats.year_rank === 2) {
+      return "h-full hover:shadow-xl transition-all relative bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-2 border-amber-500/30 shadow-md";
+    }
+    
+    return "h-full hover:shadow-md transition-shadow relative";
   };
 
   return (
-    <Card className="h-full hover:shadow-md transition-shadow relative">
+    <Card className={getCardClassName()}>
       {canEdit && onEdit && (
         <Button
           size="sm"
@@ -45,64 +48,46 @@ export default function PlayerCard({ player, canEdit, onEdit }: PlayerCardProps)
       )}
       <Link to={`/players/${player.id}`} className="block">
         <CardHeader className="pb-3">
-          <CardTitle className="text-xl font-semibold pr-10">{player.name}</CardTitle>
+          <div className="flex justify-between items-start pr-10">
+            <CardTitle className="text-xl font-semibold">{player.name}</CardTitle>
+            <div className="text-xl font-bold text-primary">
+              {player.ranking_score || 0}
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-2">
-          {player.ranking_score !== undefined && (
-            <div className="text-base text-muted-foreground">
-              <span className="font-medium">Rating:</span> {player.ranking_score}
-            </div>
-          )}
-          
-          {player.email && (
-            <div className="text-base text-muted-foreground">
-              <span className="font-medium">Email:</span> {player.email}
-            </div>
-          )}
-          
-          {player.phone && (
-            <div className="text-base text-muted-foreground">
-              <span className="font-medium">Telefoon:</span> {player.phone}
-            </div>
-          )}
-
-          {/* Specials Stats */}
+        <CardContent className="space-y-3">
+          {/* 2025 Seizoen sectie */}
           {specialsStats && specialsStats.total_specials > 0 && (
-            <div className="pt-2 space-y-1 border-t">
-              <div className="text-xs font-medium text-muted-foreground mb-1">{currentYear} Seizoen:</div>
-              <div className="flex items-center gap-2">
+            <div>
+              <div className="text-xs font-medium text-muted-foreground mb-2">
+                {currentYear} Seizoen:
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                  <Star className="h-4 w-4 text-orange-600" />
+                  <span className="font-semibold">{specialsStats.total_specials} specials</span>
+                </div>
                 {specialsStats.year_rank === 1 && (
-                  <Badge variant="default">
+                  <Badge variant="default" className="ml-2">
                     <Trophy className="h-3 w-3 mr-1" />
                     Chef Special
                   </Badge>
                 )}
                 {specialsStats.year_rank === 2 && (
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="ml-2">
                     <Award className="h-3 w-3 mr-1" />
                     Sous Chef
                   </Badge>
                 )}
-                <div className="text-sm text-muted-foreground flex items-center gap-1">
-                  <Star className="h-3 w-3" />
-                  {specialsStats.total_specials} specials
-                </div>
               </div>
             </div>
           )}
           
-          <div className="flex items-center justify-between pt-2">
-            {player.group_side && (
-              <Badge variant="outline" className="text-sm">
-                {player.group_side === 'left' ? 'Links' : 'Rechts'}
-              </Badge>
-            )}
-            
-            {player.position !== undefined && (
-              <div className="text-base font-medium text-primary">
-                #{player.position}
-              </div>
-            )}
+          {/* Footer met alleen rijtje */}
+          <div className="pt-2 border-t">
+            <Badge variant="outline">
+              {player.row_side === 'left' ? 'Links' : 'Rechts'}
+            </Badge>
           </div>
         </CardContent>
       </Link>
