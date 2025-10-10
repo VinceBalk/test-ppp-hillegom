@@ -146,7 +146,7 @@ export default function Settings() {
         </p>
       </div>
       
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid-2">
         {/* Appearance Settings */}
         <Card>
           <CardHeader>

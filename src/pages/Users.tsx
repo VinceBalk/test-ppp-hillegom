@@ -10,6 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Shield, Activity, AlertTriangle, UserCheck, Clock, Loader2 } from 'lucide-react';
 import { useSecurityValidation } from '@/hooks/useSecurityValidation';
+import { UserMobileCard } from '@/components/users/UserMobileCard';
+import { SecurityLogMobileCard } from '@/components/users/SecurityLogMobileCard';
 
 interface UserProfile {
   id: string;
@@ -298,21 +300,21 @@ export default function Users() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Gebruikersbeheer</h1>
           <p className="text-muted-foreground">
             Beheer systeem gebruikers en beveiligingsmonitoring
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 md:flex-row w-full md:w-auto">
           {isSuperAdmin() && (
-            <div className="flex rounded-lg bg-muted p-1">
+            <div className="flex rounded-lg bg-muted p-1 w-full md:w-auto">
               <Button
                 variant={activeTab === 'users' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setActiveTab('users')}
-                className="h-8"
+                className="h-8 flex-1 md:flex-none"
               >
                 <Shield className="mr-2 h-4 w-4" />
                 Gebruikers
@@ -321,7 +323,7 @@ export default function Users() {
                 variant={activeTab === 'security' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setActiveTab('security')}
-                className="h-8"
+                className="h-8 flex-1 md:flex-none"
               >
                 <Activity className="mr-2 h-4 w-4" />
                 Beveiliging
@@ -334,204 +336,271 @@ export default function Users() {
               fetchAdminUsers();
               fetchAuditLogs();
             }
-          }} variant="outline">
+          }} variant="outline" className="w-full md:w-auto">
             Vernieuwen
           </Button>
         </div>
       </div>
       
       {activeTab === 'users' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserCheck className="h-5 w-5" />
-              Geregistreerde Gebruikers
-            </CardTitle>
-            <CardDescription>
-              Overzicht van alle gebruikers en hun rollen in het systeem. Alleen beheerders kunnen gebruikersrollen wijzigen.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        <>
+          {/* Mobile Cards View */}
+          <div className="grid grid-cols-1 gap-4 md:hidden">
             {users.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                Geen gebruikers gevonden.
-              </p>
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-muted-foreground text-center">
+                    Geen gebruikers gevonden.
+                  </p>
+                </CardContent>
+              </Card>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Rol</TableHead>
-                    <TableHead>Aangemaakt</TableHead>
-                    <TableHead>Laatst bijgewerkt</TableHead>
-                    {hasRole('beheerder') && <TableHead>Acties</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map((user) => {
-                    const isAdmin = adminUsers.find(admin => admin.email === user.email);
-                    const canModifyUser = hasRole('beheerder') && (!isAdmin?.is_super_admin || isSuperAdmin());
-                    
-                    return (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            {user.email}
-                            {isAdmin?.is_super_admin && (
-                              <Badge variant="destructive" className="text-xs">
-                                Super Admin
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getRoleBadgeVariant(user.role)}>
-                            {user.role}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Clock className="h-3 w-3 text-muted-foreground" />
-                            {new Date(user.created_at).toLocaleDateString('nl-NL', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric'
-                            })}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Clock className="h-3 w-3 text-muted-foreground" />
-                            {new Date(user.updated_at).toLocaleDateString('nl-NL', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric'
-                            })}
-                          </div>
-                        </TableCell>
-                        {hasRole('beheerder') && (
-                          <TableCell>
-                            <Select
-                              value={user.role}
-                              onValueChange={(newRole: 'speler' | 'organisator' | 'beheerder') => 
-                                updateUserRole(user.id, newRole)
-                              }
-                              disabled={!canModifyUser}
-                            >
-                              <SelectTrigger className="w-32">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="speler">Speler</SelectItem>
-                                <SelectItem value="organisator">Organisator</SelectItem>
-                                <SelectItem value="beheerder">Beheerder</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            {!canModifyUser && (
-                              <div className="text-xs text-muted-foreground mt-1">
-                                Geen toestemming
-                              </div>
-                            )}
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              users.map((user) => {
+                const isAdmin = adminUsers.find(admin => admin.email === user.email);
+                const canModifyUser = hasRole('beheerder') && (!isAdmin?.is_super_admin || isSuperAdmin());
+                
+                return (
+                  <UserMobileCard
+                    key={user.id}
+                    user={user}
+                    isSuperAdmin={!!isAdmin?.is_super_admin}
+                    canModifyUser={canModifyUser}
+                    onRoleChange={updateUserRole}
+                    getRoleBadgeVariant={getRoleBadgeVariant}
+                  />
+                );
+              })
             )}
-          </CardContent>
-        </Card>
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UserCheck className="h-5 w-5" />
+                  Geregistreerde Gebruikers
+                </CardTitle>
+                <CardDescription>
+                  Overzicht van alle gebruikers en hun rollen in het systeem. Alleen beheerders kunnen gebruikersrollen wijzigen.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0 md:p-6">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[200px]">Email</TableHead>
+                        <TableHead className="min-w-[100px]">Rol</TableHead>
+                        <TableHead className="min-w-[120px]">Aangemaakt</TableHead>
+                        <TableHead className="min-w-[120px]">Laatst bijgewerkt</TableHead>
+                        {hasRole('beheerder') && <TableHead className="min-w-[140px]">Acties</TableHead>}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                            Geen gebruikers gevonden.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        users.map((user) => {
+                          const isAdmin = adminUsers.find(admin => admin.email === user.email);
+                          const canModifyUser = hasRole('beheerder') && (!isAdmin?.is_super_admin || isSuperAdmin());
+                          
+                          return (
+                            <TableRow key={user.id}>
+                              <TableCell className="font-medium">
+                                <div className="flex items-center gap-2">
+                                  {user.email}
+                                  {isAdmin?.is_super_admin && (
+                                    <Badge variant="destructive" className="text-xs">
+                                      Super Admin
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={getRoleBadgeVariant(user.role)}>
+                                  {user.role}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Clock className="h-3 w-3 text-muted-foreground" />
+                                  {new Date(user.created_at).toLocaleDateString('nl-NL', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric'
+                                  })}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Clock className="h-3 w-3 text-muted-foreground" />
+                                  {new Date(user.updated_at).toLocaleDateString('nl-NL', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric'
+                                  })}
+                                </div>
+                              </TableCell>
+                              {hasRole('beheerder') && (
+                                <TableCell>
+                                  <Select
+                                    value={user.role}
+                                    onValueChange={(newRole: 'speler' | 'organisator' | 'beheerder') => 
+                                      updateUserRole(user.id, newRole)
+                                    }
+                                    disabled={!canModifyUser}
+                                  >
+                                    <SelectTrigger className="w-32">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="speler">Speler</SelectItem>
+                                      <SelectItem value="organisator">Organisator</SelectItem>
+                                      <SelectItem value="beheerder">Beheerder</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  {!canModifyUser && (
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                      Geen toestemming
+                                    </div>
+                                  )}
+                                </TableCell>
+                              )}
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </>
       )}
 
       {activeTab === 'security' && isSuperAdmin() && (
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5" />
-                Beveiligingslogboek
-              </CardTitle>
-              <CardDescription>
-                Recente beveiligingsgebeurtenissen en gebruikersactiviteiten. Alleen super admins kunnen deze informatie bekijken.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {auditLogs.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
-                  Geen beveiligingslogboeken gevonden.
-                </p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Tijdstip</TableHead>
-                      <TableHead>Actie</TableHead>
-                      <TableHead>Gebruiker</TableHead>
-                      <TableHead>Resource</TableHead>
-                      <TableHead>Details</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {auditLogs.map((log) => (
-                      <TableRow key={log.id}>
-                        <TableCell className="text-sm">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-3 w-3 text-muted-foreground" />
-                            {new Date(log.created_at).toLocaleString('nl-NL', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getActionBadgeVariant(log.action)}>
-                            {formatActionName(log.action)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {log.user_id ? (
-                            <code className="bg-muted px-1 py-0.5 rounded text-xs">
-                              {log.user_id.substring(0, 8)}...
-                            </code>
-                          ) : (
-                            <span className="text-muted-foreground">Systeem</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {log.resource_type ? (
-                            <Badge variant="outline" className="text-xs">
-                              {log.resource_type}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm max-w-xs">
-                          {log.details ? (
-                            <details className="cursor-pointer">
-                              <summary className="text-blue-600 hover:text-blue-800">
-                                Details bekijken
-                              </summary>
-                              <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto">
-                                {JSON.stringify(log.details, null, 2)}
-                              </pre>
-                            </details>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
+        <>
+          {/* Mobile Cards View */}
+          <div className="grid grid-cols-1 gap-4 md:hidden">
+            {auditLogs.length === 0 ? (
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-muted-foreground text-center">
+                    Geen beveiligingslogboeken gevonden.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              auditLogs.map((log) => (
+                <SecurityLogMobileCard
+                  key={log.id}
+                  log={log}
+                  getActionBadgeVariant={getActionBadgeVariant}
+                  formatActionName={formatActionName}
+                />
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  Beveiligingslogboek
+                </CardTitle>
+                <CardDescription>
+                  Recente beveiligingsgebeurtenissen en gebruikersactiviteiten. Alleen super admins kunnen deze informatie bekijken.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0 md:p-6">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[160px]">Tijdstip</TableHead>
+                        <TableHead className="min-w-[140px]">Actie</TableHead>
+                        <TableHead className="min-w-[120px]">Gebruiker</TableHead>
+                        <TableHead className="min-w-[100px]">Resource</TableHead>
+                        <TableHead className="min-w-[140px]">Details</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                    </TableHeader>
+                    <TableBody>
+                      {auditLogs.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                            Geen beveiligingslogboeken gevonden.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        auditLogs.map((log) => (
+                          <TableRow key={log.id}>
+                            <TableCell className="text-sm">
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-3 w-3 text-muted-foreground" />
+                                {new Date(log.created_at).toLocaleString('nl-NL', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={getActionBadgeVariant(log.action)}>
+                                {formatActionName(log.action)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {log.user_id ? (
+                                <code className="bg-muted px-1 py-0.5 rounded text-xs">
+                                  {log.user_id.substring(0, 8)}...
+                                </code>
+                              ) : (
+                                <span className="text-muted-foreground">Systeem</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {log.resource_type ? (
+                                <Badge variant="outline" className="text-xs">
+                                  {log.resource_type}
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm max-w-xs">
+                              {log.details ? (
+                                <details className="cursor-pointer">
+                                  <summary className="text-blue-600 hover:text-blue-800">
+                                    Details bekijken
+                                  </summary>
+                                  <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto">
+                                    {JSON.stringify(log.details, null, 2)}
+                                  </pre>
+                                </details>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </>
       )}
     </div>
   );
