@@ -3,8 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tournament } from '@/hooks/useTournaments';
-import { Pencil, Trash2, Users, TrendingUp } from 'lucide-react';
+import { Pencil, Trash2, Users, TrendingUp, PlayCircle, CheckCircle } from 'lucide-react';
 import { TournamentStatusBadge } from './TournamentStatusBadge';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useState } from 'react';
 
 interface TournamentMobileCardProps {
   tournament: Tournament;
@@ -23,6 +26,39 @@ export function TournamentMobileCard({
   onViewStandings,
   isDeleting
 }: TournamentMobileCardProps) {
+  const { toast } = useToast();
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+
+  const handleToggleStatus = async () => {
+    const newStatus = tournament.status === 'completed' ? 'in_progress' : 'completed';
+    setIsTogglingStatus(true);
+
+    try {
+      const { error } = await supabase
+        .from('tournaments')
+        .update({ status: newStatus })
+        .eq('id', tournament.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Status gewijzigd',
+        description: `Toernooi status is gewijzigd naar ${newStatus === 'completed' ? 'Voltooid' : 'Bezig'}`,
+      });
+
+      // Reload to refresh data
+      window.location.reload();
+    } catch (error) {
+      toast({
+        title: 'Fout',
+        description: 'Kon status niet wijzigen',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsTogglingStatus(false);
+    }
+  };
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -73,6 +109,29 @@ export function TournamentMobileCard({
               Spelers
             </Button>
           </div>
+          
+          {(tournament.status === 'completed' || tournament.status === 'in_progress') && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleToggleStatus}
+              disabled={isTogglingStatus}
+              className="w-full"
+            >
+              {tournament.status === 'completed' ? (
+                <>
+                  <PlayCircle className="h-4 w-4 mr-2" />
+                  Zet op Bezig (om scores in te voeren)
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Zet op Voltooid
+                </>
+              )}
+            </Button>
+          )}
+
           <div className="grid grid-cols-2 gap-2">
             <Button 
               variant="outline" 

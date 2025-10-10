@@ -3,15 +3,18 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Edit, MoreHorizontal, Trash2, Users, Calendar, TrendingUp } from 'lucide-react';
+import { Edit, MoreHorizontal, Trash2, Users, Calendar, TrendingUp, PlayCircle, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { Tournament } from '@/hooks/useTournaments';
 import { TournamentForm } from '../TournamentForm';
 import { TournamentStatusBadge } from './TournamentStatusBadge';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useState } from 'react';
 
 interface TournamentRowProps {
   tournament: Tournament;
@@ -37,6 +40,8 @@ export function TournamentRow({
   isDeleting
 }: TournamentRowProps) {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
 
   const handleCreateSchedule = () => {
     navigate(`/schedule/${tournament.id}`);
@@ -44,6 +49,37 @@ export function TournamentRow({
 
   const handleRowClick = () => {
     setEditingTournament(tournament);
+  };
+
+  const handleToggleStatus = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newStatus = tournament.status === 'completed' ? 'in_progress' : 'completed';
+    setIsTogglingStatus(true);
+
+    try {
+      const { error } = await supabase
+        .from('tournaments')
+        .update({ status: newStatus })
+        .eq('id', tournament.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Status gewijzigd',
+        description: `Toernooi status is gewijzigd naar ${newStatus === 'completed' ? 'Voltooid' : 'Bezig'}`,
+      });
+
+      // Reload to refresh data
+      window.location.reload();
+    } catch (error) {
+      toast({
+        title: 'Fout',
+        description: 'Kon status niet wijzigen',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsTogglingStatus(false);
+    }
   };
 
   return (
@@ -110,6 +146,24 @@ export function TournamentRow({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {(tournament.status === 'completed' || tournament.status === 'in_progress') && (
+                  <>
+                    <DropdownMenuItem onClick={handleToggleStatus} disabled={isTogglingStatus}>
+                      {tournament.status === 'completed' ? (
+                        <>
+                          <PlayCircle className="h-4 w-4 mr-2" />
+                          Zet op Bezig
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Zet op Voltooid
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuItem onClick={() => setEditingTournament(tournament)}>
                   <Edit className="h-4 w-4 mr-2" />
                   Bewerken
