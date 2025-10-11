@@ -10,17 +10,25 @@ import {
   Target, 
   Award, 
   Settings, 
-  UserCog 
+  UserCog,
+  TrendingUp,
+  List,
+  Hash,
+  Map,
+  User
 } from 'lucide-react';
 
 const navigationItems = [
   { name: 'Dashboard', href: '/', icon: Home, roles: ['speler', 'organisator', 'beheerder'] },
-  { name: 'Spelers', href: '/players', icon: Users, roles: ['organisator', 'beheerder'] },
-  { name: 'Toernooien', href: '/tournaments', icon: Trophy, roles: ['organisator', 'beheerder'] },
-  { name: 'Wedstrijden', href: '/matches', icon: Target, roles: ['organisator', 'beheerder'] },
-  { name: 'Schema', href: '/schedule', icon: Calendar, roles: ['speler', 'organisator', 'beheerder'] },
+  { name: 'Standen', href: '/standings', icon: TrendingUp, roles: ['speler', 'organisator', 'beheerder'] },
+  { name: 'Spelers', href: '/players', icon: Users, roles: ['speler', 'organisator', 'beheerder'] },
+  { name: 'Toernooien', href: '/tournaments', icon: Trophy, roles: ['speler', 'organisator', 'beheerder'] },
+  { name: 'Wedstrijden', href: '/matches', icon: Target, roles: ['speler', 'organisator', 'beheerder'] },
+  { name: 'Schema', href: '/schedule', icon: List, roles: ['speler', 'organisator', 'beheerder'] },
   { name: 'Scores', href: '/scores', icon: Award, roles: ['speler', 'organisator', 'beheerder'] },
-  { name: 'Specials', href: '/specials', icon: Award, roles: ['organisator', 'beheerder'] },
+  { name: 'Specials', href: '/specials', icon: Hash, roles: ['organisator', 'beheerder'] },
+  { name: 'Banen', href: '/courts', icon: Map, roles: ['organisator', 'beheerder'] },
+  { name: 'Profiel', href: '/profile', icon: User, roles: ['speler', 'organisator', 'beheerder'] },
   { name: 'Instellingen', href: '/settings', icon: Settings, roles: ['organisator', 'beheerder'] },
   { name: 'Gebruikers', href: '/users', icon: UserCog, roles: ['beheerder'] },
 ];

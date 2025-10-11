@@ -55,7 +55,11 @@ const App = () => {
                 <Route path="players/:id" element={<PlayerDetail />} />
                 <Route path="tournaments" element={<Tournaments />} />
                 
-                <Route path="tournaments/:id/assign-players" element={<AssignPlayers />} />
+                <Route path="tournaments/:id/assign-players" element={
+                  <ProtectedRoute requiredRole="organisator">
+                    <AssignPlayers />
+                  </ProtectedRoute>
+                } />
                 <Route path="matches" element={<Matches />} />
                 <Route path="schedule" element={<Schedule />} />
                 <Route path="schedule/:tournamentId" element={<Schedule />} />
@@ -64,11 +68,27 @@ const App = () => {
                 
                 <Route path="scores" element={<Scores />} />
                 <Route path="scores/:matchId" element={<Scores />} />
-                <Route path="specials" element={<Specials />} />
-                <Route path="courts" element={<Courts />} />
-                <Route path="settings" element={<Settings />} />
+                <Route path="specials" element={
+                  <ProtectedRoute requiredRole="organisator">
+                    <Specials />
+                  </ProtectedRoute>
+                } />
+                <Route path="courts" element={
+                  <ProtectedRoute requiredRole="organisator">
+                    <Courts />
+                  </ProtectedRoute>
+                } />
+                <Route path="settings" element={
+                  <ProtectedRoute requiredRole="organisator">
+                    <Settings />
+                  </ProtectedRoute>
+                } />
                 <Route path="profile" element={<Profile />} />
-                <Route path="users" element={<Users />} />
+                <Route path="users" element={
+                  <ProtectedRoute requiredRole="beheerder">
+                    <Users />
+                  </ProtectedRoute>
+                } />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -16,22 +16,35 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 
 const navItems = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/standings', label: 'Standen', icon: TrendingUp },
-  { to: '/players', label: 'Spelers', icon: Users },
-  { to: '/tournaments', label: 'Toernooien', icon: Trophy },
-  { to: '/matches', label: 'Wedstrijden', icon: Calendar },
-  { to: '/schedule', label: 'Schema', icon: List },
-  { to: '/scores', label: 'Scores', icon: Hash },
-  { to: '/specials', label: 'Specials', icon: Hash },
-  { to: '/courts', label: 'Banen', icon: Map },
-  { to: '/profile', label: 'Profiel', icon: User },
-  { to: '/settings', label: 'Instellingen', icon: Sliders },
-  { to: '/users', label: 'Gebruikers', icon: Shield }
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['speler', 'organisator', 'beheerder'] },
+  { to: '/standings', label: 'Standen', icon: TrendingUp, roles: ['speler', 'organisator', 'beheerder'] },
+  { to: '/players', label: 'Spelers', icon: Users, roles: ['speler', 'organisator', 'beheerder'] },
+  { to: '/tournaments', label: 'Toernooien', icon: Trophy, roles: ['speler', 'organisator', 'beheerder'] },
+  { to: '/matches', label: 'Wedstrijden', icon: Calendar, roles: ['speler', 'organisator', 'beheerder'] },
+  { to: '/schedule', label: 'Schema', icon: List, roles: ['speler', 'organisator', 'beheerder'] },
+  { to: '/scores', label: 'Scores', icon: Hash, roles: ['speler', 'organisator', 'beheerder'] },
+  { to: '/specials', label: 'Specials', icon: Hash, roles: ['organisator', 'beheerder'] },
+  { to: '/courts', label: 'Banen', icon: Map, roles: ['organisator', 'beheerder'] },
+  { to: '/profile', label: 'Profiel', icon: User, roles: ['speler', 'organisator', 'beheerder'] },
+  { to: '/settings', label: 'Instellingen', icon: Sliders, roles: ['organisator', 'beheerder'] },
+  { to: '/users', label: 'Gebruikers', icon: Shield, roles: ['beheerder'] }
 ];
 
 export function Sidebar() {
-  const { user, profile, adminUser, loading } = useAuth();
+  const { user, profile, adminUser, loading, hasRole, isSuperAdmin } = useAuth();
+
+  // Filter menu items based on user role
+  const getVisibleNavItems = () => {
+    // Super admin can see everything
+    if (isSuperAdmin()) return navItems;
+    
+    // Filter based on user's role
+    return navItems.filter(item => 
+      item.roles.some(role => hasRole(role))
+    );
+  };
+
+  const visibleNavItems = getVisibleNavItems();
 
   // Show loading state
   if (loading) {
@@ -59,7 +72,7 @@ export function Sidebar() {
       {/* Navigatie */}
       <nav className="flex-1 overflow-y-auto py-4">
         <ul className="space-y-1 px-2">
-          {navItems.map(({ to, label, icon: Icon }) => (
+          {visibleNavItems.map(({ to, label, icon: Icon }) => (
             <li key={to}>
               <NavLink
                 to={to}
