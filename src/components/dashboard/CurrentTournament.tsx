@@ -25,16 +25,25 @@ interface CurrentTournamentProps {
 export function CurrentTournament({ tournament, onTournamentClick }: CurrentTournamentProps) {
   const navigate = useNavigate();
   
+  const handleCardClick = () => {
+    if (tournament) {
+      navigate(`/schedule/${tournament.id}`);
+    }
+  };
+  
   return (
-    <Card className={tournament ? "cursor-pointer hover:shadow-md transition-shadow" : ""}>
-      <CardHeader onClick={() => tournament && onTournamentClick()}>
+    <Card 
+      className={tournament ? "cursor-pointer hover:bg-accent/50 transition-colors" : ""}
+      onClick={handleCardClick}
+    >
+      <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Trophy className="h-5 w-5" />
           Huidig Toernooi
         </CardTitle>
         <CardDescription>{tournament?.name || 'Geen actief toernooi'}</CardDescription>
       </CardHeader>
-      <CardContent onClick={() => tournament && onTournamentClick()}>
+      <CardContent>
         {tournament ? (
           <div className="space-y-2">
             <p className="text-sm">

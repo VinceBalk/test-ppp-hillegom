@@ -14,6 +14,8 @@ export default function Dashboard() {
     leftRankings,
     rightRankings,
     stats,
+    chefSpecial,
+    sousChef,
     loading
   } = useDashboardData();
 
@@ -57,7 +59,12 @@ export default function Dashboard() {
         <p className="text-muted-foreground">Welkom bij het PPP Hillegom toernooi management systeem</p>
       </div>
 
-      <DashboardStats stats={stats} recentTournaments={recentTournaments} />
+      <DashboardStats 
+        stats={stats} 
+        recentTournaments={recentTournaments} 
+        chefSpecial={chefSpecial}
+        sousChef={sousChef}
+      />
 
       <CurrentTournament 
         tournament={currentTournament} 

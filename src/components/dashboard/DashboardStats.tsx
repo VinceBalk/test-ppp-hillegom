@@ -1,5 +1,4 @@
-
-import { Trophy, Users, Calendar } from 'lucide-react';
+import { Trophy, Users, Calendar, Award, Medal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { StatsCard } from './StatsCard';
 
@@ -10,13 +9,21 @@ interface DashboardStatsProps {
     matchesToday: number;
   };
   recentTournaments: Array<{ name: string }>;
+  chefSpecial: {
+    player_name: string;
+    total_specials: number;
+  } | null;
+  sousChef: {
+    player_name: string;
+    total_specials: number;
+  } | null;
 }
 
-export function DashboardStats({ stats, recentTournaments }: DashboardStatsProps) {
+export function DashboardStats({ stats, recentTournaments, chefSpecial, sousChef }: DashboardStatsProps) {
   const navigate = useNavigate();
 
   return (
-    <div className="grid-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       <StatsCard
         title="Actieve Toernooien"
         value={stats.activeTournaments}
@@ -43,6 +50,20 @@ export function DashboardStats({ stats, recentTournaments }: DashboardStatsProps
         value={recentTournaments[0]?.name || 'Geen recent toernooi'}
         icon={Trophy}
         onClick={() => navigate('/tournaments')}
+      />
+      
+      <StatsCard
+        title="Chef Special"
+        value={chefSpecial ? `${chefSpecial.player_name} (${chefSpecial.total_specials})` : 'Nog niet toegekend'}
+        icon={Award}
+        onClick={() => navigate('/standings')}
+      />
+      
+      <StatsCard
+        title="Sous Chef"
+        value={sousChef ? `${sousChef.player_name} (${sousChef.total_specials})` : 'Nog niet toegekend'}
+        icon={Medal}
+        onClick={() => navigate('/standings')}
       />
     </div>
   );
