@@ -19,7 +19,7 @@ export default function ScheduleGroupSection({
   onUpdateMatch,
   groupColor = "bg-blue-500"
 }: ScheduleGroupSectionProps) {
-  // Group matches by court for better organization
+  // Groepeer matches per baan en sorteer op specifieke volgorde
   const groupMatchesByCourt = (matches: ScheduleMatch[]) => {
     const grouped: { [courtName: string]: ScheduleMatch[] } = {};
     
@@ -31,7 +31,7 @@ export default function ScheduleGroupSection({
       grouped[courtKey].push(match);
     });
     
-    // Sort matches within each court by round
+    // Sorteer matches binnen elke baan op ronde
     Object.keys(grouped).forEach(courtName => {
       grouped[courtName].sort((a, b) => a.round_within_group - b.round_within_group);
     });
@@ -40,7 +40,13 @@ export default function ScheduleGroupSection({
   };
 
   const courtGroups = groupMatchesByCourt(matches);
-  const sortedCourtNames = Object.keys(courtGroups).sort();
+  
+  // Definieer vaste volgorde: voor Links eerst Jopen dan New York, voor Rechts eerst BTA dan KEEK
+  const courtOrder = title.includes('Linker') 
+    ? ['Jopen Bier Baan', 'New York Pizza Baan']
+    : ['BTA Baan', 'KEEK Baan'];
+  
+  const sortedCourtNames = courtOrder.filter(name => courtGroups[name]);
 
   return (
     <div className="space-y-4">
