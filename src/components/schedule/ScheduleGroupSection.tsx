@@ -56,7 +56,7 @@ export default function ScheduleGroupSection({
           <p className="text-lg">Geen wedstrijden in {title.toLowerCase()}</p>
         </div>
       ) : (
-        <div className="grid-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {sortedCourtNames.map((courtName) => (
             <div key={courtName} className="space-y-3">
               <div className="flex items-center gap-2 p-3 rounded-lg border bg-gray-50">
