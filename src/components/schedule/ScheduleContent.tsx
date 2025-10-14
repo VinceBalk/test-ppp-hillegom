@@ -207,9 +207,8 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
             />
           )}
 
-          {selectedRound <= 2 && (
-            <ManualMatchBuilder tournamentId={selectedTournamentId} initialRound={selectedRound} />
-          )}
+          {/* Handmatig wedstrijden toevoegen - beschikbaar voor alle rondes */}
+          <ManualMatchBuilder tournamentId={selectedTournamentId} initialRound={selectedRound} />
         </>
       )}
 

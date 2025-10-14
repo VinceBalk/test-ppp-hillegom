@@ -25,7 +25,17 @@ const generateRoundRobinMatches = (
 
   const matches: ScheduleMatch[] = [];
 
-  // Match 1: Player 1&3 vs Player 2&4
+  // CORRECTE ROUND-ROBIN PATROON VOOR 4 SPELERS:
+  // Spelers gesorteerd op prestatie: 1=beste, 2=tweede, 3=derde, 4=vierde
+  // 
+  // Match 1: Speler 1&3 vs Speler 2&4 (beste+derde vs tweede+vierde)
+  // Match 2: Speler 1&4 vs Speler 2&3 (beste+vierde vs tweede+derde)  
+  // Match 3: Speler 1&2 vs Speler 3&4 (beste+tweede vs derde+vierde)
+  //
+  // Dit zorgt ervoor dat elke speler 1x speelt met elk ander teamlid
+  // en tegen elke tegenstander precies 1 keer.
+
+  // Match 1: Speler 1&3 vs Speler 2&4
   matches.push({
     id: `${groupPrefix.toLowerCase()}-g${groupIndex}-r3-m1`,
     team1_player1_id: players[0].player_id,
@@ -37,11 +47,11 @@ const generateRoundRobinMatches = (
     team2_player1_name: players[1].name,
     team2_player2_name: players[3].name,
     round_within_group: 3,
-    groupCourtIndex, // Used for sorting later
+    groupCourtIndex,
     matchIndexWithinGroup: 0,
   } as any);
 
-  // Match 2: Player 1&4 vs Player 2&3
+  // Match 2: Speler 1&4 vs Speler 2&3
   matches.push({
     id: `${groupPrefix.toLowerCase()}-g${groupIndex}-r3-m2`,
     team1_player1_id: players[0].player_id,
@@ -57,7 +67,7 @@ const generateRoundRobinMatches = (
     matchIndexWithinGroup: 1,
   } as any);
 
-  // Match 3: Player 1&2 vs Player 3&4
+  // Match 3: Speler 1&2 vs Speler 3&4
   matches.push({
     id: `${groupPrefix.toLowerCase()}-g${groupIndex}-r3-m3`,
     team1_player1_id: players[0].player_id,

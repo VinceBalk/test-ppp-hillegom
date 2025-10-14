@@ -11,9 +11,10 @@ interface MatchEditorProps {
   match: ScheduleMatch;
   tournamentId: string;
   onUpdate: (matchId: string, updates: Partial<ScheduleMatch>) => void;
+  isPreviewMode?: boolean;
 }
 
-export default function MatchEditor({ match, tournamentId, onUpdate }: MatchEditorProps) {
+export default function MatchEditor({ match, tournamentId, onUpdate, isPreviewMode = false }: MatchEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedMatch, setEditedMatch] = useState<ScheduleMatch>(match);
   const { tournamentPlayers } = useTournamentPlayers(tournamentId);
@@ -115,9 +116,9 @@ export default function MatchEditor({ match, tournamentId, onUpdate }: MatchEdit
       activeCourts={activeCourts}
       isLeftGroup={isLeftGroup}
       isRightGroup={isRightGroup}
-      showSaveButton={true}
+      showSaveButton={isPreviewMode}
       onSave={handleSave}
-      onSaveToDatabase={handleSaveToDatabase}
+      onSaveToDatabase={isPreviewMode ? handleSaveToDatabase : undefined}
       onCancel={handleCancel}
       onUpdatePlayer={updatePlayer}
       onUpdateCourt={updateCourt}

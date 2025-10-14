@@ -73,6 +73,7 @@ export default function ScheduleGroupSection({
                     match={match}
                     tournamentId={tournamentId}
                     onUpdate={onUpdateMatch}
+                    isPreviewMode={true}
                   />
                 ))}
               </div>
