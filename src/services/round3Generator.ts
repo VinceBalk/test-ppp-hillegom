@@ -178,37 +178,48 @@ export const generateRound3Schedule = async (tournamentId: string, courts: any[]
   const startMatchNumber = (existingMatches?.[0]?.match_number || 0) + 1;
   console.log('Starting match numbers from:', startMatchNumber);
 
-  // Sort courts by menu_order for consistent assignment
-  const activeCourts = courts
-    .filter(c => c.is_active)
-    .sort((a, b) => (a.menu_order || 0) - (b.menu_order || 0));
+  // Zoek specifieke banen voor elke groep
+  const jopenBierCourt = courts.find(c => c.name === 'Jopen Bier Baan' && c.is_active);
+  const newYorkCourt = courts.find(c => c.name === 'New York Pizza Baan' && c.is_active);
+  const btaCourt = courts.find(c => c.name === 'BTA Baan' && c.is_active);
+  const keekCourt = courts.find(c => c.name === 'KEEK Baan' && c.is_active);
 
-  console.log('Active courts sorted by menu_order:', activeCourts.map(c => `${c.name} (${c.menu_order})`));
+  console.log('Court assignments:', {
+    'Links Top (beste 4)': jopenBierCourt?.name,
+    'Links Bottom (slechtste 4)': newYorkCourt?.name,
+    'Rechts Top (beste 4)': btaCourt?.name,
+    'Rechts Bottom (slechtste 4)': keekCourt?.name
+  });
 
   const allMatches: any[] = [];
 
-  // Generate matches for all 4 groups (without match numbers yet)
+  // Generate matches voor alle 4 groepen met specifieke baan toewijzing
   const groups = [
-    { players: leftPlayers.slice(0, 4), prefix: 'Links-Top', index: 1, courtIndex: 0 },
-    { players: leftPlayers.slice(4, 8), prefix: 'Links-Bottom', index: 2, courtIndex: 1 },
-    { players: rightPlayers.slice(0, 4), prefix: 'Rechts-Top', index: 3, courtIndex: 2 },
-    { players: rightPlayers.slice(4, 8), prefix: 'Rechts-Bottom', index: 4, courtIndex: 3 },
+    { players: leftPlayers.slice(0, 4), prefix: 'Links-Top', index: 1, court: jopenBierCourt },
+    { players: leftPlayers.slice(4, 8), prefix: 'Links-Bottom', index: 2, court: newYorkCourt },
+    { players: rightPlayers.slice(0, 4), prefix: 'Rechts-Top', index: 3, court: btaCourt },
+    { players: rightPlayers.slice(4, 8), prefix: 'Rechts-Bottom', index: 4, court: keekCourt },
   ];
 
   groups.forEach(group => {
-    if (group.players.length >= 4) {
+    if (group.players.length >= 4 && group.court) {
       const groupMatches = generateRoundRobinMatches(
         group.players,
         group.prefix,
         group.index,
-        group.courtIndex
+        group.index // Gebruik group index voor sortering
       );
+      // Wijs baan direct toe aan elke match in deze groep
+      groupMatches.forEach(match => {
+        match.court_id = group.court.id;
+        match.court_name = group.court.name;
+      });
       allMatches.push(...groupMatches);
     }
   });
 
-  // Sort matches: first all "match 1", then all "match 2", then all "match 3"
-  // Within each round, sort by groupCourtIndex (corresponds to court order)
+  // Sorteer matches: eerst alle "match 1", dan alle "match 2", dan alle "match 3"
+  // Binnen elke ronde: sorteer op group index (1=Links Top, 2=Links Bottom, 3=Rechts Top, 4=Rechts Bottom)
   allMatches.sort((a, b) => {
     if (a.matchIndexWithinGroup !== b.matchIndexWithinGroup) {
       return a.matchIndexWithinGroup - b.matchIndexWithinGroup;
@@ -216,22 +227,19 @@ export const generateRound3Schedule = async (tournamentId: string, courts: any[]
     return a.groupCourtIndex - b.groupCourtIndex;
   });
 
-  // Assign match numbers and courts in round-robin fashion
+  // Wijs match nummers toe (baan is al toegewezen)
   const matches: ScheduleMatch[] = allMatches.map((match, index) => {
     const matchNumber = startMatchNumber + index;
-    const court = activeCourts[match.groupCourtIndex % activeCourts.length];
     
     return {
       ...match,
       match_number: matchNumber,
-      court_id: court?.id,
-      court_name: court?.name || `Baan ${match.groupCourtIndex + 1}`,
       court_number: matchNumber.toString(),
     };
   });
 
-  console.log('Generated', matches.length, 'round 3 matches with round-robin numbering');
-  console.log('Match numbering:', matches.map(m => `#${m.match_number} on ${m.court_name}`));
+  console.log('Gegenereerd', matches.length, 'ronde 3 wedstrijden met correcte baan toewijzing');
+  console.log('Wedstrijd nummering:', matches.map(m => `#${m.match_number} op ${m.court_name}`));
 
   return {
     matches,
