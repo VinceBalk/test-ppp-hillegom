@@ -21,14 +21,21 @@ export const useSchedulePreview = (tournamentId?: string) => {
     console.log('Generating 2v2 preview for tournament:', tournamentId, 'round:', roundNumber);
     
     try {
-      // Check if schedule already exists
-      const existingSchedule = await checkIfScheduleExists(tournamentId, roundNumber);
-      if (existingSchedule && existingSchedule.preview_data) {
-        console.log('Loading existing schedule from database');
-        // Safely cast the Json data back to SchedulePreview
-        const existingPreview = existingSchedule.preview_data as unknown as SchedulePreview;
-        setPreview(existingPreview);
-        return existingPreview;
+      // For round 3, ALWAYS regenerate to ensure latest logic is used
+      if (roundNumber !== 3) {
+        // Check if schedule already exists (only for rounds 1 & 2)
+        const existingSchedule = await checkIfScheduleExists(tournamentId, roundNumber);
+        if (existingSchedule && existingSchedule.preview_data) {
+          console.log('Loading existing schedule from database');
+          // Safely cast the Json data back to SchedulePreview
+          const existingPreview = existingSchedule.preview_data as unknown as SchedulePreview;
+          setPreview(existingPreview);
+          return existingPreview;
+        }
+      } else {
+        // Round 3: Clear existing preview first to force regeneration
+        console.log('🔄 Round 3: Clearing existing preview to force regeneration with latest logic');
+        await clearPreviewFromDatabase(tournamentId, roundNumber);
       }
 
       let allMatches: ScheduleMatch[];
