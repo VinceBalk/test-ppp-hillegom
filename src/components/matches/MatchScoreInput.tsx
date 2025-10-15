@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { checkAndUpdateTournamentStatus } from "@/utils/tournamentStatusUtils";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +48,7 @@ type Props = {
 
 export default function MatchScoreInput({ match, tournament, round }: Props) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [team1Score, setTeam1Score] = useState<number | "">(match.team1_score ?? "");
   const team2Score = team1Score !== "" ? 8 - Number(team1Score) : "";
   const [loading, setLoading] = useState(false);
@@ -340,6 +342,9 @@ export default function MatchScoreInput({ match, tournament, round }: Props) {
 
     // Check of toernooi automatisch voltooid moet worden
     await checkAndUpdateTournamentStatus(tournament.id);
+    
+    // Invalidate matches query to show updated data immediately
+    await queryClient.invalidateQueries({ queryKey: ['matches'] });
 
     setLoading(false);
 

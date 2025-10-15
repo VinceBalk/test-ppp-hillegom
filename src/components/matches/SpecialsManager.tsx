@@ -11,6 +11,7 @@ import { getShortTeamName } from '@/utils/matchUtils';
 import { ArrowLeft, Plus, Minus, Star } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface SpecialsManagerProps {
   match: Match;
@@ -31,6 +32,7 @@ export default function SpecialsManager({ match, onClose, onBack }: SpecialsMana
   const [playerSpecials, setPlayerSpecials] = useState<PlayerSpecial[]>([]);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const is2v2 = !!(match.team1_player1 && match.team2_player1);
   
@@ -154,6 +156,9 @@ export default function SpecialsManager({ match, onClose, onBack }: SpecialsMana
         if (insertError) throw insertError;
       }
 
+      // Invalidate matches query to refetch updated data
+      await queryClient.invalidateQueries({ queryKey: ['matches'] });
+      
       toast({
         title: "Specials opgeslagen",
         description: `${playerSpecials.length} special${playerSpecials.length !== 1 ? 's' : ''} succesvol opgeslagen.`,

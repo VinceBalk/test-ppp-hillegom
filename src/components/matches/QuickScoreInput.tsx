@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Check, Edit } from "lucide-react";
 import { checkAndUpdateTournamentStatus } from "@/utils/tournamentStatusUtils";
+import { useQueryClient } from "@tanstack/react-query";
 
 type Match = {
   id: string;
@@ -37,6 +38,7 @@ type Props = {
 
 export default function QuickScoreInput({ match, tournament, onSaved, onRefetch }: Props) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedScore, setSelectedScore] = useState<number | null>(
     match.team1_score ?? null
   );
@@ -92,6 +94,9 @@ export default function QuickScoreInput({ match, tournament, onSaved, onRefetch 
 
       if (statsError) throw statsError;
 
+      // Invalidate matches query to show updated data immediately
+      await queryClient.invalidateQueries({ queryKey: ['matches'] });
+      
       toast({
         title: "✓ Score opgeslagen!",
         description: `Stand: ${score} - ${team2Score}`,
@@ -213,6 +218,9 @@ export default function QuickScoreInput({ match, tournament, onSaved, onRefetch 
         await checkAndUpdateTournamentStatus(matchData.tournament_id);
       }
 
+      // Invalidate matches query to show completed status immediately
+      await queryClient.invalidateQueries({ queryKey: ['matches'] });
+      
       toast({
         title: "✓ Wedstrijd voltooid!",
         description: "Stats zijn bijgewerkt voor ranking",
@@ -223,6 +231,8 @@ export default function QuickScoreInput({ match, tournament, onSaved, onRefetch 
         await onRefetch();
       }
 
+      setLoading(false);
+      
       setTimeout(() => {
         if (onSaved) onSaved();
       }, 300);
@@ -247,14 +257,16 @@ export default function QuickScoreInput({ match, tournament, onSaved, onRefetch 
 
       if (error) throw error;
 
+      // Invalidate matches query to show reopened status immediately
+      await queryClient.invalidateQueries({ queryKey: ['matches'] });
+
       toast({
         title: "✓ Wedstrijd heropend",
         description: "Je kunt nu de score aanpassen",
         duration: 2000,
       });
 
-      // Reload de pagina om de nieuwe status te tonen
-      window.location.reload();
+      setLoading(false);
     } catch (error: any) {
       toast({
         title: "Fout bij heropenen",
