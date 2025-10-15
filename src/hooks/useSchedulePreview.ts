@@ -53,13 +53,11 @@ export const useSchedulePreview = (tournamentId?: string) => {
         const round3Result = await generateRound3Schedule(tournamentId, activeCourts);
         allMatches = round3Result.matches;
         
-        // Split matches by group for display
-        leftMatches = allMatches.filter(m => 
-          m.court_name?.includes('Links') || m.id.includes('links')
-        );
-        rightMatches = allMatches.filter(m => 
-          m.court_name?.includes('Rechts') || m.id.includes('rechts')
-        );
+        // Split matches by group for display - gebruik startsWith voor betrouwbare filtering
+        leftMatches = allMatches.filter(m => m.id.startsWith('links-'));
+        rightMatches = allMatches.filter(m => m.id.startsWith('rechts-'));
+        
+        console.log('Split matches - Left:', leftMatches.length, 'Right:', rightMatches.length);
         
         console.log('Generated Round 3 matches:', allMatches.length);
       } else {
@@ -132,12 +130,8 @@ export const useSchedulePreview = (tournamentId?: string) => {
     );
     console.log('Preview updated, updatedMatches count:', updatedMatches.length);
     
-    const updatedLeftMatches = updatedMatches.filter(m => 
-      m.court_name?.includes('Links') || m.id.includes('links')
-    );
-    const updatedRightMatches = updatedMatches.filter(m => 
-      m.court_name?.includes('Rechts') || m.id.includes('rechts')
-    );
+    const updatedLeftMatches = updatedMatches.filter(m => m.id.startsWith('links-'));
+    const updatedRightMatches = updatedMatches.filter(m => m.id.startsWith('rechts-'));
     
     const updatedPreview = {
       matches: updatedMatches,

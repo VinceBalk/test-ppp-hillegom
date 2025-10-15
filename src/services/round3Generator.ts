@@ -164,8 +164,19 @@ export const generateRound3Schedule = async (tournamentId: string, courts: any[]
       return b.total_specials - a.total_specials;
     });
 
-  console.log('Left players ranked:', leftPlayers);
-  console.log('Right players ranked:', rightPlayers);
+  console.log('Left players ranked:', leftPlayers.length, 'players');
+  console.log('Right players ranked:', rightPlayers.length, 'players');
+  
+  // Valideer dat we genoeg spelers hebben
+  if (leftPlayers.length < 8) {
+    console.error(`❌ CRITICAL: Linker groep heeft slechts ${leftPlayers.length} spelers, minimaal 8 nodig voor Ronde 3!`);
+    throw new Error(`Onvoldoende spelers in linker groep: ${leftPlayers.length}/8`);
+  }
+  
+  if (rightPlayers.length < 8) {
+    console.error(`❌ CRITICAL: Rechter groep heeft slechts ${rightPlayers.length} spelers, minimaal 8 nodig voor Ronde 3!`);
+    throw new Error(`Onvoldoende spelers in rechter groep: ${rightPlayers.length}/8`);
+  }
 
   // Get highest match number to continue numbering
   const { data: existingMatches } = await supabase
