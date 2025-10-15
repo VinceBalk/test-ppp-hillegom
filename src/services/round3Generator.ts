@@ -178,31 +178,66 @@ export const generateRound3Schedule = async (tournamentId: string, courts: any[]
   const startMatchNumber = (existingMatches?.[0]?.match_number || 0) + 1;
   console.log('Starting match numbers from:', startMatchNumber);
 
-  // Zoek specifieke banen voor elke groep
-  const jopenBierCourt = courts.find(c => c.name === 'Jopen Bier Baan' && c.is_active);
-  const newYorkCourt = courts.find(c => c.name === 'New York Pizza Baan' && c.is_active);
-  const btaCourt = courts.find(c => c.name === 'BTA Baan' && c.is_active);
-  const keekCourt = courts.find(c => c.name === 'KEEK Baan' && c.is_active);
+  // Log beschikbare banen
+  console.log(`Available courts (${courts.length}):`, courts.map(c => `${c.name} (active: ${c.is_active})`));
+
+  // Zoek specifieke banen (zonder dubbele is_active check - dat gebeurt al in useSchedulePreview)
+  const jopenBierCourt = courts.find(c => c.name === 'Jopen Bier Baan');
+  const newYorkCourt = courts.find(c => c.name === 'New York Pizza Baan');
+  const btaCourt = courts.find(c => c.name === 'BTA Baan');
+  const keekCourt = courts.find(c => c.name === 'KEEK Baan');
+
+  // Fallback: gebruik eerste beschikbare baan per row_side
+  const leftCourts = courts.filter(c => c.row_side === 'left');
+  const rightCourts = courts.filter(c => c.row_side === 'right');
 
   console.log('Court assignments:', {
-    'Links Top (beste 4)': jopenBierCourt?.name,
-    'Links Bottom (slechtste 4)': newYorkCourt?.name,
-    'Rechts Top (beste 4)': btaCourt?.name,
-    'Rechts Bottom (slechtste 4)': keekCourt?.name
+    'Links Top (beste 4)': jopenBierCourt?.name || 'NOT FOUND',
+    'Links Bottom (slechtste 4)': newYorkCourt?.name || 'NOT FOUND',
+    'Rechts Top (beste 4)': btaCourt?.name || 'NOT FOUND',
+    'Rechts Bottom (slechtste 4)': keekCourt?.name || 'NOT FOUND',
+    'Fallback left courts available': leftCourts.length,
+    'Fallback right courts available': rightCourts.length
   });
 
   const allMatches: any[] = [];
 
-  // Generate matches voor alle 4 groepen met specifieke baan toewijzing
+  // Generate matches voor alle 4 groepen met specifieke baan toewijzing + fallback
   const groups = [
-    { players: leftPlayers.slice(0, 4), prefix: 'Links-Top', index: 1, court: jopenBierCourt },
-    { players: leftPlayers.slice(4, 8), prefix: 'Links-Bottom', index: 2, court: newYorkCourt },
-    { players: rightPlayers.slice(0, 4), prefix: 'Rechts-Top', index: 3, court: btaCourt },
-    { players: rightPlayers.slice(4, 8), prefix: 'Rechts-Bottom', index: 4, court: keekCourt },
+    { 
+      players: leftPlayers.slice(0, 4), 
+      prefix: 'Links-Top', 
+      index: 1, 
+      court: jopenBierCourt || leftCourts[0],
+      fallback: !jopenBierCourt
+    },
+    { 
+      players: leftPlayers.slice(4, 8), 
+      prefix: 'Links-Bottom', 
+      index: 2, 
+      court: newYorkCourt || leftCourts[1] || leftCourts[0],
+      fallback: !newYorkCourt
+    },
+    { 
+      players: rightPlayers.slice(0, 4), 
+      prefix: 'Rechts-Top', 
+      index: 3, 
+      court: btaCourt || rightCourts[0],
+      fallback: !btaCourt
+    },
+    { 
+      players: rightPlayers.slice(4, 8), 
+      prefix: 'Rechts-Bottom', 
+      index: 4, 
+      court: keekCourt || rightCourts[1] || rightCourts[0],
+      fallback: !keekCourt
+    },
   ];
 
   groups.forEach(group => {
-    console.log(`Processing ${group.prefix}: ${group.players.length} players, court: ${group.court?.name || 'MISSING'}`);
+    const courtInfo = group.court?.name || 'MISSING';
+    const fallbackWarning = group.fallback ? ' (FALLBACK!)' : '';
+    console.log(`Processing ${group.prefix}: ${group.players.length} players, court: ${courtInfo}${fallbackWarning}`);
     
     if (group.players.length < 4) {
       console.warn(`⚠️ Skipping ${group.prefix}: only ${group.players.length} players (need 4)`);
@@ -210,8 +245,12 @@ export const generateRound3Schedule = async (tournamentId: string, courts: any[]
     }
     
     if (!group.court) {
-      console.error(`❌ Skipping ${group.prefix}: court not found!`);
+      console.error(`❌ CRITICAL: Skipping ${group.prefix}: no court available even with fallback!`);
       return;
+    }
+    
+    if (group.fallback) {
+      console.warn(`⚠️ WARNING: ${group.prefix} using fallback court "${group.court.name}" - expected court not found!`);
     }
     
     const groupMatches = generateRoundRobinMatches(

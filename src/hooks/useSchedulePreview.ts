@@ -48,7 +48,9 @@ export const useSchedulePreview = (tournamentId?: string) => {
 
       // Round 3 uses stats-based generation
       if (roundNumber === 3) {
-        const round3Result = await generateRound3Schedule(tournamentId, courts);
+        const activeCourts = courts.filter(c => c.is_active);
+        console.log('Active courts for Round 3:', activeCourts.map(c => c.name));
+        const round3Result = await generateRound3Schedule(tournamentId, activeCourts);
         allMatches = round3Result.matches;
         
         // Split matches by group for display
