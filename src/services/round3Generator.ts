@@ -196,101 +196,63 @@ export const generateRound3Schedule = async (tournamentId: string, courts: any[]
   const startMatchNumber = (existingMatches?.[0]?.match_number || 0) + 1;
   console.log('Starting match numbers from:', startMatchNumber);
 
-  // Log beschikbare banen
-  console.log(`Available courts (${courts.length}):`, courts.map(c => `${c.name} (active: ${c.is_active})`));
+  // Sort courts by menu_order and split by row_side
+  const sortedCourts = [...courts].sort((a, b) => (a.menu_order || 0) - (b.menu_order || 0));
+  const leftCourts = sortedCourts.filter(c => c.row_side === 'left');
+  const rightCourts = sortedCourts.filter(c => c.row_side === 'right');
 
-  // Zoek specifieke banen (zonder dubbele is_active check - dat gebeurt al in useSchedulePreview)
-  const jopenBierCourt = courts.find(c => c.name === 'Jopen Bier Baan');
-  const newYorkCourt = courts.find(c => c.name === 'New York Pizza Baan');
-  const btaCourt = courts.find(c => c.name === 'BTA Baan');
-  const keekCourt = courts.find(c => c.name === 'KEEK Baan');
+  console.log(`Available courts (${courts.length}):`, courts.map(c => `${c.name} (menu_order: ${c.menu_order}, row_side: ${c.row_side})`));
+  console.log('Left courts:', leftCourts.map(c => c.name));
+  console.log('Right courts:', rightCourts.map(c => c.name));
 
-  // Fallback: gebruik eerste beschikbare baan per row_side
-  const leftCourts = courts.filter(c => c.row_side === 'left');
-  const rightCourts = courts.filter(c => c.row_side === 'right');
-
-  // DEFENSIVE CHECK: Verify all 4 expected courts exist
-  const missingCourts = [];
-  if (!jopenBierCourt) missingCourts.push('Jopen Bier Baan');
-  if (!newYorkCourt) missingCourts.push('New York Pizza Baan');
-  if (!btaCourt) missingCourts.push('BTA Baan');
-  if (!keekCourt) missingCourts.push('KEEK Baan');
-  
-  if (missingCourts.length > 0) {
-    console.warn(`⚠️ Missing courts: ${missingCourts.join(', ')}`);
-    console.warn(`📋 Available courts: ${courts.map(c => c.name).join(', ')}`);
+  // Validate sufficient courts
+  if (leftCourts.length < 2) {
+    throw new Error(`Onvoldoende linker banen: ${leftCourts.length}/2 nodig voor Links-Top en Links-Bottom`);
   }
-
-  console.log('Court assignments:', {
-    'Links Top (beste 4)': jopenBierCourt?.name || '❌ NOT FOUND',
-    'Links Bottom (slechtste 4)': newYorkCourt?.name || '❌ NOT FOUND',
-    'Rechts Top (beste 4)': btaCourt?.name || '❌ NOT FOUND',
-    'Rechts Bottom (slechtste 4)': keekCourt?.name || '❌ NOT FOUND',
-    'Fallback left courts available': leftCourts.length,
-    'Fallback right courts available': rightCourts.length
-  });
+  if (rightCourts.length < 2) {
+    throw new Error(`Onvoldoende rechter banen: ${rightCourts.length}/2 nodig voor Rechts-Top en Rechts-Bottom`);
+  }
 
   const allMatches: any[] = [];
 
-  // Generate matches voor alle 4 groepen met specifieke baan toewijzing + fallback
+  // Generate matches voor alle 4 groepen met menu_order based court assignment
   const groups = [
     { 
       players: leftPlayers.slice(0, 4), 
       prefix: 'Links-Top', 
       index: 1, 
-      court: jopenBierCourt || leftCourts[0],
-      fallback: !jopenBierCourt
+      court: leftCourts[0]
     },
     { 
       players: leftPlayers.slice(4, 8), 
       prefix: 'Links-Bottom', 
       index: 2, 
-      court: newYorkCourt || leftCourts[1] || leftCourts[0],
-      fallback: !newYorkCourt
+      court: leftCourts[1]
     },
     { 
       players: rightPlayers.slice(0, 4), 
       prefix: 'Rechts-Top', 
       index: 3, 
-      court: btaCourt || rightCourts[0],
-      fallback: !btaCourt
+      court: rightCourts[0]
     },
     { 
       players: rightPlayers.slice(4, 8), 
       prefix: 'Rechts-Bottom', 
       index: 4, 
-      court: keekCourt || rightCourts[1] || rightCourts[0],
-      fallback: !keekCourt
+      court: rightCourts[1]
     },
   ];
 
   groups.forEach(group => {
-    const courtInfo = group.court?.name || 'MISSING';
-    const fallbackWarning = group.fallback ? ' (FALLBACK!)' : '';
-    console.log(`Processing ${group.prefix}: ${group.players.length} players, court: ${courtInfo}${fallbackWarning}`);
-    
-    if (group.players.length < 4) {
-      console.warn(`⚠️ Skipping ${group.prefix}: only ${group.players.length} players (need 4)`);
-      return;
-    }
-    
-    if (!group.court) {
-      console.error(`❌ CRITICAL: Skipping ${group.prefix}: no court available even with fallback!`);
-      return;
-    }
-    
-    if (group.fallback) {
-      console.warn(`⚠️ WARNING: ${group.prefix} using fallback court "${group.court.name}" - expected court not found!`);
-    }
+    console.log(`Processing ${group.prefix}: ${group.players.length} players, court: ${group.court.name}`);
     
     const groupMatches = generateRoundRobinMatches(
-      group.players.slice(0, 4), // Take exactly 4 players
+      group.players,
       group.prefix,
       group.index,
-      group.index // Gebruik group index voor sortering
+      group.index
     );
     
-    // Wijs baan direct toe aan elke match in deze groep
     groupMatches.forEach(match => {
       match.court_id = group.court.id;
       match.court_name = group.court.name;
