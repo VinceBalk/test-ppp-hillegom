@@ -92,6 +92,13 @@ const generateRoundRobinMatches = (
  */
 export const generateRound3Schedule = async (tournamentId: string, courts: any[]) => {
   console.log('Generating Round 3 schedule for tournament:', tournamentId);
+  console.log(`📊 Received ${courts.length} courts:`, courts.map(c => c.name));
+  
+  // CRITICAL: Check if courts are loaded
+  if (!courts || courts.length === 0) {
+    console.error('❌ CRITICAL: No courts available - courts may not be loaded yet!');
+    throw new Error('Geen banen beschikbaar. Wacht tot de banen zijn geladen en probeer opnieuw.');
+  }
 
   // Get player stats from rounds 1 and 2
   const { data: stats, error: statsError } = await supabase
@@ -202,11 +209,23 @@ export const generateRound3Schedule = async (tournamentId: string, courts: any[]
   const leftCourts = courts.filter(c => c.row_side === 'left');
   const rightCourts = courts.filter(c => c.row_side === 'right');
 
+  // DEFENSIVE CHECK: Verify all 4 expected courts exist
+  const missingCourts = [];
+  if (!jopenBierCourt) missingCourts.push('Jopen Bier Baan');
+  if (!newYorkCourt) missingCourts.push('New York Pizza Baan');
+  if (!btaCourt) missingCourts.push('BTA Baan');
+  if (!keekCourt) missingCourts.push('KEEK Baan');
+  
+  if (missingCourts.length > 0) {
+    console.warn(`⚠️ Missing courts: ${missingCourts.join(', ')}`);
+    console.warn(`📋 Available courts: ${courts.map(c => c.name).join(', ')}`);
+  }
+
   console.log('Court assignments:', {
-    'Links Top (beste 4)': jopenBierCourt?.name || 'NOT FOUND',
-    'Links Bottom (slechtste 4)': newYorkCourt?.name || 'NOT FOUND',
-    'Rechts Top (beste 4)': btaCourt?.name || 'NOT FOUND',
-    'Rechts Bottom (slechtste 4)': keekCourt?.name || 'NOT FOUND',
+    'Links Top (beste 4)': jopenBierCourt?.name || '❌ NOT FOUND',
+    'Links Bottom (slechtste 4)': newYorkCourt?.name || '❌ NOT FOUND',
+    'Rechts Top (beste 4)': btaCourt?.name || '❌ NOT FOUND',
+    'Rechts Bottom (slechtste 4)': keekCourt?.name || '❌ NOT FOUND',
     'Fallback left courts available': leftCourts.length,
     'Fallback right courts available': rightCourts.length
   });

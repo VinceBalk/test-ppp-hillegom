@@ -12,7 +12,7 @@ export const useSchedulePreview = (tournamentId?: string) => {
   const [preview, setPreview] = useState<SchedulePreview | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const { tournamentPlayers } = useTournamentPlayers(tournamentId);
-  const { courts } = useCourts();
+  const { courts, loading: courtsLoading } = useCourts();
 
   const generatePreview = async (roundNumber: number = 1) => {
     if (!tournamentId) return;
@@ -48,8 +48,25 @@ export const useSchedulePreview = (tournamentId?: string) => {
 
       // Round 3 uses stats-based generation
       if (roundNumber === 3) {
+        // CRITICAL: Check if courts are loaded
+        if (courtsLoading) {
+          console.error('❌ Courts are still loading, cannot generate Round 3 yet');
+          throw new Error('Banen worden nog geladen. Probeer het opnieuw over een paar seconden.');
+        }
+        
+        if (!courts || courts.length === 0) {
+          console.error('❌ No courts available for Round 3 generation');
+          throw new Error('Geen banen beschikbaar. Maak eerst banen aan voordat je Ronde 3 kunt genereren.');
+        }
+        
         const activeCourts = courts.filter(c => c.is_active);
         console.log('Active courts for Round 3:', activeCourts.map(c => c.name));
+        
+        if (activeCourts.length === 0) {
+          console.error('❌ No active courts available');
+          throw new Error('Geen actieve banen beschikbaar. Activeer minimaal 4 banen om Ronde 3 te kunnen genereren.');
+        }
+        
         const round3Result = await generateRound3Schedule(tournamentId, activeCourts);
         allMatches = round3Result.matches;
         
@@ -168,5 +185,6 @@ export const useSchedulePreview = (tournamentId?: string) => {
     updateMatch,
     clearPreview,
     isGenerating,
+    courtsLoading, // Export loading state for UI
   };
 };

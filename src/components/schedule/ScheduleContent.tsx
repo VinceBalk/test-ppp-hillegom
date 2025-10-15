@@ -32,7 +32,8 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
     generatePreview, 
     updateMatch, 
     clearPreview, 
-    isGenerating 
+    isGenerating,
+    courtsLoading 
   } = useSchedulePreview(selectedTournamentId);
   const { 
     generateSchedule, 
@@ -177,6 +178,7 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
               selectedRound={selectedRound}
               onGeneratePreview={handleGeneratePreview}
               isGenerating={isGenerating}
+              courtsLoading={courtsLoading}
             />
           )}
 

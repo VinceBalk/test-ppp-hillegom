@@ -6,13 +6,17 @@ interface PreviewGeneratorProps {
   selectedRound: number;
   onGeneratePreview: () => void;
   isGenerating: boolean;
+  courtsLoading?: boolean;
 }
 
 export default function PreviewGenerator({ 
   selectedRound, 
   onGeneratePreview, 
-  isGenerating 
+  isGenerating,
+  courtsLoading = false
 }: PreviewGeneratorProps) {
+  const isDisabled = isGenerating || (selectedRound === 3 && courtsLoading);
+  
   return (
     <Card>
       <CardHeader>
@@ -21,11 +25,21 @@ export default function PreviewGenerator({
       <CardContent>
         <Button 
           onClick={onGeneratePreview} 
-          disabled={isGenerating}
+          disabled={isDisabled}
           className="w-full"
         >
-          {isGenerating ? 'Preview Genereren...' : `Preview Genereren voor Ronde ${selectedRound}`}
+          {courtsLoading && selectedRound === 3 
+            ? 'Banen laden...' 
+            : isGenerating 
+              ? 'Preview Genereren...' 
+              : `Preview Genereren voor Ronde ${selectedRound}`
+          }
         </Button>
+        {courtsLoading && selectedRound === 3 && (
+          <p className="text-sm text-muted-foreground mt-2">
+            Wacht tot de banen zijn geladen voordat je Ronde 3 genereert.
+          </p>
+        )}
       </CardContent>
     </Card>
   );
