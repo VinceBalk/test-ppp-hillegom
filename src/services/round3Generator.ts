@@ -202,20 +202,33 @@ export const generateRound3Schedule = async (tournamentId: string, courts: any[]
   ];
 
   groups.forEach(group => {
-    if (group.players.length >= 4 && group.court) {
-      const groupMatches = generateRoundRobinMatches(
-        group.players,
-        group.prefix,
-        group.index,
-        group.index // Gebruik group index voor sortering
-      );
-      // Wijs baan direct toe aan elke match in deze groep
-      groupMatches.forEach(match => {
-        match.court_id = group.court.id;
-        match.court_name = group.court.name;
-      });
-      allMatches.push(...groupMatches);
+    console.log(`Processing ${group.prefix}: ${group.players.length} players, court: ${group.court?.name || 'MISSING'}`);
+    
+    if (group.players.length < 4) {
+      console.warn(`⚠️ Skipping ${group.prefix}: only ${group.players.length} players (need 4)`);
+      return;
     }
+    
+    if (!group.court) {
+      console.error(`❌ Skipping ${group.prefix}: court not found!`);
+      return;
+    }
+    
+    const groupMatches = generateRoundRobinMatches(
+      group.players.slice(0, 4), // Take exactly 4 players
+      group.prefix,
+      group.index,
+      group.index // Gebruik group index voor sortering
+    );
+    
+    // Wijs baan direct toe aan elke match in deze groep
+    groupMatches.forEach(match => {
+      match.court_id = group.court.id;
+      match.court_name = group.court.name;
+    });
+    
+    allMatches.push(...groupMatches);
+    console.log(`✓ Generated 3 matches for ${group.prefix} on ${group.court.name}`);
   });
 
   // Sorteer matches: eerst alle "match 1", dan alle "match 2", dan alle "match 3"
