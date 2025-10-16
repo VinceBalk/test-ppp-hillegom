@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,12 @@ interface ChefSpecial {
   title: string;
 }
 
+interface R1R2Stats {
+  player_id: string;
+  total_games: number;
+  total_specials: number;
+}
+
 export default function Standings() {
   const { tournamentId } = useParams();
   const navigate = useNavigate();
@@ -30,6 +36,7 @@ export default function Standings() {
   const [selectedTournament, setSelectedTournament] = useState<string>("");
   const [chefSpecials, setChefSpecials] = useState<ChefSpecial[]>([]);
   const [playerGroups, setPlayerGroups] = useState<{ [key: string]: string }>({});
+  const [r1r2Stats, setR1R2Stats] = useState<R1R2Stats[]>([]);
   
   const { data: allStandings = [], isLoading } = useTournamentStandings(selectedTournament || undefined);
 
@@ -56,13 +63,30 @@ export default function Standings() {
     });
   };
 
-  // Split standings into left and right based on player groups, then sort and assign positions
-  const leftStandings = sortStandingsR3Primary(
-    allStandings.filter(s => playerGroups[s.player_id] === 'left')
+  // Split R1+R2 stats by group and determine top/bottom 4
+  const leftPlayersR1R2 = r1r2Stats.filter(p => playerGroups[p.player_id] === 'left');
+  const rightPlayersR1R2 = r1r2Stats.filter(p => playerGroups[p.player_id] === 'right');
+
+  const leftTop4PlayerIds = new Set(leftPlayersR1R2.slice(0, 4).map(p => p.player_id));
+  const leftBottom4PlayerIds = new Set(leftPlayersR1R2.slice(4, 8).map(p => p.player_id));
+  const rightTop4PlayerIds = new Set(rightPlayersR1R2.slice(0, 4).map(p => p.player_id));
+  const rightBottom4PlayerIds = new Set(rightPlayersR1R2.slice(4, 8).map(p => p.player_id));
+
+  // Create 4 groups and apply R3-primary sorting to each
+  const leftTopStandings = sortStandingsR3Primary(
+    allStandings.filter(s => leftTop4PlayerIds.has(s.player_id))
   ).map((s, idx) => ({ ...s, position: idx + 1 }));
-    
-  const rightStandings = sortStandingsR3Primary(
-    allStandings.filter(s => playerGroups[s.player_id] === 'right')
+
+  const leftBottomStandings = sortStandingsR3Primary(
+    allStandings.filter(s => leftBottom4PlayerIds.has(s.player_id))
+  ).map((s, idx) => ({ ...s, position: idx + 1 }));
+
+  const rightTopStandings = sortStandingsR3Primary(
+    allStandings.filter(s => rightTop4PlayerIds.has(s.player_id))
+  ).map((s, idx) => ({ ...s, position: idx + 1 }));
+
+  const rightBottomStandings = sortStandingsR3Primary(
+    allStandings.filter(s => rightBottom4PlayerIds.has(s.player_id))
   ).map((s, idx) => ({ ...s, position: idx + 1 }));
 
   useEffect(() => {
@@ -81,6 +105,7 @@ export default function Standings() {
     if (selectedTournament) {
       fetchPlayerGroups();
       fetchChefSpecials();
+      fetchR1R2Stats();
     }
   }, [selectedTournament]);
 
@@ -123,7 +148,41 @@ export default function Standings() {
     }
   };
 
-  const renderStandingsTable = (standings: typeof allStandings, title: string) => {
+  const fetchR1R2Stats = async () => {
+    const { data } = await supabase
+      .from('player_tournament_stats')
+      .select('player_id, games_won, tiebreaker_specials_count')
+      .eq('tournament_id', selectedTournament)
+      .in('round_number', [1, 2]);
+
+    if (data) {
+      // Aggregate per player
+      const playerMap = new Map<string, R1R2Stats>();
+      data.forEach(stat => {
+        const existing = playerMap.get(stat.player_id);
+        if (existing) {
+          existing.total_games += stat.games_won || 0;
+          existing.total_specials += stat.tiebreaker_specials_count || 0;
+        } else {
+          playerMap.set(stat.player_id, {
+            player_id: stat.player_id,
+            total_games: stat.games_won || 0,
+            total_specials: stat.tiebreaker_specials_count || 0,
+          });
+        }
+      });
+
+      // Sort by R1+R2 performance
+      const sorted = Array.from(playerMap.values()).sort((a, b) => {
+        if (b.total_games !== a.total_games) return b.total_games - a.total_games;
+        return b.total_specials - a.total_specials;
+      });
+
+      setR1R2Stats(sorted);
+    }
+  };
+
+  const renderStandingsTable = (standings: typeof allStandings) => {
     if (isLoading) {
       return (
         <div className="space-y-2">
@@ -136,73 +195,61 @@ export default function Standings() {
 
     if (standings.length === 0) {
       return (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">Geen resultaten beschikbaar</p>
+        <div className="text-center py-4">
+          <p className="text-muted-foreground text-sm">Geen data beschikbaar</p>
         </div>
       );
     }
     
     return (
-      <div className="space-y-3">
-        <h3 className="text-lg font-semibold text-center">{title}</h3>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-16">#</TableHead>
-              <TableHead>Speler</TableHead>
-              <TableHead className="text-center">Ronde 1<br/><span className="text-xs font-normal">G / S</span></TableHead>
-              <TableHead className="text-center">Ronde 2<br/><span className="text-xs font-normal">G / S</span></TableHead>
-              <TableHead className="text-center">Ronde 3<br/><span className="text-xs font-normal">G / S</span></TableHead>
-              <TableHead className="text-center">Tie-breaker</TableHead>
-            </TableRow>
-          </TableHeader>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-12">#</TableHead>
+            <TableHead>Speler</TableHead>
+            <TableHead className="text-center">R1<br/><span className="text-xs font-normal">G/S</span></TableHead>
+            <TableHead className="text-center">R2<br/><span className="text-xs font-normal">G/S</span></TableHead>
+            <TableHead className="text-center">R3<br/><span className="text-xs font-normal">G/S</span></TableHead>
+            <TableHead className="text-center">TB</TableHead>
+          </TableRow>
+        </TableHeader>
         <TableBody>
           {standings.map((player) => (
             <TableRow key={player.player_id}>
               <TableCell className="font-bold">
-                {player.position === 1 && <span className="text-2xl">🥇</span>}
-                {player.position === 2 && <span className="text-2xl">🥈</span>}
-                {player.position === 3 && <span className="text-2xl">🥉</span>}
-                {player.position > 3 && <span className="text-base">{player.position}</span>}
+                {player.position === 1 ? '🥇' : player.position}
               </TableCell>
               <TableCell 
-                className="font-bold text-lg text-primary hover:underline cursor-pointer"
+                className="font-medium hover:underline cursor-pointer"
                 onClick={() => navigate(`/players/${player.player_id}`)}
               >
                 {player.player_name}
               </TableCell>
               <TableCell className="text-center">
-                <div className="flex flex-col items-center gap-1">
+                <div className="flex flex-col items-center gap-0.5">
                   <span className="font-medium">{player.round1_games_won}</span>
                   <span className="text-xs text-orange-600">{player.round1_specials}</span>
                 </div>
               </TableCell>
               <TableCell className="text-center">
-                <div className="flex flex-col items-center gap-1">
+                <div className="flex flex-col items-center gap-0.5">
                   <span className="font-medium">{player.round2_games_won}</span>
                   <span className="text-xs text-orange-600">{player.round2_specials}</span>
                 </div>
               </TableCell>
               <TableCell className="text-center">
-                <div className="flex flex-col items-center gap-1">
+                <div className="flex flex-col items-center gap-0.5">
                   <span className="font-bold text-green-600">{player.round3_games_won}</span>
                   <span className="text-xs text-orange-600 font-semibold">{player.round3_specials}</span>
                 </div>
               </TableCell>
               <TableCell className="text-center">
-                {player.tie_breaker_used === 'r3_specials' && (
+                {player.tie_breaker_used && (
                   <Badge variant="outline" className="text-xs">
-                    <Award className="h-3 w-3 mr-1" /> R3 Specials
-                  </Badge>
-                )}
-                {player.tie_breaker_used === 'r2_games' && (
-                  <Badge variant="outline" className="text-xs">
-                    R2 Games
-                  </Badge>
-                )}
-                {player.tie_breaker_used === 'r1_games' && (
-                  <Badge variant="outline" className="text-xs">
-                    R1 Games
+                    {player.tie_breaker_used === 'r3_specials' && <Award className="h-3 w-3 mr-1" />}
+                    {player.tie_breaker_used === 'r3_specials' && 'R3S'}
+                    {player.tie_breaker_used === 'r2_games' && 'R2G'}
+                    {player.tie_breaker_used === 'r1_games' && 'R1G'}
                   </Badge>
                 )}
               </TableCell>
@@ -210,18 +257,17 @@ export default function Standings() {
           ))}
         </TableBody>
       </Table>
-      </div>
     );
   };
 
   return (
-    <div className="space-y-6 p-4 max-w-7xl mx-auto">
+    <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
           <Trophy className="h-8 w-8 text-yellow-500" />
           Standen
         </h1>
-        <p className="text-muted-foreground">Rankings en statistieken</p>
+        <p className="text-muted-foreground">Rankings per groep op basis van Ronde 3 prestaties</p>
       </div>
 
       <Card>
@@ -288,33 +334,61 @@ export default function Standings() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-blue-500" />
-              Linkse Rij
-              <Badge variant="outline" className="ml-2">R3 Primair</Badge>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-yellow-500" />
+              Links - Top 4
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Ronde 3 games → R3 specials → R2 games → R1 games
-            </p>
+            <CardDescription>
+              Beste 4 spelers (links) - R3 ranking
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            {renderStandingsTable(leftStandings, "Linkse Rij")}
+            {renderStandingsTable(leftTopStandings)}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-green-500" />
-              Rechtse Rij
-              <Badge variant="outline" className="ml-2">R3 Primair</Badge>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-yellow-500" />
+              Rechts - Top 4
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Ronde 3 games → R3 specials → R2 games → R1 games
-            </p>
+            <CardDescription>
+              Beste 4 spelers (rechts) - R3 ranking
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            {renderStandingsTable(rightStandings, "Rechtse Rij")}
+            {renderStandingsTable(rightTopStandings)}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-blue-500" />
+              Links - Bottom 4
+            </CardTitle>
+            <CardDescription>
+              Slechtste 4 spelers (links) - R3 ranking
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {renderStandingsTable(leftBottomStandings)}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-blue-500" />
+              Rechts - Bottom 4
+            </CardTitle>
+            <CardDescription>
+              Slechtste 4 spelers (rechts) - R3 ranking
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {renderStandingsTable(rightBottomStandings)}
           </CardContent>
         </Card>
       </div>
