@@ -40,17 +40,25 @@ export default function Standings() {
   
   const { data: allStandings = [], isLoading } = useTournamentStandings(selectedTournament || undefined);
 
-  // Helper function to sort standings with R3-primary logic
-  const sortStandingsR3Primary = (standings: typeof allStandings) => {
+  // Helper function to sort standings: TOTAAL games → TOTAAL specials → R2 → R1
+  const sortStandingsByTotal = (standings: typeof allStandings) => {
     return [...standings].sort((a, b) => {
-      // 1. Primary: Ronde 3 games won
-      if (b.round3_games_won !== a.round3_games_won) {
-        return b.round3_games_won - a.round3_games_won;
+      // Calculate total games (R1 + R2 + R3)
+      const totalGamesA = a.round1_games_won + a.round2_games_won + a.round3_games_won;
+      const totalGamesB = b.round1_games_won + b.round2_games_won + b.round3_games_won;
+      
+      // 1. Primary: Totaal games gewonnen
+      if (totalGamesB !== totalGamesA) {
+        return totalGamesB - totalGamesA;
       }
       
-      // 2. Tie-breaker 1: Ronde 3 specials
-      if (b.round3_specials !== a.round3_specials) {
-        return b.round3_specials - a.round3_specials;
+      // Calculate total specials (R1 + R2 + R3)
+      const totalSpecialsA = a.round1_specials + a.round2_specials + a.round3_specials;
+      const totalSpecialsB = b.round1_specials + b.round2_specials + b.round3_specials;
+      
+      // 2. Tie-breaker 1: Totaal specials
+      if (totalSpecialsB !== totalSpecialsA) {
+        return totalSpecialsB - totalSpecialsA;
       }
       
       // 3. Tie-breaker 2: Ronde 2 games won
@@ -72,20 +80,20 @@ export default function Standings() {
   const rightTop4PlayerIds = new Set(rightPlayersR1R2.slice(0, 4).map(p => p.player_id));
   const rightBottom4PlayerIds = new Set(rightPlayersR1R2.slice(4, 8).map(p => p.player_id));
 
-  // Create 4 groups and apply R3-primary sorting to each
-  const leftTopStandings = sortStandingsR3Primary(
+  // Create 4 groups and apply total-based sorting to each
+  const leftTopStandings = sortStandingsByTotal(
     allStandings.filter(s => leftTop4PlayerIds.has(s.player_id))
   ).map((s, idx) => ({ ...s, position: idx + 1 }));
 
-  const leftBottomStandings = sortStandingsR3Primary(
+  const leftBottomStandings = sortStandingsByTotal(
     allStandings.filter(s => leftBottom4PlayerIds.has(s.player_id))
   ).map((s, idx) => ({ ...s, position: idx + 1 }));
 
-  const rightTopStandings = sortStandingsR3Primary(
+  const rightTopStandings = sortStandingsByTotal(
     allStandings.filter(s => rightTop4PlayerIds.has(s.player_id))
   ).map((s, idx) => ({ ...s, position: idx + 1 }));
 
-  const rightBottomStandings = sortStandingsR3Primary(
+  const rightBottomStandings = sortStandingsByTotal(
     allStandings.filter(s => rightBottom4PlayerIds.has(s.player_id))
   ).map((s, idx) => ({ ...s, position: idx + 1 }));
 
@@ -267,7 +275,7 @@ export default function Standings() {
           <Trophy className="h-8 w-8 text-yellow-500" />
           Standen
         </h1>
-        <p className="text-muted-foreground">Rankings per groep op basis van Ronde 3 prestaties</p>
+        <p className="text-muted-foreground">Rankings op basis van totaal aantal games gewonnen</p>
       </div>
 
       <Card>
@@ -336,10 +344,10 @@ export default function Standings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-yellow-500" />
-              Links - Top 4
+              Linker Rij - Top 4
             </CardTitle>
             <CardDescription>
-              Beste 4 spelers (links) - R3 ranking
+              Bovenste 4 spelers (linker rij) - totaal games
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -351,10 +359,10 @@ export default function Standings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-yellow-500" />
-              Rechts - Top 4
+              Rechter Rij - Top 4
             </CardTitle>
             <CardDescription>
-              Beste 4 spelers (rechts) - R3 ranking
+              Bovenste 4 spelers (rechter rij) - totaal games
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -366,10 +374,10 @@ export default function Standings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-blue-500" />
-              Links - Bottom 4
+              Linker Rij - Onderste 4
             </CardTitle>
             <CardDescription>
-              Slechtste 4 spelers (links) - R3 ranking
+              Onderste 4 spelers (linker rij) - totaal games
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -381,10 +389,10 @@ export default function Standings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-blue-500" />
-              Rechts - Bottom 4
+              Rechter Rij - Onderste 4
             </CardTitle>
             <CardDescription>
-              Slechtste 4 spelers (rechts) - R3 ranking
+              Onderste 4 spelers (rechter rij) - totaal games
             </CardDescription>
           </CardHeader>
           <CardContent>
