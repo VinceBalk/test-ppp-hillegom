@@ -18,6 +18,7 @@ import { useAuth } from '../contexts/AuthContext';
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['speler', 'organisator', 'beheerder'] },
   { to: '/standings', label: 'Standen', icon: TrendingUp, roles: ['speler', 'organisator', 'beheerder'] },
+  { to: '/statistics', label: 'Statistieken', icon: BarChart3, roles: ['speler', 'organisator', 'beheerder'] },
   { to: '/players', label: 'Spelers', icon: Users, roles: ['speler', 'organisator', 'beheerder'] },
   { to: '/tournaments', label: 'Toernooien', icon: Trophy, roles: ['speler', 'organisator', 'beheerder'] },
   { to: '/matches', label: 'Wedstrijden', icon: Calendar, roles: ['speler', 'organisator', 'beheerder'] },

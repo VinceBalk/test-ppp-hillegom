@@ -4,12 +4,16 @@ import { supabase } from '@/integrations/supabase/client';
 interface PlayerStanding {
   player_id: string;
   player_name: string;
-  games_won: number;
-  games_lost: number;
-  specials_count: number;
+  round1_games_won: number;
+  round1_specials: number;
+  round2_games_won: number;
+  round2_specials: number;
+  round3_games_won: number;
+  round3_specials: number;
   position: number;
   trend?: 'up' | 'down' | 'same';
   position_change?: number;
+  tie_breaker_used?: 'r3_specials' | 'r2_games' | 'r1_games' | null;
 }
 
 interface RoundStats {
@@ -21,16 +25,14 @@ interface RoundStats {
 }
 
 export const useTournamentStandings = (
-  tournamentId?: string, 
-  roundNumber?: number,
-  mode: 'cumulative' | 'round-only' = 'cumulative'
+  tournamentId?: string
 ) => {
   return useQuery({
-    queryKey: ['tournament-standings', tournamentId, roundNumber, mode],
+    queryKey: ['tournament-standings', tournamentId],
     queryFn: async () => {
       if (!tournamentId) return [];
 
-      // Fetch ALL stats to calculate trends
+      // Fetch ALL stats for all rounds
       const { data: allData, error: allError } = await supabase
         .from('player_tournament_stats')
         .select(`
@@ -49,119 +51,77 @@ export const useTournamentStandings = (
         throw allError;
       }
 
-      // Build stats per round per player
-      const playerRoundStats = new Map<string, RoundStats[]>();
-      
-      allData?.forEach((stat: any) => {
-        const playerId = stat.player_id;
-        if (!playerRoundStats.has(playerId)) {
-          playerRoundStats.set(playerId, []);
-        }
-        playerRoundStats.get(playerId)!.push({
-          player_id: playerId,
-          round_number: stat.round_number,
-          games_won: stat.games_won || 0,
-          games_lost: stat.games_lost || 0,
-          specials_count: stat.tiebreaker_specials_count || 0,
-        });
-      });
-
-      // Calculate standings for current view (specific round or cumulative)
+      // Calculate standings with per-round data
       const playerMap = new Map<string, PlayerStanding>();
 
       allData?.forEach((stat: any) => {
         const playerId = stat.player_id;
-        
-        // Filter based on mode and roundNumber
-        if (mode === 'round-only' && roundNumber) {
-          // Show only stats from this specific round
-          if (stat.round_number !== roundNumber) {
-            return;
-          }
-        } else if (mode === 'cumulative' && roundNumber) {
-          // Show cumulative stats up to and including this round
-          if (stat.round_number > roundNumber) {
-            return;
-          }
-        }
 
         if (!playerMap.has(playerId)) {
           playerMap.set(playerId, {
             player_id: playerId,
             player_name: stat.player?.name || 'Onbekend',
-            games_won: 0,
-            games_lost: 0,
-            specials_count: 0,
+            round1_games_won: 0,
+            round1_specials: 0,
+            round2_games_won: 0,
+            round2_specials: 0,
+            round3_games_won: 0,
+            round3_specials: 0,
             position: 0,
+            tie_breaker_used: null,
           });
         }
 
         const player = playerMap.get(playerId)!;
-        player.games_won += stat.games_won || 0;
-        player.games_lost += stat.games_lost || 0;
-        player.specials_count += stat.tiebreaker_specials_count || 0;
-      });
-
-      // Calculate standings for previous round (for trend)
-      let previousStandings: PlayerStanding[] | null = null;
-      if (roundNumber && roundNumber > 1) {
-        const prevPlayerMap = new Map<string, PlayerStanding>();
         
-        allData?.forEach((stat: any) => {
-          if (stat.round_number >= roundNumber) return;
-          
-          const playerId = stat.player_id;
-          if (!prevPlayerMap.has(playerId)) {
-            prevPlayerMap.set(playerId, {
-              player_id: playerId,
-              player_name: stat.player?.name || 'Onbekend',
-              games_won: 0,
-              games_lost: 0,
-              specials_count: 0,
-              position: 0,
-            });
-          }
-
-          const player = prevPlayerMap.get(playerId)!;
-          player.games_won += stat.games_won || 0;
-          player.games_lost += stat.games_lost || 0;
-          player.specials_count += stat.tiebreaker_specials_count || 0;
-        });
-
-        previousStandings = Array.from(prevPlayerMap.values()).sort((a, b) => {
-          if (b.games_won !== a.games_won) return b.games_won - a.games_won;
-          return b.specials_count - a.specials_count;
-        });
-
-        previousStandings.forEach((standing, index) => {
-          standing.position = index + 1;
-        });
-      }
-
-      // Convert to array and sort
-      const standings = Array.from(playerMap.values()).sort((a, b) => {
-        if (b.games_won !== a.games_won) {
-          return b.games_won - a.games_won;
+        // Store stats per round
+        if (stat.round_number === 1) {
+          player.round1_games_won = stat.games_won || 0;
+          player.round1_specials = stat.tiebreaker_specials_count || 0;
+        } else if (stat.round_number === 2) {
+          player.round2_games_won = stat.games_won || 0;
+          player.round2_specials = stat.tiebreaker_specials_count || 0;
+        } else if (stat.round_number === 3) {
+          player.round3_games_won = stat.games_won || 0;
+          player.round3_specials = stat.tiebreaker_specials_count || 0;
         }
-        return b.specials_count - a.specials_count;
       });
 
-      // Assign positions and calculate trends
+      // Convert to array and sort with R3-primary logic
+      const standings = Array.from(playerMap.values()).sort((a, b) => {
+        // 1. Primary: Ronde 3 games won
+        if (b.round3_games_won !== a.round3_games_won) {
+          return b.round3_games_won - a.round3_games_won;
+        }
+        
+        // 2. Tie-breaker 1: Ronde 3 specials
+        if (b.round3_specials !== a.round3_specials) {
+          return b.round3_specials - a.round3_specials;
+        }
+        
+        // 3. Tie-breaker 2: Ronde 2 games won
+        if (b.round2_games_won !== a.round2_games_won) {
+          return b.round2_games_won - a.round2_games_won;
+        }
+        
+        // 4. Tie-breaker 3: Ronde 1 games won
+        return b.round1_games_won - a.round1_games_won;
+      });
+
+      // Assign positions and detect which tie-breaker was used
       standings.forEach((standing, index) => {
         standing.position = index + 1;
-
-        if (previousStandings) {
-          const prevStanding = previousStandings.find(p => p.player_id === standing.player_id);
-          if (prevStanding) {
-            const positionChange = prevStanding.position - standing.position;
-            standing.position_change = positionChange;
-            
-            if (positionChange > 0) {
-              standing.trend = 'up';
-            } else if (positionChange < 0) {
-              standing.trend = 'down';
-            } else {
-              standing.trend = 'same';
+        
+        // Determine tie-breaker used by comparing with next player
+        if (index < standings.length - 1) {
+          const next = standings[index + 1];
+          if (standing.round3_games_won === next.round3_games_won) {
+            if (standing.round3_specials !== next.round3_specials) {
+              standing.tie_breaker_used = 'r3_specials';
+            } else if (standing.round2_games_won !== next.round2_games_won) {
+              standing.tie_breaker_used = 'r2_games';
+            } else if (standing.round1_games_won !== next.round1_games_won) {
+              standing.tie_breaker_used = 'r1_games';
             }
           }
         }

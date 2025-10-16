@@ -452,6 +452,7 @@ export type Database = {
           row_side: string | null
           specials: Json | null
           total_games_won: number | null
+          total_specials: number | null
           total_tournaments: number | null
           updated_at: string | null
         }
@@ -470,6 +471,7 @@ export type Database = {
           row_side?: string | null
           specials?: Json | null
           total_games_won?: number | null
+          total_specials?: number | null
           total_tournaments?: number | null
           updated_at?: string | null
         }
@@ -488,6 +490,7 @@ export type Database = {
           row_side?: string | null
           specials?: Json | null
           total_games_won?: number | null
+          total_specials?: number | null
           total_tournaments?: number | null
           updated_at?: string | null
         }

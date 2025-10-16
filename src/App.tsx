@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import Standings from "./pages/Standings";
+import Statistics from "./pages/Statistics";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
@@ -65,6 +66,7 @@ const App = () => {
                 <Route path="schedule/:tournamentId" element={<Schedule />} />
                 <Route path="standings" element={<Standings />} />
                 <Route path="tournaments/:tournamentId/standings" element={<Standings />} />
+                <Route path="statistics" element={<Statistics />} />
                 
                 <Route path="scores" element={<Scores />} />
                 <Route path="scores/:matchId" element={<Scores />} />

@@ -1,10 +1,8 @@
-import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTournament } from '@/hooks/useTournament';
 import { useTournamentStandings } from '@/hooks/useTournamentStandings';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Trophy, Award, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import ChefSpecialRanking from '@/components/tournaments/ChefSpecialRanking';
@@ -13,13 +11,9 @@ export default function TournamentStandings() {
   const { id: tournamentId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: tournament, isLoading: loadingTournament } = useTournament(tournamentId);
-  const [selectedRound, setSelectedRound] = useState<number | undefined>(undefined);
-  const [viewMode, setViewMode] = useState<'cumulative' | 'round-only'>('cumulative');
   
   const { data: standings = [], isLoading: loadingStandings } = useTournamentStandings(
-    tournamentId,
-    selectedRound,
-    viewMode
+    tournamentId
   );
 
   if (loadingTournament || loadingStandings) {
@@ -48,9 +42,6 @@ export default function TournamentStandings() {
       </div>
     );
   }
-
-  const totalRounds = tournament.total_rounds || 3;
-  const rounds = Array.from({ length: totalRounds }, (_, i) => i + 1);
 
   const renderStandingsCard = (
     title: string, 
@@ -116,17 +107,21 @@ export default function TournamentStandings() {
                 </div>
                 <div className="flex items-center gap-3 text-sm">
                   <div className="text-right">
-                    <p className="font-bold text-green-600">{player.games_won}</p>
-                    <p className="text-xs text-muted-foreground">gewonnen</p>
+                    <p className="font-bold text-green-600">{player.round3_games_won}</p>
+                    <p className="text-xs text-muted-foreground">R3 games</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium text-muted-foreground">{player.games_lost}</p>
-                    <p className="text-xs text-muted-foreground">verloren</p>
+                    <p className="font-medium">{player.round2_games_won}</p>
+                    <p className="text-xs text-muted-foreground">R2 games</p>
                   </div>
-                  {player.specials_count > 0 && (
+                  <div className="text-right">
+                    <p className="font-medium">{player.round1_games_won}</p>
+                    <p className="text-xs text-muted-foreground">R1 games</p>
+                  </div>
+                  {player.round3_specials > 0 && (
                     <Badge variant="outline" className="ml-2">
                       <Award className="h-3 w-3 mr-1" />
-                      {player.specials_count}
+                      {player.round3_specials}
                     </Badge>
                   )}
                 </div>
@@ -149,92 +144,20 @@ export default function TournamentStandings() {
 
       <div>
         <h1 className="text-2xl font-bold">{tournament.name}</h1>
-        <p className="text-sm text-muted-foreground">Tussenstand en Uitslagen</p>
+        <p className="text-sm text-muted-foreground">Eindstand (Ronde 3 Primair)</p>
       </div>
 
-      <Tabs 
-        defaultValue="all" 
-        onValueChange={(value) => {
-          if (value === 'all') {
-            setSelectedRound(undefined);
-            setViewMode('cumulative');
-          } else {
-            setSelectedRound(parseInt(value));
-            setViewMode('cumulative'); // Default to cumulative when switching rounds
-          }
-        }}
-      >
-        <TabsList className="w-full grid grid-cols-4 h-auto">
-          <TabsTrigger value="all" className="text-xs sm:text-sm py-2">
-            Totaal
-          </TabsTrigger>
-          {rounds.map((round) => (
-            <TabsTrigger key={round} value={round.toString()} className="text-xs sm:text-sm py-2">
-              R{round}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
-        <TabsContent value="all" className="space-y-4 mt-4">
-          {renderStandingsCard(
-            'Totale Stand', 
-            false,
-            'Cumulatief overzicht van alle gespeelde rondes'
-          )}
-          <ChefSpecialRanking 
-            tournamentId={tournamentId!} 
-            title="Chef Special Ranking (Totaal)"
-          />
-        </TabsContent>
-
-        {rounds.map((round) => (
-          <TabsContent key={round} value={round.toString()} className="space-y-4 mt-4">
-            <div className="flex gap-2 mb-4">
-              <Button
-                variant={viewMode === 'cumulative' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('cumulative')}
-              >
-                Cumulatief
-              </Button>
-              <Button
-                variant={viewMode === 'round-only' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('round-only')}
-              >
-                Alleen Ronde {round}
-              </Button>
-            </div>
-
-            {viewMode === 'cumulative' ? (
-              <>
-                {renderStandingsCard(
-                  `Stand na Ronde ${round}`, 
-                  round > 1,
-                  `Cumulatief totaal tot en met ronde ${round}`
-                )}
-                <ChefSpecialRanking 
-                  tournamentId={tournamentId!}
-                  title={`Chef Special Ranking (t/m Ronde ${round})`}
-                />
-              </>
-            ) : (
-              <>
-                {renderStandingsCard(
-                  `Resultaten Ronde ${round}`,
-                  false,
-                  `Alleen de resultaten van ronde ${round}`
-                )}
-                <ChefSpecialRanking 
-                  tournamentId={tournamentId!}
-                  roundNumber={round}
-                  title={`Chef Special Ranking (Ronde ${round})`}
-                />
-              </>
-            )}
-          </TabsContent>
-        ))}
-      </Tabs>
+      <div className="space-y-4">
+        {renderStandingsCard(
+          'Finale Ranking', 
+          false,
+          'Gerankt op basis van Ronde 3 prestaties, met tie-breakers van R3 specials, R2 games, en R1 games'
+        )}
+        <ChefSpecialRanking 
+          tournamentId={tournamentId!} 
+          title="Chef Special Ranking"
+        />
+      </div>
     </div>
   );
 }
