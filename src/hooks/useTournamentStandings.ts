@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PlayerStanding {
   player_id: string;
@@ -13,7 +13,7 @@ interface PlayerStanding {
   position: number;
   court_name?: string;
   court_position_range?: string;
-  tie_breaker_used?: 'r3_specials' | 'r2_games' | 'r1_games' | null;
+  tie_breaker_used?: "r3_specials" | "r2_games" | "r1_games" | null;
 }
 
 interface RoundStats {
@@ -24,48 +24,50 @@ interface RoundStats {
   specials_count: number;
 }
 
-export const useTournamentStandings = (
-  tournamentId?: string
-) => {
+export const useTournamentStandings = (tournamentId?: string) => {
   return useQuery({
-    queryKey: ['tournament-standings', tournamentId],
+    queryKey: ["tournament-standings", tournamentId],
     queryFn: async () => {
       if (!tournamentId) return [];
 
       // Fetch R3 matches with court info
       const { data: r3Matches, error: r3Error } = await supabase
-        .from('matches')
-        .select(`
+        .from("matches")
+        .select(
+          `
           team1_player1_id,
           team1_player2_id,
           team2_player1_id,
           team2_player2_id,
           court:courts(name, menu_order, row_side)
-        `)
-        .eq('tournament_id', tournamentId)
-        .eq('round_number', 3);
+        `,
+        )
+        .eq("tournament_id", tournamentId)
+        .eq("round_number", 3);
 
       if (r3Error) {
-        console.error('Error fetching R3 matches:', r3Error);
+        console.error("Error fetching R3 matches:", r3Error);
         throw r3Error;
       }
 
       // Fetch ALL stats for all rounds
       const { data: allData, error: allError } = await supabase
-        .from('player_tournament_stats')
-        .select(`
+        .from("player_tournament_stats")
+        .select(
+          `
           player_id,
           games_won,
           games_lost,
           tiebreaker_specials_count,
           round_number,
           player:players(name)
-        `)
-        .eq('tournament_id', tournamentId)
-        .order('round_number', { ascending: true });
+        `,
+        )
+        .eq("tournament_id", tournamentId)
+        .order("round_number", { ascending: true });
 
       if (allError) {
-        console.error('Error fetching tournament standings:', allError);
+        console.error("Error fetching tournament standings:", allError);
         throw allError;
       }
 
@@ -78,7 +80,7 @@ export const useTournamentStandings = (
         if (!playerMap.has(playerId)) {
           playerMap.set(playerId, {
             player_id: playerId,
-            player_name: stat.player?.name || 'Onbekend',
+            player_name: stat.player?.name || "Onbekend",
             round1_games_won: 0,
             round1_specials: 0,
             round2_games_won: 0,
@@ -91,7 +93,7 @@ export const useTournamentStandings = (
         }
 
         const player = playerMap.get(playerId)!;
-        
+
         if (stat.round_number === 1) {
           player.round1_games_won = stat.games_won || 0;
           player.round1_specials = stat.tiebreaker_specials_count || 0;
@@ -104,34 +106,44 @@ export const useTournamentStandings = (
         }
       });
 
-      // Map players to their R3 courts
+      // Map players to their R3 court (simpel: eerste match waar ze in zitten)
+      const playerCourtMap = new Map<string, string>();
       const courtPlayerMap = new Map<string, Set<string>>();
 
       r3Matches?.forEach((match: any) => {
-        const courtName = match.court?.name || 'Onbekend';
-        if (!courtPlayerMap.has(courtName)) {
-          courtPlayerMap.set(courtName, new Set());
-        }
-        const playerSet = courtPlayerMap.get(courtName)!;
+        const courtName = match.court?.name || "Onbekend";
+
         [match.team1_player1_id, match.team1_player2_id, match.team2_player1_id, match.team2_player2_id]
           .filter(Boolean)
-          .forEach(pid => playerSet.add(pid));
+          .forEach((pid) => {
+            // Als speler nog geen court heeft, assign deze court
+            if (!playerCourtMap.has(pid)) {
+              playerCourtMap.set(pid, courtName);
+
+              if (!courtPlayerMap.has(courtName)) {
+                courtPlayerMap.set(courtName, new Set());
+              }
+              courtPlayerMap.get(courtName)!.add(pid);
+            }
+          });
       });
 
       // Extract unique courts from R3 matches with row_side info
-      const courtsFromMatches = r3Matches
-        ?.map((m: any) => m.court)
-        .filter((court: any, index: number, self: any[]) => 
-          court && self.findIndex((c: any) => c?.name === court.name) === index
-        ) || [];
+      const courtsFromMatches =
+        r3Matches
+          ?.map((m: any) => m.court)
+          .filter(
+            (court: any, index: number, self: any[]) =>
+              court && self.findIndex((c: any) => c?.name === court.name) === index,
+          ) || [];
 
       // Split courts by row_side and sort by menu_order
       const leftCourts = courtsFromMatches
-        .filter((c: any) => c.row_side === 'left')
+        .filter((c: any) => c.row_side === "left")
         .sort((a: any, b: any) => (a.menu_order || 0) - (b.menu_order || 0));
 
       const rightCourts = courtsFromMatches
-        .filter((c: any) => c.row_side === 'right')
+        .filter((c: any) => c.row_side === "right")
         .sort((a: any, b: any) => (a.menu_order || 0) - (b.menu_order || 0));
 
       // Define court position ranges
@@ -167,7 +179,7 @@ export const useTournamentStandings = (
 
       courtPlayerMap.forEach((playerIds, courtName) => {
         const courtPlayers = Array.from(playerIds)
-          .map(pid => playerMap.get(pid))
+          .map((pid) => playerMap.get(pid))
           .filter(Boolean) as PlayerStanding[];
 
         // Sort within court group: R3 games won DESC → R3 specials DESC → R2 games won DESC → R1 games won DESC
@@ -196,11 +208,11 @@ export const useTournamentStandings = (
             const next = courtPlayers[idx + 1];
             if (player.round3_games_won === next.round3_games_won) {
               if (player.round3_specials !== next.round3_specials) {
-                player.tie_breaker_used = 'r3_specials';
+                player.tie_breaker_used = "r3_specials";
               } else if (player.round2_games_won !== next.round2_games_won) {
-                player.tie_breaker_used = 'r2_games';
+                player.tie_breaker_used = "r2_games";
               } else if (player.round1_games_won !== next.round1_games_won) {
-                player.tie_breaker_used = 'r1_games';
+                player.tie_breaker_used = "r1_games";
               }
             }
           }
@@ -211,7 +223,7 @@ export const useTournamentStandings = (
 
       // Flatten and return sorted by position
       const standings: PlayerStanding[] = [];
-      sortedCourts.forEach(courtName => {
+      sortedCourts.forEach((courtName) => {
         const group = courtGroups.get(courtName);
         if (group) standings.push(...group);
       });
