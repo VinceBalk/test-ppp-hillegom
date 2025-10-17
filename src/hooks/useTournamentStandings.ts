@@ -40,7 +40,7 @@ export const useTournamentStandings = (
           team1_player2_id,
           team2_player1_id,
           team2_player2_id,
-          court:courts(name, menu_order)
+          court:courts(name, menu_order, row_side)
         `)
         .eq('tournament_id', tournamentId)
         .eq('round_number', 3);
@@ -118,23 +118,49 @@ export const useTournamentStandings = (
           .forEach(pid => playerSet.add(pid));
       });
 
-      // Define court position ranges based on menu_order
-      const courtRanges: Record<string, { start: number; end: number }> = {};
-      const sortedCourts = Array.from(courtPlayerMap.keys()).sort((a, b) => {
-        const courtA = r3Matches?.find((m: any) => m.court?.name === a)?.court;
-        const courtB = r3Matches?.find((m: any) => m.court?.name === b)?.court;
-        return (courtA?.menu_order || 0) - (courtB?.menu_order || 0);
-      });
+      // Extract unique courts from R3 matches with row_side info
+      const courtsFromMatches = r3Matches
+        ?.map((m: any) => m.court)
+        .filter((court: any, index: number, self: any[]) => 
+          court && self.findIndex((c: any) => c?.name === court.name) === index
+        ) || [];
 
+      // Split courts by row_side and sort by menu_order
+      const leftCourts = courtsFromMatches
+        .filter((c: any) => c.row_side === 'left')
+        .sort((a: any, b: any) => (a.menu_order || 0) - (b.menu_order || 0));
+
+      const rightCourts = courtsFromMatches
+        .filter((c: any) => c.row_side === 'right')
+        .sort((a: any, b: any) => (a.menu_order || 0) - (b.menu_order || 0));
+
+      // Define court position ranges
+      const courtRanges: Record<string, { start: number; end: number }> = {};
+
+      // Assign positions for LEFT courts (starting at 1)
       let positionCounter = 1;
-      sortedCourts.forEach(courtName => {
-        const playerCount = courtPlayerMap.get(courtName)?.size || 0;
-        courtRanges[courtName] = {
+      leftCourts.forEach((court: any) => {
+        const playerCount = courtPlayerMap.get(court.name)?.size || 0;
+        courtRanges[court.name] = {
           start: positionCounter,
           end: positionCounter + playerCount - 1,
         };
         positionCounter += playerCount;
       });
+
+      // Assign positions for RIGHT courts (starting at 9)
+      positionCounter = 9;
+      rightCourts.forEach((court: any) => {
+        const playerCount = courtPlayerMap.get(court.name)?.size || 0;
+        courtRanges[court.name] = {
+          start: positionCounter,
+          end: positionCounter + playerCount - 1,
+        };
+        positionCounter += playerCount;
+      });
+
+      // Create sorted court list for display (left first, then right)
+      const sortedCourts = [...leftCourts, ...rightCourts].map((c: any) => c.name);
 
       // Group players by court and rank within each court
       const courtGroups = new Map<string, PlayerStanding[]>();
