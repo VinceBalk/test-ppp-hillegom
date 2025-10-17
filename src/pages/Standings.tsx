@@ -22,12 +22,6 @@ interface ChefSpecial {
   title: string;
 }
 
-interface R1R2Stats {
-  player_id: string;
-  total_games: number;
-  total_specials: number;
-}
-
 export default function Standings() {
   const { tournamentId } = useParams();
   const navigate = useNavigate();
@@ -35,67 +29,14 @@ export default function Standings() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [selectedTournament, setSelectedTournament] = useState<string>("");
   const [chefSpecials, setChefSpecials] = useState<ChefSpecial[]>([]);
-  const [playerGroups, setPlayerGroups] = useState<{ [key: string]: string }>({});
-  const [r1r2Stats, setR1R2Stats] = useState<R1R2Stats[]>([]);
   
   const { data: allStandings = [], isLoading } = useTournamentStandings(selectedTournament || undefined);
 
-  // Helper function to sort standings: TOTAAL games → TOTAAL specials → R2 → R1
-  const sortStandingsByTotal = (standings: typeof allStandings) => {
-    return [...standings].sort((a, b) => {
-      // Calculate total games (R1 + R2 + R3)
-      const totalGamesA = a.round1_games_won + a.round2_games_won + a.round3_games_won;
-      const totalGamesB = b.round1_games_won + b.round2_games_won + b.round3_games_won;
-      
-      // 1. Primary: Totaal games gewonnen
-      if (totalGamesB !== totalGamesA) {
-        return totalGamesB - totalGamesA;
-      }
-      
-      // Calculate total specials (R1 + R2 + R3)
-      const totalSpecialsA = a.round1_specials + a.round2_specials + a.round3_specials;
-      const totalSpecialsB = b.round1_specials + b.round2_specials + b.round3_specials;
-      
-      // 2. Tie-breaker 1: Totaal specials
-      if (totalSpecialsB !== totalSpecialsA) {
-        return totalSpecialsB - totalSpecialsA;
-      }
-      
-      // 3. Tie-breaker 2: Ronde 2 games won
-      if (b.round2_games_won !== a.round2_games_won) {
-        return b.round2_games_won - a.round2_games_won;
-      }
-      
-      // 4. Tie-breaker 3: Ronde 1 games won
-      return b.round1_games_won - a.round1_games_won;
-    });
-  };
-
-  // Split R1+R2 stats by group and determine top/bottom 4
-  const leftPlayersR1R2 = r1r2Stats.filter(p => playerGroups[p.player_id] === 'left');
-  const rightPlayersR1R2 = r1r2Stats.filter(p => playerGroups[p.player_id] === 'right');
-
-  const leftTop4PlayerIds = new Set(leftPlayersR1R2.slice(0, 4).map(p => p.player_id));
-  const leftBottom4PlayerIds = new Set(leftPlayersR1R2.slice(4, 8).map(p => p.player_id));
-  const rightTop4PlayerIds = new Set(rightPlayersR1R2.slice(0, 4).map(p => p.player_id));
-  const rightBottom4PlayerIds = new Set(rightPlayersR1R2.slice(4, 8).map(p => p.player_id));
-
-  // Create 4 groups and apply total-based sorting to each
-  const leftTopStandings = sortStandingsByTotal(
-    allStandings.filter(s => leftTop4PlayerIds.has(s.player_id))
-  ).map((s, idx) => ({ ...s, position: idx + 1 }));
-
-  const leftBottomStandings = sortStandingsByTotal(
-    allStandings.filter(s => leftBottom4PlayerIds.has(s.player_id))
-  ).map((s, idx) => ({ ...s, position: idx + 1 }));
-
-  const rightTopStandings = sortStandingsByTotal(
-    allStandings.filter(s => rightTop4PlayerIds.has(s.player_id))
-  ).map((s, idx) => ({ ...s, position: idx + 1 }));
-
-  const rightBottomStandings = sortStandingsByTotal(
-    allStandings.filter(s => rightBottom4PlayerIds.has(s.player_id))
-  ).map((s, idx) => ({ ...s, position: idx + 1 }));
+  // Group standings by position ranges (based on actual position numbers from hook)
+  const leftTopStandings = allStandings.filter(s => s.position >= 1 && s.position <= 4);
+  const leftBottomStandings = allStandings.filter(s => s.position >= 5 && s.position <= 8);
+  const rightTopStandings = allStandings.filter(s => s.position >= 9 && s.position <= 12);
+  const rightBottomStandings = allStandings.filter(s => s.position >= 13 && s.position <= 16);
 
   useEffect(() => {
     fetchTournaments();
@@ -111,24 +52,9 @@ export default function Standings() {
 
   useEffect(() => {
     if (selectedTournament) {
-      fetchPlayerGroups();
       fetchChefSpecials();
-      fetchR1R2Stats();
     }
   }, [selectedTournament]);
-
-  const fetchPlayerGroups = async () => {
-    const { data: tournamentPlayers } = await supabase
-      .from("tournament_players")
-      .select("player_id, group")
-      .eq("tournament_id", selectedTournament);
-
-    const groups: { [key: string]: string } = {};
-    tournamentPlayers?.forEach(tp => {
-      groups[tp.player_id] = tp.group;
-    });
-    setPlayerGroups(groups);
-  };
 
   const fetchTournaments = async () => {
     const { data } = await supabase
@@ -156,41 +82,7 @@ export default function Standings() {
     }
   };
 
-  const fetchR1R2Stats = async () => {
-    const { data } = await supabase
-      .from('player_tournament_stats')
-      .select('player_id, games_won, tiebreaker_specials_count')
-      .eq('tournament_id', selectedTournament)
-      .in('round_number', [1, 2]);
-
-    if (data) {
-      // Aggregate per player
-      const playerMap = new Map<string, R1R2Stats>();
-      data.forEach(stat => {
-        const existing = playerMap.get(stat.player_id);
-        if (existing) {
-          existing.total_games += stat.games_won || 0;
-          existing.total_specials += stat.tiebreaker_specials_count || 0;
-        } else {
-          playerMap.set(stat.player_id, {
-            player_id: stat.player_id,
-            total_games: stat.games_won || 0,
-            total_specials: stat.tiebreaker_specials_count || 0,
-          });
-        }
-      });
-
-      // Sort by R1+R2 performance
-      const sorted = Array.from(playerMap.values()).sort((a, b) => {
-        if (b.total_games !== a.total_games) return b.total_games - a.total_games;
-        return b.total_specials - a.total_specials;
-      });
-
-      setR1R2Stats(sorted);
-    }
-  };
-
-  const renderStandingsTable = (standings: typeof allStandings) => {
+  const renderStandingsTable = (standings: typeof allStandings, showGlobalPosition: boolean = false) => {
     if (isLoading) {
       return (
         <div className="space-y-2">
@@ -215,6 +107,7 @@ export default function Standings() {
           <TableRow>
             <TableHead className="w-12">#</TableHead>
             <TableHead>Speler</TableHead>
+            {showGlobalPosition && <TableHead className="text-center">Pos</TableHead>}
             <TableHead className="text-center">R1<br/><span className="text-xs font-normal">G/S</span></TableHead>
             <TableHead className="text-center">R2<br/><span className="text-xs font-normal">G/S</span></TableHead>
             <TableHead className="text-center">R3<br/><span className="text-xs font-normal">G/S</span></TableHead>
@@ -222,10 +115,10 @@ export default function Standings() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {standings.map((player) => (
+          {standings.map((player, idx) => (
             <TableRow key={player.player_id}>
               <TableCell className="font-bold">
-                {player.position === 1 ? '🥇' : player.position}
+                {idx + 1 === 1 ? '🥇' : idx + 1}
               </TableCell>
               <TableCell 
                 className="font-medium hover:underline cursor-pointer"
@@ -233,6 +126,11 @@ export default function Standings() {
               >
                 {player.player_name}
               </TableCell>
+              {showGlobalPosition && (
+                <TableCell className="text-center text-xs text-muted-foreground">
+                  #{player.position}
+                </TableCell>
+              )}
               <TableCell className="text-center">
                 <div className="flex flex-col items-center gap-0.5">
                   <span className="font-medium">{player.round1_games_won}</span>
@@ -275,7 +173,7 @@ export default function Standings() {
           <Trophy className="h-8 w-8 text-yellow-500" />
           Standen
         </h1>
-        <p className="text-muted-foreground">Rankings op basis van totaal aantal games gewonnen</p>
+        <p className="text-muted-foreground">Rankings op basis van Ronde 3 prestaties per baan</p>
       </div>
 
       <Card>
@@ -347,11 +245,11 @@ export default function Standings() {
               Linker Rij - Top 4
             </CardTitle>
             <CardDescription>
-              Bovenste 4 spelers (linker rij) - totaal games
+              Posities 1-4 (linker rij, eerste baan)
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {renderStandingsTable(leftTopStandings)}
+            {renderStandingsTable(leftTopStandings, true)}
           </CardContent>
         </Card>
 
@@ -362,11 +260,11 @@ export default function Standings() {
               Rechter Rij - Top 4
             </CardTitle>
             <CardDescription>
-              Bovenste 4 spelers (rechter rij) - totaal games
+              Posities 9-12 (rechter rij, eerste baan)
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {renderStandingsTable(rightTopStandings)}
+            {renderStandingsTable(rightTopStandings, true)}
           </CardContent>
         </Card>
 
@@ -377,11 +275,11 @@ export default function Standings() {
               Linker Rij - Onderste 4
             </CardTitle>
             <CardDescription>
-              Onderste 4 spelers (linker rij) - totaal games
+              Posities 5-8 (linker rij, tweede baan)
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {renderStandingsTable(leftBottomStandings)}
+            {renderStandingsTable(leftBottomStandings, true)}
           </CardContent>
         </Card>
 
@@ -392,11 +290,11 @@ export default function Standings() {
               Rechter Rij - Onderste 4
             </CardTitle>
             <CardDescription>
-              Onderste 4 spelers (rechter rij) - totaal games
+              Posities 13-16 (rechter rij, tweede baan)
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {renderStandingsTable(rightBottomStandings)}
+            {renderStandingsTable(rightBottomStandings, true)}
           </CardContent>
         </Card>
       </div>
