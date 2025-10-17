@@ -25,6 +25,7 @@ import Users from "./pages/Users";
 import Profile from "./pages/Profile";
 import Courts from "./pages/Courts";
 import Layout from "./components/Layout";
+import Footer from './components/Footer';
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
