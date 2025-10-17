@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { MobileMenu } from './MobileMenu';
 import { Header } from './Header';
+import { Footer } from './Footer;;
 import { useSecurityMonitoring } from '../hooks/useSecurityMonitoring';
 
 export default function Layout() {
