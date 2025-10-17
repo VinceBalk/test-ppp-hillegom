@@ -10,6 +10,7 @@ export interface PlayerStatistics {
   total_tournaments: number;
   avg_games_per_tournament: number;
   win_percentage: number;
+  row_side?: string;
 }
 
 export const usePlayerStatistics = (tournamentId?: string) => {
@@ -24,7 +25,7 @@ export const usePlayerStatistics = (tournamentId?: string) => {
           games_lost,
           tiebreaker_specials_count,
           tournament_id,
-          players:player_id (name)
+          players:player_id (name, row_side)
         `);
       
       if (tournamentId) {
@@ -46,6 +47,7 @@ export const usePlayerStatistics = (tournamentId?: string) => {
         total_games_lost: number;
         total_specials: number;
         tournaments: Set<string>;
+        row_side?: string;
       }>();
 
       data?.forEach((stat: any) => {
@@ -59,6 +61,7 @@ export const usePlayerStatistics = (tournamentId?: string) => {
             total_games_lost: 0,
             total_specials: 0,
             tournaments: new Set(),
+            row_side: stat.players?.row_side,
           });
         }
         
@@ -83,6 +86,7 @@ export const usePlayerStatistics = (tournamentId?: string) => {
         win_percentage: (p.total_games_won + p.total_games_lost) > 0
           ? Number(((p.total_games_won / (p.total_games_won + p.total_games_lost)) * 100).toFixed(1))
           : 0,
+        row_side: p.row_side,
       }));
 
       // Sort by total games won
