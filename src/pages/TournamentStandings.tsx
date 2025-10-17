@@ -43,64 +43,58 @@ export default function TournamentStandings() {
     );
   }
 
-  const renderStandingsCard = (
-    title: string, 
-    showTrend: boolean = false,
-    description?: string
-  ) => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">{title}</CardTitle>
-        {description && (
-          <p className="text-sm text-muted-foreground mt-1">{description}</p>
-        )}
-      </CardHeader>
-      <CardContent>
-        {standings.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            Nog geen statistieken beschikbaar.
-          </p>
-        ) : (
+  // Group standings by court
+  const courtGroups = standings.reduce((acc, player) => {
+    const courtName = player.court_name || 'Onbekend';
+    if (!acc[courtName]) acc[courtName] = [];
+    acc[courtName].push(player);
+    return acc;
+  }, {} as Record<string, typeof standings>);
+
+  const renderCourtGroup = (courtName: string, players: typeof standings) => {
+    if (players.length === 0) return null;
+    
+    const positionRange = players[0].court_position_range || '';
+    
+    return (
+      <Card key={courtName}>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            {courtName}
+            <Badge variant="secondary" className="text-xs">
+              Posities {positionRange}
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
           <div className="space-y-2">
-            {standings.map((player, index) => (
+            {players.map((player) => (
               <div
                 key={player.player_id}
                 className={`flex items-center justify-between p-3 rounded-lg border ${
-                  index === 0 ? 'bg-yellow-50 border-yellow-200' :
-                  index === 1 ? 'bg-gray-50 border-gray-200' :
-                  index === 2 ? 'bg-orange-50 border-orange-200' :
+                  player.position === 1 ? 'bg-yellow-50 border-yellow-200' :
+                  player.position === 2 ? 'bg-gray-50 border-gray-200' :
+                  player.position === 3 ? 'bg-orange-50 border-orange-200' :
                   'bg-background border-border'
                 }`}
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${
-                    index === 0 ? 'bg-yellow-500 text-white' :
-                    index === 1 ? 'bg-gray-400 text-white' :
-                    index === 2 ? 'bg-orange-500 text-white' :
+                    player.position === 1 ? 'bg-yellow-500 text-white' :
+                    player.position === 2 ? 'bg-gray-400 text-white' :
+                    player.position === 3 ? 'bg-orange-500 text-white' :
                     'bg-muted text-muted-foreground'
                   }`}>
-                    {index === 0 ? <Trophy className="h-4 w-4" /> : player.position}
+                    {player.position === 1 ? <Trophy className="h-4 w-4" /> : player.position}
                   </div>
-                  
-                  {showTrend && player.trend && (
-                    <div className="flex items-center justify-center w-6 h-6">
-                      {player.trend === 'up' && (
-                        <TrendingUp className="h-5 w-5 text-green-600" />
-                      )}
-                      {player.trend === 'down' && (
-                        <TrendingDown className="h-5 w-5 text-red-600" />
-                      )}
-                      {player.trend === 'same' && (
-                        <Minus className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </div>
-                  )}
                   
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{player.player_name}</p>
-                    {showTrend && player.position_change !== undefined && player.position_change !== 0 && (
+                    {player.tie_breaker_used && (
                       <p className="text-xs text-muted-foreground">
-                        {player.position_change > 0 ? `+${player.position_change}` : player.position_change} positie{Math.abs(player.position_change) !== 1 ? 's' : ''}
+                        {player.tie_breaker_used === 'r3_specials' && '🎯 R3 Specials'}
+                        {player.tie_breaker_used === 'r2_games' && '🔢 R2 Games'}
+                        {player.tie_breaker_used === 'r1_games' && '🥉 R1 Games'}
                       </p>
                     )}
                   </div>
@@ -108,30 +102,30 @@ export default function TournamentStandings() {
                 <div className="flex items-center gap-3 text-sm">
                   <div className="text-right">
                     <p className="font-bold text-green-600">{player.round3_games_won}</p>
-                    <p className="text-xs text-muted-foreground">R3 games</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">{player.round2_games_won}</p>
-                    <p className="text-xs text-muted-foreground">R2 games</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">{player.round1_games_won}</p>
-                    <p className="text-xs text-muted-foreground">R1 games</p>
+                    <p className="text-xs text-muted-foreground">R3</p>
                   </div>
                   {player.round3_specials > 0 && (
-                    <Badge variant="outline" className="ml-2">
+                    <Badge variant="outline" className="ml-1">
                       <Award className="h-3 w-3 mr-1" />
                       {player.round3_specials}
                     </Badge>
                   )}
+                  <div className="text-right">
+                    <p className="font-medium">{player.round2_games_won}</p>
+                    <p className="text-xs text-muted-foreground">R2</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">{player.round1_games_won}</p>
+                    <p className="text-xs text-muted-foreground">R1</p>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <div className="space-y-4 p-4 max-w-4xl mx-auto">
@@ -148,11 +142,29 @@ export default function TournamentStandings() {
       </div>
 
       <div className="space-y-4">
-        {renderStandingsCard(
-          'Finale Ranking', 
-          false,
-          'Gerankt op basis van Ronde 3 prestaties, met tie-breakers van R3 specials, R2 games, en R1 games'
+        <div>
+          <h2 className="text-lg font-semibold mb-1">🏆 Finalegroepen</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Gerankt op basis van R3 prestaties binnen elke baan
+          </p>
+        </div>
+
+        {standings.length === 0 ? (
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Nog geen statistieken beschikbaar.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {Object.entries(courtGroups).map(([courtName, players]) =>
+              renderCourtGroup(courtName, players)
+            )}
+          </div>
         )}
+
         <ChefSpecialRanking 
           tournamentId={tournamentId!} 
           title="Chef Special Ranking"

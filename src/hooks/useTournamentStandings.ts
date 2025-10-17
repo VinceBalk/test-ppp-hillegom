@@ -11,8 +11,8 @@ interface PlayerStanding {
   round3_games_won: number;
   round3_specials: number;
   position: number;
-  trend?: 'up' | 'down' | 'same';
-  position_change?: number;
+  court_name?: string;
+  court_position_range?: string;
   tie_breaker_used?: 'r3_specials' | 'r2_games' | 'r1_games' | null;
 }
 
@@ -31,6 +31,24 @@ export const useTournamentStandings = (
     queryKey: ['tournament-standings', tournamentId],
     queryFn: async () => {
       if (!tournamentId) return [];
+
+      // Fetch R3 matches with court info
+      const { data: r3Matches, error: r3Error } = await supabase
+        .from('matches')
+        .select(`
+          team1_player1_id,
+          team1_player2_id,
+          team2_player1_id,
+          team2_player2_id,
+          court:courts(name, menu_order)
+        `)
+        .eq('tournament_id', tournamentId)
+        .eq('round_number', 3);
+
+      if (r3Error) {
+        console.error('Error fetching R3 matches:', r3Error);
+        throw r3Error;
+      }
 
       // Fetch ALL stats for all rounds
       const { data: allData, error: allError } = await supabase
@@ -51,7 +69,7 @@ export const useTournamentStandings = (
         throw allError;
       }
 
-      // Calculate standings with per-round data
+      // Build player stats map
       const playerMap = new Map<string, PlayerStanding>();
 
       allData?.forEach((stat: any) => {
@@ -74,7 +92,6 @@ export const useTournamentStandings = (
 
         const player = playerMap.get(playerId)!;
         
-        // Store stats per round
         if (stat.round_number === 1) {
           player.round1_games_won = stat.games_won || 0;
           player.round1_specials = stat.tiebreaker_specials_count || 0;
@@ -87,44 +104,90 @@ export const useTournamentStandings = (
         }
       });
 
-      // Convert to array and sort with R3-primary logic
-      const standings = Array.from(playerMap.values()).sort((a, b) => {
-        // 1. Primary: Ronde 3 games won
-        if (b.round3_games_won !== a.round3_games_won) {
-          return b.round3_games_won - a.round3_games_won;
+      // Map players to their R3 courts
+      const courtPlayerMap = new Map<string, Set<string>>();
+
+      r3Matches?.forEach((match: any) => {
+        const courtName = match.court?.name || 'Onbekend';
+        if (!courtPlayerMap.has(courtName)) {
+          courtPlayerMap.set(courtName, new Set());
         }
-        
-        // 2. Tie-breaker 1: Ronde 3 specials
-        if (b.round3_specials !== a.round3_specials) {
-          return b.round3_specials - a.round3_specials;
-        }
-        
-        // 3. Tie-breaker 2: Ronde 2 games won
-        if (b.round2_games_won !== a.round2_games_won) {
-          return b.round2_games_won - a.round2_games_won;
-        }
-        
-        // 4. Tie-breaker 3: Ronde 1 games won
-        return b.round1_games_won - a.round1_games_won;
+        const playerSet = courtPlayerMap.get(courtName)!;
+        [match.team1_player1_id, match.team1_player2_id, match.team2_player1_id, match.team2_player2_id]
+          .filter(Boolean)
+          .forEach(pid => playerSet.add(pid));
       });
 
-      // Assign positions and detect which tie-breaker was used
-      standings.forEach((standing, index) => {
-        standing.position = index + 1;
-        
-        // Determine tie-breaker used by comparing with next player
-        if (index < standings.length - 1) {
-          const next = standings[index + 1];
-          if (standing.round3_games_won === next.round3_games_won) {
-            if (standing.round3_specials !== next.round3_specials) {
-              standing.tie_breaker_used = 'r3_specials';
-            } else if (standing.round2_games_won !== next.round2_games_won) {
-              standing.tie_breaker_used = 'r2_games';
-            } else if (standing.round1_games_won !== next.round1_games_won) {
-              standing.tie_breaker_used = 'r1_games';
+      // Define court position ranges based on menu_order
+      const courtRanges: Record<string, { start: number; end: number }> = {};
+      const sortedCourts = Array.from(courtPlayerMap.keys()).sort((a, b) => {
+        const courtA = r3Matches?.find((m: any) => m.court?.name === a)?.court;
+        const courtB = r3Matches?.find((m: any) => m.court?.name === b)?.court;
+        return (courtA?.menu_order || 0) - (courtB?.menu_order || 0);
+      });
+
+      let positionCounter = 1;
+      sortedCourts.forEach(courtName => {
+        const playerCount = courtPlayerMap.get(courtName)?.size || 0;
+        courtRanges[courtName] = {
+          start: positionCounter,
+          end: positionCounter + playerCount - 1,
+        };
+        positionCounter += playerCount;
+      });
+
+      // Group players by court and rank within each court
+      const courtGroups = new Map<string, PlayerStanding[]>();
+
+      courtPlayerMap.forEach((playerIds, courtName) => {
+        const courtPlayers = Array.from(playerIds)
+          .map(pid => playerMap.get(pid))
+          .filter(Boolean) as PlayerStanding[];
+
+        // Sort within court group: R3 games won DESC → R3 specials DESC → R2 games won DESC → R1 games won DESC
+        courtPlayers.sort((a, b) => {
+          if (b.round3_games_won !== a.round3_games_won) {
+            return b.round3_games_won - a.round3_games_won;
+          }
+          if (b.round3_specials !== a.round3_specials) {
+            return b.round3_specials - a.round3_specials;
+          }
+          if (b.round2_games_won !== a.round2_games_won) {
+            return b.round2_games_won - a.round2_games_won;
+          }
+          return b.round1_games_won - a.round1_games_won;
+        });
+
+        // Assign positions based on court range
+        const range = courtRanges[courtName];
+        courtPlayers.forEach((player, idx) => {
+          player.position = range.start + idx;
+          player.court_name = courtName;
+          player.court_position_range = `${range.start}-${range.end}`;
+
+          // Detect tie-breaker used
+          if (idx < courtPlayers.length - 1) {
+            const next = courtPlayers[idx + 1];
+            if (player.round3_games_won === next.round3_games_won) {
+              if (player.round3_specials !== next.round3_specials) {
+                player.tie_breaker_used = 'r3_specials';
+              } else if (player.round2_games_won !== next.round2_games_won) {
+                player.tie_breaker_used = 'r2_games';
+              } else if (player.round1_games_won !== next.round1_games_won) {
+                player.tie_breaker_used = 'r1_games';
+              }
             }
           }
-        }
+        });
+
+        courtGroups.set(courtName, courtPlayers);
+      });
+
+      // Flatten and return sorted by position
+      const standings: PlayerStanding[] = [];
+      sortedCourts.forEach(courtName => {
+        const group = courtGroups.get(courtName);
+        if (group) standings.push(...group);
       });
 
       return standings;
