@@ -25,17 +25,12 @@ import Users from "./pages/Users";
 import Profile from "./pages/Profile";
 import Courts from "./pages/Courts";
 import Layout from "./components/Layout";
-import Footer from './components/Footer';
+import { Footer } from './components/Footer';
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  console.log('=== APP COMPONENT RENDERING ===');
-  console.log('Current URL:', window.location.href);
-  console.log('Pathname:', window.location.pathname);
-  console.log('React is working - this should appear first');
-  
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

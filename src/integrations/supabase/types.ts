@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -89,7 +89,7 @@ export type Database = {
           created_at: string | null
           email: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           success: boolean | null
         }
         Insert: {
@@ -97,7 +97,7 @@ export type Database = {
           created_at?: string | null
           email: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           success?: boolean | null
         }
         Update: {
@@ -105,7 +105,7 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           success?: boolean | null
         }
         Relationships: []
@@ -530,7 +530,7 @@ export type Database = {
           details: Json | null
           event_type: Database["public"]["Enums"]["security_event_type"] | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           resource_id: string | null
           resource_type: string | null
           risk_level: string | null
@@ -544,7 +544,7 @@ export type Database = {
           details?: Json | null
           event_type?: Database["public"]["Enums"]["security_event_type"] | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           resource_id?: string | null
           resource_type?: string | null
           risk_level?: string | null
@@ -558,7 +558,7 @@ export type Database = {
           details?: Json | null
           event_type?: Database["public"]["Enums"]["security_event_type"] | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           resource_id?: string | null
           resource_type?: string | null
           risk_level?: string | null
@@ -889,7 +889,7 @@ export type Database = {
           created_at: string | null
           ended_at: string | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           is_active: boolean | null
           last_activity: string | null
           session_id: string
@@ -900,7 +900,7 @@ export type Database = {
           created_at?: string | null
           ended_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           is_active?: boolean | null
           last_activity?: string | null
           session_id: string
@@ -911,7 +911,7 @@ export type Database = {
           created_at?: string | null
           ended_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           is_active?: boolean | null
           last_activity?: string | null
           session_id?: string
@@ -945,10 +945,7 @@ export type Database = {
         Args: { p_email: string; p_ip_address?: unknown }
         Returns: Json
       }
-      force_logout_all_users: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      force_logout_all_users: { Args: never; Returns: undefined }
       get_player_specials_by_year: {
         Args: { p_player_id: string; p_year: number }
         Returns: {
@@ -969,18 +966,14 @@ export type Database = {
           total_specials: number
         }[]
       }
-      get_user_role: {
-        Args: Record<PropertyKey, never> | { user_id: string }
-        Returns: string
-      }
+      get_user_role:
+        | { Args: never; Returns: string }
+        | { Args: { user_id: string }; Returns: string }
       has_role_or_higher: {
         Args: { required_role: string; user_id: string }
         Returns: boolean
       }
-      is_super_admin: {
-        Args: { user_id: string }
-        Returns: boolean
-      }
+      is_super_admin: { Args: { user_id: string }; Returns: boolean }
       log_comprehensive_security_event: {
         Args: {
           p_action: string
@@ -999,18 +992,18 @@ export type Database = {
         Args: { p_email: string; p_ip_address?: unknown; p_success: boolean }
         Returns: undefined
       }
-      log_security_event: {
-        Args:
-          | Record<PropertyKey, never>
-          | {
+      log_security_event:
+        | { Args: never; Returns: undefined }
+        | {
+            Args: {
               p_action: string
               p_details?: Json
               p_resource_id?: string
               p_resource_type?: string
               p_user_id: string
             }
-        Returns: undefined
-      }
+            Returns: undefined
+          }
       log_security_event_enhanced: {
         Args: {
           p_action: string
@@ -1022,10 +1015,7 @@ export type Database = {
         }
         Returns: undefined
       }
-      sanitize_user_input: {
-        Args: { input: string }
-        Returns: string
-      }
+      sanitize_user_input: { Args: { input: string }; Returns: string }
       save_individual_match: {
         Args: {
           p_court_id?: string
@@ -1062,10 +1052,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      validate_email_format: {
-        Args: { email: string }
-        Returns: boolean
-      }
+      validate_email_format: { Args: { email: string }; Returns: boolean }
     }
     Enums: {
       app_role: "speler" | "organisator" | "beheerder"

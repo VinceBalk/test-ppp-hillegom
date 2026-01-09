@@ -40,12 +40,10 @@ export default function MatchSimulator({ match, onClose }: MatchSimulatorProps) 
 
   const { team1: team1Name, team2: team2Name } = getPlayerNames();
 
-  // Enforce total score = 8 constraint
   useEffect(() => {
     if (is2v2) {
       const total = team1Score + team2Score;
       if (total > 8) {
-        // Auto-adjust to maintain total of 8
         if (team1Score > team2Score) {
           setTeam1Score(8 - team2Score);
         } else {
@@ -102,21 +100,6 @@ export default function MatchSimulator({ match, onClose }: MatchSimulatorProps) 
   };
 
   const handleSimulate = () => {
-    console.log('=== MATCH SIMULATION ===');
-    console.log('Match ID:', match.id);
-    console.log('Status:', status);
-    console.log('Type:', is2v2 ? '2v2' : '1v1');
-    if (is2v2) {
-      console.log('Team 1 Score:', team1Score);
-      console.log('Team 2 Score:', team2Score);
-    } else {
-      console.log('Player 1 Score:', player1Score);
-      console.log('Player 2 Score:', player2Score);
-    }
-    console.log('Notes:', notes);
-    console.log('=== SIMULATION COMPLETE (NOT SAVED) ===');
-    
-    // Show a temporary notification
     alert(`Wedstrijd gesimuleerd!\n${team1Name}: ${is2v2 ? team1Score : player1Score}\n${team2Name}: ${is2v2 ? team2Score : player2Score}\n\n(Niet opgeslagen in database)`);
   };
 
