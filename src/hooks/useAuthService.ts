@@ -10,7 +10,6 @@ export function useAuthService() {
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('Attempting sign in for:', email);
       setLoading(true);
 
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -21,7 +20,6 @@ export function useAuthService() {
       if (error) {
         console.error('Sign in error:', error.message);
       } else {
-        console.log('Sign in successful for user:', data.user?.id);
         if (data?.session) {
           setSession(data.session);
           setUser(data.user);
@@ -41,8 +39,6 @@ export function useAuthService() {
     try {
       setLoading(true);
       const redirectUrl = `${window.location.origin}/`;
-
-      console.log('Attempting sign up for:', email, 'with redirect:', redirectUrl);
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -77,8 +73,6 @@ export function useAuthService() {
     try {
       setLoading(true);
       const redirectUrl = `${window.location.origin}/`;
-      
-      console.log('Sending magic link to:', email, 'with redirect:', redirectUrl);
 
       const { error } = await supabase.auth.signInWithOtp({
         email,

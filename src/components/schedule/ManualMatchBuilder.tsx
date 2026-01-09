@@ -4,7 +4,6 @@ import { useTournamentPlayers } from "@/hooks/useTournamentPlayers";
 import { useMatches } from "@/hooks/useMatches";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -31,11 +30,9 @@ const ManualMatchBuilder: React.FC<Props> = ({ tournamentId, initialRound = 1 })
   const [round, setRound] = useState(initialRound);
   const [selectedMatches, setSelectedMatches] = useState<Match2v2[]>([]);
   const [courts, setCourts] = useState<{ id: string; name: string }[]>([]);
-  const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Update round when initialRound changes
   useEffect(() => {
     setRound(initialRound);
   }, [initialRound]);
@@ -50,9 +47,6 @@ const ManualMatchBuilder: React.FC<Props> = ({ tournamentId, initialRound = 1 })
 
   const mutation = useMutation({
     mutationFn: async () => {
-      console.log('Adding matches to existing round instead of overwriting...');
-      
-      // Check if tournament round exists, create if not
       const { data: existingRound } = await supabase
         .from("tournament_rounds")
         .select("*")
@@ -61,7 +55,6 @@ const ManualMatchBuilder: React.FC<Props> = ({ tournamentId, initialRound = 1 })
         .maybeSingle();
 
       if (!existingRound) {
-        console.log('Creating new tournament round...');
         await supabase.from("tournament_rounds").insert({
           tournament_id: tournamentId,
           round_number: round,
@@ -70,7 +63,6 @@ const ManualMatchBuilder: React.FC<Props> = ({ tournamentId, initialRound = 1 })
         });
       }
 
-      // Add new matches WITHOUT deleting existing ones
       const newMatches = selectedMatches.map(match => ({
         tournament_id: tournamentId,
         round_number: round,
@@ -81,8 +73,6 @@ const ManualMatchBuilder: React.FC<Props> = ({ tournamentId, initialRound = 1 })
         team2_player2_id: match.team2Player2,
         status: 'scheduled' as const
       }));
-
-      console.log('Inserting new matches:', newMatches);
       
       const { data: insertedMatches, error } = await supabase
         .from("matches")
@@ -94,12 +84,11 @@ const ManualMatchBuilder: React.FC<Props> = ({ tournamentId, initialRound = 1 })
         throw error;
       }
 
-      console.log('Successfully added matches:', insertedMatches);
       return insertedMatches;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["matches", tournamentId] });
-      setSelectedMatches([]); // Clear the form after successful submission
+      setSelectedMatches([]);
       toast({
         title: "Wedstrijden toegevoegd",
         description: `${data.length} nieuwe 2v2 wedstrijden zijn toegevoegd aan ronde ${round}.`,
@@ -138,7 +127,6 @@ const ManualMatchBuilder: React.FC<Props> = ({ tournamentId, initialRound = 1 })
 
   if (loadingPlayers || loadingMatches) return <p>Bezig met laden...</p>;
 
-  // Convert tournament players to the expected format
   const players = tournamentPlayers.map(tp => ({
     id: tp.player_id,
     name: tp.player.name
@@ -151,7 +139,6 @@ const ManualMatchBuilder: React.FC<Props> = ({ tournamentId, initialRound = 1 })
 
   const allMatchesValid = selectedMatches.length > 0 && selectedMatches.every(isValidMatch);
 
-  // Get existing matches for current round
   const existingRoundMatches = matches.filter(match => match.round_number === round);
 
   return (
@@ -200,7 +187,6 @@ const ManualMatchBuilder: React.FC<Props> = ({ tournamentId, initialRound = 1 })
             </div>
             
             <div className="grid gap-4">
-              {/* Court Selection */}
               <div>
                 <Label className="text-sm">Baan</Label>
                 <Select
@@ -220,7 +206,6 @@ const ManualMatchBuilder: React.FC<Props> = ({ tournamentId, initialRound = 1 })
                 </Select>
               </div>
 
-              {/* Team 1 */}
               <div>
                 <Label className="text-sm text-blue-600 font-medium">Team 1</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -257,10 +242,8 @@ const ManualMatchBuilder: React.FC<Props> = ({ tournamentId, initialRound = 1 })
                 </div>
               </div>
 
-              {/* VS */}
               <div className="text-center font-bold text-muted-foreground">VS</div>
 
-              {/* Team 2 */}
               <div>
                 <Label className="text-sm text-red-600 font-medium">Team 2</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">

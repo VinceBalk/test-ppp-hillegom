@@ -8,7 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Mail } from 'lucide-react';
 
 export function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
-  console.log('=== LOGIN FORM RENDERING ===');
   const { signIn, signInWithMagicLink } = useAuth();
   const { toast } = useToast();
   
@@ -23,7 +22,6 @@ export function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }
     setLoading(true);
 
     try {
-      console.log('Attempting to sign in with:', email);
       const { error } = await signIn(email, password);
       
       if (error) {
@@ -51,7 +49,6 @@ export function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }
     setLoading(true);
 
     try {
-      console.log('Sending magic link to:', magicLinkEmail);
       const { error } = await signInWithMagicLink(magicLinkEmail);
       
       if (error) {
