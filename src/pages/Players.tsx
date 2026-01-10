@@ -37,7 +37,8 @@ export default function PlayersPage() {
     }
   };
 
-  const handleEditClick = (player: Player) => {
+  const handleEditClick = (e: React.MouseEvent, player: Player) => {
+    e.stopPropagation();
     setEditingPlayer(player);
     setDialogOpen(true);
   };
@@ -59,14 +60,10 @@ export default function PlayersPage() {
       globalPosition: globalPosition !== undefined && globalPosition >= 0 ? globalPosition + 1 : null
     };
   }).sort((a, b) => {
-    // Sort by global ranking position (nulls last)
     if (a.globalPosition === null) return 1;
     if (b.globalPosition === null) return -1;
     return a.globalPosition - b.globalPosition;
   });
-
-  const leftSidePlayers = playersWithRankings.filter(p => p.group_side === 'left');
-  const rightSidePlayers = playersWithRankings.filter(p => p.group_side === 'right');
 
   if (error) {
     return (
@@ -84,89 +81,6 @@ export default function PlayersPage() {
       </div>
     );
   }
-
-  const renderPlayersTable = (playersList: typeof playersWithRankings, title: string, badgeClass: string) => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Badge variant="secondary" className={badgeClass}>
-            {title}
-          </Badge>
-          <span className="text-sm font-normal text-muted-foreground">
-            ({playersList.length} spelers)
-          </span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </div>
-        ) : playersList.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">Geen spelers in {title.toLowerCase()}</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-16">#</TableHead>
-                  <TableHead>Naam</TableHead>
-                  <TableHead className="text-center">Toernooien</TableHead>
-                  <TableHead className="text-center">Gem. Positie</TableHead>
-                  <TableHead className="text-center">Games Won</TableHead>
-                  <TableHead className="text-center">Specials</TableHead>
-                  {canEdit && <TableHead className="w-20"></TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {playersList.map((player) => (
-                  <TableRow 
-                    key={player.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => navigate(`/players/${player.id}`)}
-                  >
-                    <TableCell className="font-bold">
-                      {player.globalPosition || '-'}
-                    </TableCell>
-                    <TableCell className="font-semibold text-primary">
-                      {player.name}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {player.ranking?.tournaments_played || 0}
-                    </TableCell>
-                    <TableCell className="text-center font-semibold">
-                      {player.ranking?.avg_position || '-'}
-                    </TableCell>
-                    <TableCell className="text-center text-green-600">
-                      {player.ranking?.total_games_won || 0}
-                    </TableCell>
-                    <TableCell className="text-center text-orange-600">
-                      {player.ranking?.total_specials || 0}
-                    </TableCell>
-                    {canEdit && (
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditClick(player)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
 
   return (
     <div className="space-y-6 p-4 max-w-7xl mx-auto">
@@ -203,18 +117,86 @@ export default function PlayersPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {renderPlayersTable(
-          leftSidePlayers, 
-          "Links", 
-          "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-        )}
-        {renderPlayersTable(
-          rightSidePlayers, 
-          "Rechts", 
-          "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100"
-        )}
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            Alle Spelers
+            <span className="text-sm font-normal text-muted-foreground">
+              ({playersWithRankings.length} spelers)
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : playersWithRankings.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Nog geen spelers toegevoegd</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Naam</TableHead>
+                    <TableHead>Rij</TableHead>
+                    <TableHead className="text-center">Toernooien</TableHead>
+                    <TableHead className="text-center">Positie</TableHead>
+                    {canEdit && <TableHead className="w-20"></TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {playersWithRankings.map((player) => (
+                    <TableRow 
+                      key={player.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/players/${player.id}`)}
+                    >
+                      <TableCell className="font-semibold text-primary whitespace-nowrap">
+                        {player.name}
+                      </TableCell>
+                      <TableCell>
+                        {player.group_side === 'left' ? (
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+                            Links
+                          </Badge>
+                        ) : player.group_side === 'right' ? (
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
+                            Rechts
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">-</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {player.ranking?.tournaments_played || 0}
+                      </TableCell>
+                      <TableCell className="text-center font-semibold">
+                        #{player.globalPosition || '-'}
+                      </TableCell>
+                      {canEdit && (
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => handleEditClick(e, player)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
