@@ -23,20 +23,11 @@ export default function Dashboard() {
 
   const loading = dashboardLoading || rankingsLoading || playersLoading;
 
-  // Get top 3 per side
   const leftTop3 = rankings?.filter(r => r.row_side === 'left').slice(0, 3) || [];
   const rightTop3 = rankings?.filter(r => r.row_side === 'right').slice(0, 3) || [];
 
-  // Get biggest mover (positive = improved position = lower number)
-  const playersWithChange = players
-    .filter(p => p.rank_change && p.rank_change !== 0)
-    .sort((a, b) => (b.rank_change || 0) - (a.rank_change || 0));
-  
-  const biggestRiser = playersWithChange[0];
-  const biggestFaller = playersWithChange[playersWithChange.length - 1];
-
   const lastTournament = recentTournaments[0];
-  const lastTournamentWinner = rankings?.find(r => rankings.indexOf(r) === 0);
+  const lastTournamentWinner = rankings?.[0];
 
   if (loading) {
     return (
@@ -61,8 +52,8 @@ export default function Dashboard() {
         <p className="text-muted-foreground">Welkom bij het PPP Hillegom toernooi management systeem</p>
       </div>
 
-      {/* Stats Row - Single Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      {/* Top Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Aankomend Toernooi */}
         <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/tournaments')}>
           <CardHeader className="pb-3">
@@ -74,79 +65,17 @@ export default function Dashboard() {
           <CardContent>
             {currentTournament ? (
               <>
-                <div className="text-lg font-bold mb-1">{currentTournament.name}</div>
-                <p className="text-xs text-muted-foreground">
+                <div className="text-xl font-bold mb-1">{currentTournament.name}</div>
+                <p className="text-sm text-muted-foreground">
                   {new Date(currentTournament.start_date).toLocaleDateString('nl-NL', { 
                     day: 'numeric', 
-                    month: 'short', 
+                    month: 'long', 
                     year: 'numeric' 
                   })}
                 </p>
               </>
             ) : (
               <div className="text-sm text-muted-foreground">Geen gepland</div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Laatste Toernooi */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
-              <Trophy className="h-4 w-4" />
-              Laatste Toernooi
-            </div>
-          </CardHeader>
-          <CardContent>
-            {lastTournament ? (
-              <>
-                <div className="text-lg font-bold mb-1">{lastTournament.name}</div>
-                <p className="text-xs text-muted-foreground">
-                  Winnaar: {lastTournamentWinner?.name || 'N/A'}
-                </p>
-              </>
-            ) : (
-              <div className="text-sm text-muted-foreground">Geen data</div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Chef Special */}
-        <Card className="border-orange-200 bg-gradient-to-br from-orange-50 to-background">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2 text-sm font-medium text-orange-700 mb-2">
-              <ChefHat className="h-4 w-4" />
-              Chef Special
-            </div>
-          </CardHeader>
-          <CardContent>
-            {chefSpecial ? (
-              <>
-                <div className="text-lg font-bold text-orange-700 mb-1">{chefSpecial.player_name}</div>
-                <p className="text-xs text-muted-foreground">{chefSpecial.total_specials} specials</p>
-              </>
-            ) : (
-              <div className="text-sm text-muted-foreground">Nog niet toegekend</div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Sous Chef */}
-        <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-background">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2 text-sm font-medium text-amber-700 mb-2">
-              <Award className="h-4 w-4" />
-              Sous Chef
-            </div>
-          </CardHeader>
-          <CardContent>
-            {sousChef ? (
-              <>
-                <div className="text-lg font-bold text-amber-700 mb-1">{sousChef.player_name}</div>
-                <p className="text-xs text-muted-foreground">{sousChef.total_specials} specials</p>
-              </>
-            ) : (
-              <div className="text-sm text-muted-foreground">Nog niet toegekend</div>
             )}
           </CardContent>
         </Card>
@@ -160,11 +89,100 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold mb-1">{stats.totalPlayers}</div>
-            <p className="text-xs text-muted-foreground">Actieve spelers</p>
+            <div className="text-3xl font-bold mb-1">{stats.totalPlayers}</div>
+            <p className="text-sm text-muted-foreground">Actieve spelers</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Laatste Toernooi Row */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2 text-base font-semibold text-muted-foreground">
+            <Trophy className="h-5 w-5" />
+            Laatste Toernooi
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Toernooi Info */}
+            <div className="md:col-span-1">
+              {lastTournament ? (
+                <>
+                  <div className="text-2xl font-bold mb-1">{lastTournament.name}</div>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(lastTournament.created_at).toLocaleDateString('nl-NL', { 
+                      day: 'numeric', 
+                      month: 'long'
+                    })}
+                  </p>
+                </>
+              ) : (
+                <div className="text-sm text-muted-foreground">Geen data</div>
+              )}
+            </div>
+
+            {/* Winnaar */}
+            <div className="border-l pl-4">
+              <div className="text-sm font-medium text-muted-foreground mb-2">Winnaar</div>
+              {lastTournamentWinner ? (
+                <div 
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => navigate(`/players/${lastTournamentWinner.player_id}`)}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Trophy className="h-5 w-5 text-yellow-500" />
+                    <span className="text-xl font-bold">{lastTournamentWinner.name}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {lastTournamentWinner.row_side === 'left' ? 'Links' : 'Rechts'}
+                  </p>
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">N/A</div>
+              )}
+            </div>
+
+            {/* Chef Special */}
+            <div className="border-l pl-4">
+              <div className="text-sm font-medium text-orange-700 mb-2 flex items-center gap-1">
+                <ChefHat className="h-4 w-4" />
+                Chef Special
+              </div>
+              {chefSpecial ? (
+                <div 
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => navigate(`/players/${chefSpecial.player_id}`)}
+                >
+                  <div className="text-xl font-bold text-orange-700 mb-1">{chefSpecial.player_name}</div>
+                  <p className="text-sm text-muted-foreground">{chefSpecial.total_specials} specials</p>
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">Nog niet toegekend</div>
+              )}
+            </div>
+
+            {/* Sous Chef */}
+            <div className="border-l pl-4">
+              <div className="text-sm font-medium text-amber-700 mb-2 flex items-center gap-1">
+                <Award className="h-4 w-4" />
+                Sous Chef
+              </div>
+              {sousChef ? (
+                <div 
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => navigate(`/players/${sousChef.player_id}`)}
+                >
+                  <div className="text-xl font-bold text-amber-700 mb-1">{sousChef.player_name}</div>
+                  <p className="text-sm text-muted-foreground">{sousChef.total_specials} specials</p>
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">Nog niet toegekend</div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Current Tournament */}
       <CurrentTournament 
@@ -253,75 +271,149 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Trends */}
+      {/* Trends - Per Rij */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-green-200 bg-gradient-to-br from-green-50 to-background">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-              Grootste Stijger
+              <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+                Links
+              </Badge>
+              Trends
             </CardTitle>
-            <CardDescription>Meeste posities vooruitgegaan</CardDescription>
           </CardHeader>
-          <CardContent>
-            {biggestRiser ? (
-              <div
-                onClick={() => navigate(`/players/${biggestRiser.id}`)}
-                className="flex items-center justify-between p-4 rounded-lg hover:bg-white/50 cursor-pointer transition-colors"
-              >
-                <div>
-                  <p className="font-semibold text-xl">{biggestRiser.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {biggestRiser.group_side === 'left' ? 'Links' : 'Rechts'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-8 w-8 text-green-600" />
-                  <span className="text-3xl font-bold text-green-600">
-                    +{biggestRiser.rank_change}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Geen data beschikbaar
-              </p>
-            )}
+          <CardContent className="space-y-4">
+            {(() => {
+              const leftPlayers = players.filter(p => p.group_side === 'left' && p.rank_change);
+              const leftRiser = leftPlayers.sort((a, b) => (b.rank_change || 0) - (a.rank_change || 0))[0];
+              const leftFaller = leftPlayers.sort((a, b) => (a.rank_change || 0) - (b.rank_change || 0))[0];
+
+              return (
+                <>
+                  <div className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-background rounded-lg p-4">
+                    <div className="text-sm font-medium text-green-700 mb-2 flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      Grootste Stijger
+                    </div>
+                    {leftRiser && (leftRiser.rank_change || 0) > 0 ? (
+                      <div
+                        onClick={() => navigate(`/players/${leftRiser.id}`)}
+                        className="flex items-center justify-between cursor-pointer hover:bg-white/50 rounded p-2 transition-colors"
+                      >
+                        <div>
+                          <p className="font-semibold text-lg">{leftRiser.name}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-6 w-6 text-green-600" />
+                          <span className="text-2xl font-bold text-green-600">
+                            +{leftRiser.rank_change}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Geen data</p>
+                    )}
+                  </div>
+
+                  <div className="border-2 border-red-200 bg-gradient-to-br from-red-50 to-background rounded-lg p-4">
+                    <div className="text-sm font-medium text-red-700 mb-2 flex items-center gap-2">
+                      <TrendingDown className="h-4 w-4" />
+                      Grootste Daler
+                    </div>
+                    {leftFaller && (leftFaller.rank_change || 0) < 0 ? (
+                      <div
+                        onClick={() => navigate(`/players/${leftFaller.id}`)}
+                        className="flex items-center justify-between cursor-pointer hover:bg-white/50 rounded p-2 transition-colors"
+                      >
+                        <div>
+                          <p className="font-semibold text-lg">{leftFaller.name}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <TrendingDown className="h-6 w-6 text-red-600" />
+                          <span className="text-2xl font-bold text-red-600">
+                            {leftFaller.rank_change}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Geen data</p>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
 
-        <Card className="border-red-200 bg-gradient-to-br from-red-50 to-background">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <TrendingDown className="h-5 w-5 text-red-600" />
-              Grootste Daler
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
+                Rechts
+              </Badge>
+              Trends
             </CardTitle>
-            <CardDescription>Meeste posities achteruitgegaan</CardDescription>
           </CardHeader>
-          <CardContent>
-            {biggestFaller ? (
-              <div
-                onClick={() => navigate(`/players/${biggestFaller.id}`)}
-                className="flex items-center justify-between p-4 rounded-lg hover:bg-white/50 cursor-pointer transition-colors"
-              >
-                <div>
-                  <p className="font-semibold text-xl">{biggestFaller.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {biggestFaller.group_side === 'left' ? 'Links' : 'Rechts'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <TrendingDown className="h-8 w-8 text-red-600" />
-                  <span className="text-3xl font-bold text-red-600">
-                    {biggestFaller.rank_change}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Geen data beschikbaar
-              </p>
-            )}
+          <CardContent className="space-y-4">
+            {(() => {
+              const rightPlayers = players.filter(p => p.group_side === 'right' && p.rank_change);
+              const rightRiser = rightPlayers.sort((a, b) => (b.rank_change || 0) - (a.rank_change || 0))[0];
+              const rightFaller = rightPlayers.sort((a, b) => (a.rank_change || 0) - (b.rank_change || 0))[0];
+
+              return (
+                <>
+                  <div className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-background rounded-lg p-4">
+                    <div className="text-sm font-medium text-green-700 mb-2 flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      Grootste Stijger
+                    </div>
+                    {rightRiser && (rightRiser.rank_change || 0) > 0 ? (
+                      <div
+                        onClick={() => navigate(`/players/${rightRiser.id}`)}
+                        className="flex items-center justify-between cursor-pointer hover:bg-white/50 rounded p-2 transition-colors"
+                      >
+                        <div>
+                          <p className="font-semibold text-lg">{rightRiser.name}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-6 w-6 text-green-600" />
+                          <span className="text-2xl font-bold text-green-600">
+                            +{rightRiser.rank_change}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Geen data</p>
+                    )}
+                  </div>
+
+                  <div className="border-2 border-red-200 bg-gradient-to-br from-red-50 to-background rounded-lg p-4">
+                    <div className="text-sm font-medium text-red-700 mb-2 flex items-center gap-2">
+                      <TrendingDown className="h-4 w-4" />
+                      Grootste Daler
+                    </div>
+                    {rightFaller && (rightFaller.rank_change || 0) < 0 ? (
+                      <div
+                        onClick={() => navigate(`/players/${rightFaller.id}`)}
+                        className="flex items-center justify-between cursor-pointer hover:bg-white/50 rounded p-2 transition-colors"
+                      >
+                        <div>
+                          <p className="font-semibold text-lg">{rightFaller.name}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <TrendingDown className="h-6 w-6 text-red-600" />
+                          <span className="text-2xl font-bold text-red-600">
+                            {rightFaller.rank_change}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Geen data</p>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
       </div>
