@@ -15,16 +15,21 @@ import {
   Minus,
   Trophy,
   Target,
+  Award,
 } from 'lucide-react';
 import { usePlayers } from '@/hooks/usePlayers';
+import { usePlayerRankings } from '@/hooks/usePlayerRankings';
 import PlayerMatches from '@/components/player/PlayerMatches';
 
 export default function PlayerDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { players, isLoading } = usePlayers();
+  const { data: rankings } = usePlayerRankings();
 
   const player = players.find((p) => p.id === id);
+  const playerRanking = rankings?.find((r) => r.player_id === id);
+  const globalPosition = rankings?.findIndex((r) => r.player_id === id);
 
   const getRowSideBadge = (side?: string) => {
     const variants = {
@@ -141,26 +146,28 @@ export default function PlayerDetail() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Trophy className="icon-s" />
-              Prestaties
+              <Award className="icon-s" />
+              Ranking
             </CardTitle>
           </CardHeader>
           <CardContent className="stack-s">
             <div className="flex justify-between">
-              <span className="font-medium">Ranking Score:</span>
-              <span className="text-l font-bold">{player.ranking_score || 0}</span>
+              <span className="font-medium">Globale Positie:</span>
+              <span className="text-l font-bold">
+                #{globalPosition !== undefined ? globalPosition + 1 : '-'}
+              </span>
             </div>
             <div className="flex justify-between">
-              <span className="font-medium">Totaal Toernooien:</span>
-              <span>{player.total_tournaments || 0}</span>
+              <span className="font-medium">Toernooien Gespeeld:</span>
+              <span>{playerRanking?.tournaments_played || 0}</span>
             </div>
             <div className="flex justify-between">
-              <span className="font-medium">Totaal Gewonnen:</span>
-              <span>{player.total_games_won || 0}</span>
+              <span className="font-medium">Totaal Punten:</span>
+              <span>{playerRanking?.total_points || 0}</span>
             </div>
             <div className="flex justify-between">
-              <span className="font-medium">Gem. per Toernooi:</span>
-              <span>{player.avg_games_per_tournament?.toFixed(1) || '0.0'}</span>
+              <span className="font-medium">Gem. Positie:</span>
+              <span className="font-semibold">{playerRanking?.avg_position || '-'}</span>
             </div>
             <div className="flex justify-between">
               <span className="font-medium">Trend:</span>
@@ -172,6 +179,33 @@ export default function PlayerDetail() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trophy className="icon-s" />
+            Prestaties
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="space-y-1">
+            <span className="text-sm font-medium text-muted-foreground">Ranking Score</span>
+            <p className="text-2xl font-bold">{player.ranking_score || 0}</p>
+          </div>
+          <div className="space-y-1">
+            <span className="text-sm font-medium text-muted-foreground">Totaal Gewonnen</span>
+            <p className="text-2xl font-bold text-green-600">{player.total_games_won || 0}</p>
+          </div>
+          <div className="space-y-1">
+            <span className="text-sm font-medium text-muted-foreground">Totaal Specials</span>
+            <p className="text-2xl font-bold text-orange-600">{playerRanking?.total_specials || 0}</p>
+          </div>
+          <div className="space-y-1">
+            <span className="text-sm font-medium text-muted-foreground">Gem. per Toernooi</span>
+            <p className="text-2xl font-bold">{player.avg_games_per_tournament?.toFixed(1) || '0.0'}</p>
+          </div>
+        </CardContent>
+      </Card>
 
       {formatSpecials(player.specials).length > 0 && (
         <Card>
