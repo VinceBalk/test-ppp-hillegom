@@ -162,8 +162,8 @@ export default function Statistics() {
 
       <Tabs defaultValue="statistics" className="w-full">
         <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="statistics">Statistieken</TabsTrigger>
           <TabsTrigger value="ranking">Ranking</TabsTrigger>
+          <TabsTrigger value="statistics">Statistieken</TabsTrigger>
         </TabsList>
 
         <TabsContent value="statistics" className="mt-6">
