@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Trophy, TrendingUp, TrendingDown, Calendar, Users, Award, ChefHat } from 'lucide-react';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { usePlayerRankings } from '@/hooks/usePlayerRankings';
@@ -33,15 +32,11 @@ export default function Dashboard() {
     .filter(p => p.rank_change && p.rank_change !== 0)
     .sort((a, b) => (b.rank_change || 0) - (a.rank_change || 0));
   
-  const biggestRiser = playersWithChange[0]; // Highest positive (most improved)
-  const biggestFaller = playersWithChange[playersWithChange.length - 1]; // Most negative (most declined)
+  const biggestRiser = playersWithChange[0];
+  const biggestFaller = playersWithChange[playersWithChange.length - 1];
 
   const lastTournament = recentTournaments[0];
-  const lastTournamentWinner = rankings?.find(r => {
-    // Find winner of last tournament (would need tournament-specific data)
-    // For now, use overall #1
-    return rankings.indexOf(r) === 0;
-  });
+  const lastTournamentWinner = rankings?.find(r => rankings.indexOf(r) === 0);
 
   if (loading) {
     return (
@@ -66,20 +61,26 @@ export default function Dashboard() {
         <p className="text-muted-foreground">Welkom bij het PPP Hillegom toernooi management systeem</p>
       </div>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* Stats Row - Single Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {/* Aankomend Toernooi */}
         <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/tournaments')}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Aankomend Toernooi</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
+              <Calendar className="h-4 w-4" />
+              Aankomend Toernooi
+            </div>
           </CardHeader>
           <CardContent>
             {currentTournament ? (
               <>
-                <div className="text-xl font-bold truncate">{currentTournament.name}</div>
+                <div className="text-lg font-bold mb-1">{currentTournament.name}</div>
                 <p className="text-xs text-muted-foreground">
-                  {new Date(currentTournament.start_date).toLocaleDateString('nl-NL')}
+                  {new Date(currentTournament.start_date).toLocaleDateString('nl-NL', { 
+                    day: 'numeric', 
+                    month: 'short', 
+                    year: 'numeric' 
+                  })}
                 </p>
               </>
             ) : (
@@ -90,14 +91,16 @@ export default function Dashboard() {
 
         {/* Laatste Toernooi */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Laatste Toernooi</CardTitle>
-            <Trophy className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
+              <Trophy className="h-4 w-4" />
+              Laatste Toernooi
+            </div>
           </CardHeader>
           <CardContent>
             {lastTournament ? (
               <>
-                <div className="text-xl font-bold truncate">{lastTournament.name}</div>
+                <div className="text-lg font-bold mb-1">{lastTournament.name}</div>
                 <p className="text-xs text-muted-foreground">
                   Winnaar: {lastTournamentWinner?.name || 'N/A'}
                 </p>
@@ -110,14 +113,16 @@ export default function Dashboard() {
 
         {/* Chef Special */}
         <Card className="border-orange-200 bg-gradient-to-br from-orange-50 to-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Chef Special</CardTitle>
-            <ChefHat className="h-4 w-4 text-orange-600" />
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-orange-700 mb-2">
+              <ChefHat className="h-4 w-4" />
+              Chef Special
+            </div>
           </CardHeader>
           <CardContent>
             {chefSpecial ? (
               <>
-                <div className="text-xl font-bold text-orange-600">{chefSpecial.player_name}</div>
+                <div className="text-lg font-bold text-orange-700 mb-1">{chefSpecial.player_name}</div>
                 <p className="text-xs text-muted-foreground">{chefSpecial.total_specials} specials</p>
               </>
             ) : (
@@ -128,14 +133,16 @@ export default function Dashboard() {
 
         {/* Sous Chef */}
         <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sous Chef</CardTitle>
-            <Award className="h-4 w-4 text-amber-600" />
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-amber-700 mb-2">
+              <Award className="h-4 w-4" />
+              Sous Chef
+            </div>
           </CardHeader>
           <CardContent>
             {sousChef ? (
               <>
-                <div className="text-xl font-bold text-amber-600">{sousChef.player_name}</div>
+                <div className="text-lg font-bold text-amber-700 mb-1">{sousChef.player_name}</div>
                 <p className="text-xs text-muted-foreground">{sousChef.total_specials} specials</p>
               </>
             ) : (
@@ -146,12 +153,14 @@ export default function Dashboard() {
 
         {/* Totaal Spelers */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Spelers</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
+              <Users className="h-4 w-4" />
+              Totaal Spelers
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalPlayers}</div>
+            <div className="text-2xl font-bold mb-1">{stats.totalPlayers}</div>
             <p className="text-xs text-muted-foreground">Actieve spelers</p>
           </CardContent>
         </Card>
