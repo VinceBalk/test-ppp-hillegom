@@ -5,6 +5,7 @@ import { Trophy, TrendingUp, TrendingDown, Calendar, Users, Award, ChefHat } fro
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { usePlayerRankings } from '@/hooks/usePlayerRankings';
 import { usePlayers } from '@/hooks/usePlayers';
+import { useChefSpecialRanking } from '@/hooks/useChefSpecialRanking';
 import { CurrentTournament } from '@/components/dashboard/CurrentTournament';
 
 export default function Dashboard() {
@@ -13,21 +14,23 @@ export default function Dashboard() {
     currentTournament,
     recentTournaments,
     stats,
-    chefSpecial,
-    sousChef,
     loading: dashboardLoading
   } = useDashboardData();
 
   const { data: rankings, isLoading: rankingsLoading } = usePlayerRankings();
   const { players, isLoading: playersLoading } = usePlayers();
+  
+  const lastTournament = recentTournaments[0];
+  const { data: chefRankings, isLoading: chefLoading } = useChefSpecialRanking(lastTournament?.id);
 
-  const loading = dashboardLoading || rankingsLoading || playersLoading;
+  const loading = dashboardLoading || rankingsLoading || playersLoading || chefLoading;
 
   const leftTop3 = rankings?.filter(r => r.row_side === 'left').slice(0, 3) || [];
   const rightTop3 = rankings?.filter(r => r.row_side === 'right').slice(0, 3) || [];
 
-  const lastTournament = recentTournaments[0];
   const lastTournamentWinner = rankings?.[0];
+  const chefSpecial = chefRankings?.find(r => r.title === 'Chef Special');
+  const sousChef = chefRankings?.find(r => r.title === 'Sous Chef');
 
   if (loading) {
     return (
@@ -54,7 +57,6 @@ export default function Dashboard() {
 
       {/* Top Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Aankomend Toernooi */}
         <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/tournaments')}>
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
@@ -80,7 +82,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Totaal Spelers */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
@@ -97,19 +98,19 @@ export default function Dashboard() {
 
       {/* Laatste Toernooi Row */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2 text-base font-semibold text-muted-foreground">
-            <Trophy className="h-5 w-5" />
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Trophy className="h-4 w-4" />
             Laatste Toernooi
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-center">
             {/* Toernooi Info */}
-            <div className="md:col-span-1">
+            <div>
               {lastTournament ? (
                 <>
-                  <div className="text-2xl font-bold mb-1">{lastTournament.name}</div>
+                  <div className="text-lg font-bold">{lastTournament.name}</div>
                   <p className="text-sm text-muted-foreground">
                     {new Date(lastTournament.created_at).toLocaleDateString('nl-NL', { 
                       day: 'numeric', 
@@ -123,20 +124,17 @@ export default function Dashboard() {
             </div>
 
             {/* Winnaar */}
-            <div className="border-l pl-4">
-              <div className="text-sm font-medium text-muted-foreground mb-2">Winnaar</div>
+            <div className="border-l pl-6">
+              <div className="text-xs font-medium text-muted-foreground mb-1">Winnaar</div>
               {lastTournamentWinner ? (
                 <div 
                   className="cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={() => navigate(`/players/${lastTournamentWinner.player_id}`)}
                 >
-                  <div className="flex items-center gap-2 mb-1">
-                    <Trophy className="h-5 w-5 text-yellow-500" />
-                    <span className="text-xl font-bold">{lastTournamentWinner.name}</span>
+                  <div className="flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-yellow-500 flex-shrink-0" />
+                    <span className="text-lg font-bold">{lastTournamentWinner.name}</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {lastTournamentWinner.row_side === 'left' ? 'Links' : 'Rechts'}
-                  </p>
                 </div>
               ) : (
                 <div className="text-sm text-muted-foreground">N/A</div>
@@ -144,9 +142,9 @@ export default function Dashboard() {
             </div>
 
             {/* Chef Special */}
-            <div className="border-l pl-4">
-              <div className="text-sm font-medium text-orange-700 mb-2 flex items-center gap-1">
-                <ChefHat className="h-4 w-4" />
+            <div className="border-l pl-6">
+              <div className="text-xs font-medium text-orange-700 mb-1 flex items-center gap-1">
+                <ChefHat className="h-3 w-3" />
                 Chef Special
               </div>
               {chefSpecial ? (
@@ -154,8 +152,8 @@ export default function Dashboard() {
                   className="cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={() => navigate(`/players/${chefSpecial.player_id}`)}
                 >
-                  <div className="text-xl font-bold text-orange-700 mb-1">{chefSpecial.player_name}</div>
-                  <p className="text-sm text-muted-foreground">{chefSpecial.total_specials} specials</p>
+                  <div className="text-lg font-bold text-orange-700">{chefSpecial.player_name}</div>
+                  <p className="text-xs text-muted-foreground">{chefSpecial.total_specials} specials</p>
                 </div>
               ) : (
                 <div className="text-sm text-muted-foreground">Nog niet toegekend</div>
@@ -163,9 +161,9 @@ export default function Dashboard() {
             </div>
 
             {/* Sous Chef */}
-            <div className="border-l pl-4">
-              <div className="text-sm font-medium text-amber-700 mb-2 flex items-center gap-1">
-                <Award className="h-4 w-4" />
+            <div className="border-l pl-6">
+              <div className="text-xs font-medium text-amber-700 mb-1 flex items-center gap-1">
+                <Award className="h-3 w-3" />
                 Sous Chef
               </div>
               {sousChef ? (
@@ -173,8 +171,8 @@ export default function Dashboard() {
                   className="cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={() => navigate(`/players/${sousChef.player_id}`)}
                 >
-                  <div className="text-xl font-bold text-amber-700 mb-1">{sousChef.player_name}</div>
-                  <p className="text-sm text-muted-foreground">{sousChef.total_specials} specials</p>
+                  <div className="text-lg font-bold text-amber-700">{sousChef.player_name}</div>
+                  <p className="text-xs text-muted-foreground">{sousChef.total_specials} specials</p>
                 </div>
               ) : (
                 <div className="text-sm text-muted-foreground">Nog niet toegekend</div>
