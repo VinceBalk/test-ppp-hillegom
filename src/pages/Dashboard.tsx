@@ -108,38 +108,40 @@ export default function Dashboard() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Toernooi Info */}
-            <div className="flex flex-col justify-center">
-              {lastTournament ? (
-                <>
-                  <div className="text-lg font-bold">{lastTournament.name}</div>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(lastTournament.created_at).toLocaleDateString('nl-NL', { 
-                      day: 'numeric', 
-                      month: 'long'
-                    })}
-                  </p>
-                </>
-              ) : (
-                <div className="text-sm text-muted-foreground">Geen data</div>
-              )}
+            <div className="flex items-center gap-3 p-3 bg-gradient-to-br from-gray-50 to-gray-100/50 border border-gray-200 rounded-lg">
+              <div className="flex-1">
+                {lastTournament ? (
+                  <>
+                    <div className="text-lg font-bold">{lastTournament.name}</div>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(lastTournament.created_at).toLocaleDateString('nl-NL', { 
+                        day: 'numeric', 
+                        month: 'long'
+                      })}
+                    </p>
+                  </>
+                ) : (
+                  <div className="text-sm text-muted-foreground">Geen data</div>
+                )}
+              </div>
             </div>
 
             {/* Winnaar */}
-            <div className="flex flex-col justify-center">
-              <div className="text-xs font-medium text-muted-foreground mb-1.5">Winnaar</div>
-              {lastTournamentWinner ? (
-                <div 
-                  className="cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => navigate(`/players/${lastTournamentWinner.player_id}`)}
-                >
-                  <div className="flex items-center gap-2">
-                    <Trophy className="h-5 w-5 text-yellow-500 flex-shrink-0" />
-                    <span className="text-lg font-bold">{lastTournamentWinner.name}</span>
+            <div 
+              className="flex items-center gap-3 p-3 bg-gradient-to-br from-green-50 to-green-100/50 border border-green-200 rounded-lg cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => lastTournamentWinner && navigate(`/players/${lastTournamentWinner.player_id}`)}
+            >
+              <Trophy className="h-8 w-8 text-green-600 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium text-green-700 mb-0.5">Winnaar</div>
+                {lastTournamentWinner ? (
+                  <div className="text-base font-bold text-green-900 truncate">
+                    {lastTournamentWinner.name}
                   </div>
-                </div>
-              ) : (
-                <div className="text-sm text-muted-foreground">N/A</div>
-              )}
+                ) : (
+                  <div className="text-sm text-muted-foreground">N/A</div>
+                )}
+              </div>
             </div>
 
             {/* Chef Special */}
