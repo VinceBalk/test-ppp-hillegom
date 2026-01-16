@@ -50,11 +50,14 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-6 p-4">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Welkom bij het PPP Hillegom toernooi management systeem</p>
-      </div>
+<section className="hero-dashboard">
+  <div className="hero-dashboard__inner">
+    <h1 className="hero-dashboard__heading">Dashboard</h1>
+    <p className="hero-dashboard__lede">
+      Welkom bij het PPP Hillegom toernooi management systeem
+    </p>
+  </div>
+</section>
 
       {/* Top Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
