@@ -1,0 +1,110 @@
+:root {
+  /* =========================
+     TYPOGRAPHY (ACSS-style)
+     ========================= */
+  --font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-heading: var(--font-body);
+
+  --base-text-size-mob: 16px;
+  --base-text-size-desk: 18px;
+  --base-text-line-height: calc(6px + 2ex);
+  --base-text-weight: 400;
+
+  --base-heading-size-mob: 18px;
+  --base-heading-size-desk: 20px;
+  --base-heading-line-height: calc(4px + 2ex);
+  --base-heading-weight: 600;
+
+  --heading-scale: 1.333;
+
+  --p:
+    var(--base-text-weight)
+    clamp(var(--base-text-size-mob), 1vw + 0.9rem, var(--base-text-size-desk))
+    / var(--base-text-line-height)
+    var(--font-body);
+
+  /* h1–h6 (simple, stable; no weird math dependencies) */
+  --h1: 700 clamp(2.25rem, 4vw, 3rem) / 1.15 var(--font-heading);
+  --h2: 600 clamp(1.875rem, 3vw, 2.5rem) / 1.2 var(--font-heading);
+  --h3: 600 clamp(1.5rem, 2.5vw, 2rem) / 1.3 var(--font-heading);
+  --h4: 600 clamp(1.25rem, 2vw, 1.75rem) / 1.35 var(--font-heading);
+  --h5: 600 clamp(1.125rem, 1.5vw, 1.25rem) / 1.4 var(--font-heading);
+  --h6: 600 clamp(1rem, 1vw, 1.125rem) / 1.45 var(--font-heading);
+
+  /* =========================
+     COLORS (ACSS-ish)
+     ========================= */
+  --color-text: #0a2434;
+  --color-muted: #6b7280;
+
+  --color-bg: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-2: #f9fafb;
+
+  --color-primary: #32a2c1;
+  --color-secondary: #1c1930;
+  --color-accent: #bcc8a2;
+
+  --color-border: #e5e7eb;
+  --color-border-strong: #cbd5e1;
+
+  --color-danger: #dc3545;
+  --color-warning: #ffc10a;
+  --color-success: #29a745;
+  --color-info: #18a2b8;
+
+  /* =========================
+     SPACING
+     ========================= */
+  --base-space: 30px;
+
+  --space-2xs: calc(var(--base-space) / 6);
+  --space-xs: calc(var(--base-space) / 4);
+  --space-s: calc(var(--base-space) / 2);
+  --space-m: var(--base-space);
+  --space-l: calc(var(--base-space) * 1.5);
+  --space-xl: calc(var(--base-space) * 2);
+  --space-2xl: calc(var(--base-space) * 3);
+
+  /* =========================
+     BORDERS / RADIUS / SHADOW
+     ========================= */
+  --border-w: 1px;
+  --border-style: solid;
+
+  --radius-s: 4px;
+  --radius-m: 6px;
+  --radius-l: 10px;
+  --radius-pill: 999px;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.08);
+
+  /* =========================
+     BUTTON TOKENS
+     ========================= */
+  --btn-font: 600 0.95rem/1.2 var(--font-body);
+  --btn-padding-y: 0.6rem;
+  --btn-padding-x: 0.9rem;
+  --btn-radius: var(--radius-m);
+
+  --btn-bg: var(--color-primary);
+  --btn-fg: #ffffff;
+  --btn-border: transparent;
+
+  --btn-bg-hover: color-mix(in srgb, var(--btn-bg) 85%, black);
+  --btn-fg-hover: var(--btn-fg);
+
+  --btn-outline-bg: transparent;
+  --btn-outline-fg: var(--color-primary);
+  --btn-outline-border: var(--color-primary);
+  --btn-outline-hover-bg: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  --btn-outline-hover-fg: var(--color-primary);
+
+  /* =========================
+     MOTION
+     ========================= */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.3s ease-in-out;
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
