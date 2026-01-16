@@ -1,0 +1,66 @@
+/* Card framework */
+.card {
+  background: var(--color-surface);
+  border: var(--border-w) var(--border-style) var(--color-border);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-1);
+}
+
+.card__header {
+  padding: var(--space-m);
+  border-bottom: var(--border-w) var(--border-style) var(--color-border);
+}
+
+.card__title {
+  font: var(--h4);
+  margin: 0;
+}
+
+.card__description {
+  margin: var(--space-xs) 0 0;
+  color: var(--color-muted);
+}
+
+.card__content {
+  padding: var(--space-m);
+}
+
+/* Button framework */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+
+  font: var(--btn-font);
+  padding: var(--btn-padding-y) var(--btn-padding-x);
+  border-radius: var(--btn-radius);
+
+  border: var(--border-w) var(--border-style) var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+
+  transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: var(--btn-bg-hover);
+  color: var(--btn-fg-hover);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn--outline {
+  background: var(--btn-outline-bg);
+  color: var(--btn-outline-fg);
+  border-color: var(--btn-outline-border);
+}
+
+.btn--outline:hover {
+  background: var(--btn-outline-hover-bg);
+  color: var(--btn-outline-hover-fg);
+}
