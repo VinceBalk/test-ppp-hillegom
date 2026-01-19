@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -46,28 +45,9 @@ export default function AssignPlayers() {
     updatePlayerGroup({ tournamentPlayerId, group: newGroup });
   };
 
-  // Sort players by group, then by ranking, then by first name
-  const sortedTournamentPlayers = [...tournamentPlayers].sort((a, b) => {
-    // First sort by group
-    if (a.group !== b.group) {
-      return a.group === 'left' ? -1 : 1;
-    }
-    
-    // Then by ranking score (higher first)
-    const aRanking = a.player?.ranking_score || 0;
-    const bRanking = b.player?.ranking_score || 0;
-    if (aRanking !== bRanking) {
-      return bRanking - aRanking;
-    }
-    
-    // Finally by first name
-    const aFirstName = a.player?.name?.split(' ')[0] || '';
-    const bFirstName = b.player?.name?.split(' ')[0] || '';
-    return aFirstName.localeCompare(bFirstName);
-  });
-
-  const leftPlayers = sortedTournamentPlayers.filter(tp => tp.group === 'left');
-  const rightPlayers = sortedTournamentPlayers.filter(tp => tp.group === 'right');
+  // Players are already sorted by ranking in the useTournamentPlayers hook
+  const leftPlayers = tournamentPlayers.filter(tp => tp.group === 'left');
+  const rightPlayers = tournamentPlayers.filter(tp => tp.group === 'right');
 
   if (isLoading || !tournament) {
     return (
