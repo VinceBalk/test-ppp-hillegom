@@ -46,6 +46,7 @@ export default function AssignPlayers() {
   };
 
   // Players are already sorted by ranking in the useTournamentPlayers hook
+  // No need for additional sorting here
   const leftPlayers = tournamentPlayers.filter(tp => tp.group === 'left');
   const rightPlayers = tournamentPlayers.filter(tp => tp.group === 'right');
 
