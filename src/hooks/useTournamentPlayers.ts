@@ -33,11 +33,23 @@ export const useTournamentPlayers = (tournamentId?: string) => {
           player:players(id, name, email, ranking_score)
         `)
         .eq('tournament_id', tournamentId)
-        .eq('active', true)
-        .order('registration_date');
+        .eq('active', true);
       
       if (error) throw error;
-      return data as TournamentPlayer[];
+      
+      // Sort in frontend: first by group (left before right), then by ranking_score (highest first)
+      const sortedData = (data as TournamentPlayer[]).sort((a, b) => {
+        // First sort by group
+        if (a.group !== b.group) {
+          return a.group === 'left' ? -1 : 1;
+        }
+        // Then by ranking_score (highest first)
+        const rankingA = a.player?.ranking_score || 0;
+        const rankingB = b.player?.ranking_score || 0;
+        return rankingB - rankingA;
+      });
+      
+      return sortedData;
     },
     enabled: !!tournamentId,
   });
