@@ -5,9 +5,14 @@ import { Badge } from '@/components/ui/badge';
 import { Trash2 } from 'lucide-react';
 import { TournamentPlayer } from '@/hooks/useTournamentPlayers';
 
+interface EnrichedTournamentPlayer extends TournamentPlayer {
+  avg_position?: number;
+  total_games_won?: number;
+}
+
 interface PlayerGroupTableProps {
   title: string;
-  players: TournamentPlayer[];
+  players: EnrichedTournamentPlayer[];
   groupName: 'left' | 'right';
   onGroupChange: (tournamentPlayerId: string, newGroup: 'left' | 'right') => void;
   onRemovePlayer: (tournamentPlayerId: string) => void;
@@ -56,7 +61,9 @@ export default function PlayerGroupTable({
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant="secondary" className="font-mono">
-                        {player.player.ranking_score?.toFixed(1) || '0.0'}
+                        {player.avg_position !== undefined && player.avg_position !== 99
+                          ? player.avg_position.toFixed(1)
+                          : '-'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
