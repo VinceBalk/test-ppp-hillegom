@@ -10,13 +10,12 @@ interface Court {
 }
 
 /**
- * Genereert een max-variety schema voor R1 en R2
- * Elke groep van 4 spelers speelt 3 wedstrijden waarbij iedereen 
- * precies 1x met elke andere speler als partner speelt
+ * Genereert max-variety schema voor R1 en R2
+ * Per groep van 4 spelers: 3 wedstrijden waarbij iedereen 1x met iedereen als partner speelt
  */
-export const generateMaxVarietySchedule = (
+export const generateGroupMatches = (
   players: TournamentPlayer[], 
-  courtPrefix: string, 
+  groupPrefix: string, 
   courts: Court[],
   startMatchNumber: number = 1
 ): { matches: ScheduleMatch[], nextMatchNumber: number } => {
@@ -25,7 +24,9 @@ export const generateMaxVarietySchedule = (
     .filter(court => court.is_active)
     .sort((a, b) => (a.menu_order || 0) - (b.menu_order || 0));
   
-  // Groepeer spelers in groepen van 4 voor round-robin style wedstrijden
+  console.log(`generateGroupMatches: ${players.length} players, prefix: ${groupPrefix}, courts:`, activeCourts.map(c => c.name));
+  
+  // Groepeer spelers in groepen van 4
   for (let groupStart = 0; groupStart < players.length; groupStart += 4) {
     const groupPlayers = players.slice(groupStart, groupStart + 4);
     
@@ -33,16 +34,16 @@ export const generateMaxVarietySchedule = (
       const courtIndex = Math.floor(groupStart / 4);
       const assignedCourt = activeCourts[courtIndex % activeCourts.length];
       
-      const courtName = assignedCourt 
-        ? `${assignedCourt.name} (${courtPrefix})` 
-        : `${courtPrefix} Baan ${courtIndex + 1}`;
-      const courtId = assignedCourt ? assignedCourt.id : undefined;
+      // Court name ZONDER suffix - gewoon de baan naam
+      const courtName = assignedCourt?.name || `Baan ${courtIndex + 1}`;
+      const courtId = assignedCourt?.id;
       const courtMenuOrder = assignedCourt?.menu_order || 0;
       
-      // Round-robin patroon voor max variety:
+      console.log(`Group ${courtIndex + 1}: ${groupPlayers.map(p => p.player.name).join(', ')} -> ${courtName}`);
+      
       // Ronde 1: Speler 1&3 vs Speler 2&4
       matches.push({
-        id: `${courtPrefix.toLowerCase()}-g${courtIndex + 1}-r1`,
+        id: `${groupPrefix}-g${courtIndex + 1}-r1`,
         team1_player1_id: groupPlayers[0].player_id,
         team1_player2_id: groupPlayers[2].player_id,
         team2_player1_id: groupPlayers[1].player_id,
@@ -60,7 +61,7 @@ export const generateMaxVarietySchedule = (
 
       // Ronde 2: Speler 1&4 vs Speler 2&3
       matches.push({
-        id: `${courtPrefix.toLowerCase()}-g${courtIndex + 1}-r2`,
+        id: `${groupPrefix}-g${courtIndex + 1}-r2`,
         team1_player1_id: groupPlayers[0].player_id,
         team1_player2_id: groupPlayers[3].player_id,
         team2_player1_id: groupPlayers[1].player_id,
@@ -78,7 +79,7 @@ export const generateMaxVarietySchedule = (
 
       // Ronde 3: Speler 1&2 vs Speler 3&4
       matches.push({
-        id: `${courtPrefix.toLowerCase()}-g${courtIndex + 1}-r3`,
+        id: `${groupPrefix}-g${courtIndex + 1}-r3`,
         team1_player1_id: groupPlayers[0].player_id,
         team1_player2_id: groupPlayers[1].player_id,
         team2_player1_id: groupPlayers[2].player_id,
@@ -96,7 +97,7 @@ export const generateMaxVarietySchedule = (
     }
   }
   
-  // Sorteer: eerst op round_within_group, dan op court menu_order
+  // Sorteer op ronde, dan op court menu_order
   matches.sort((a: any, b: any) => {
     if (a.round_within_group !== b.round_within_group) {
       return a.round_within_group - b.round_within_group;
@@ -104,19 +105,19 @@ export const generateMaxVarietySchedule = (
     return a.courtMenuOrder - b.courtMenuOrder;
   });
   
-  // Wijs sequentiële match nummers toe
+  // Nummeren
   const numberedMatches = matches.map((match, index) => ({
     ...match,
     match_number: startMatchNumber + index,
   }));
   
-  const nextMatchNumber = startMatchNumber + numberedMatches.length;
+  console.log(`Generated ${numberedMatches.length} matches for ${groupPrefix}`);
   
   return { 
     matches: numberedMatches, 
-    nextMatchNumber 
+    nextMatchNumber: startMatchNumber + numberedMatches.length 
   };
 };
 
-// Behoud backward compatibility
-export const generateGroupMatches = generateMaxVarietySchedule;
+// Alias voor backward compatibility
+export const generateMaxVarietySchedule = generateGroupMatches;
