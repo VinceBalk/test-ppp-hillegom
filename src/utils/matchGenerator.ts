@@ -1,4 +1,3 @@
-
 import { ScheduleMatch } from '@/types/schedule';
 import { TournamentPlayer } from '@/hooks/useTournamentPlayers';
 
@@ -7,9 +6,15 @@ interface Court {
   name: string;
   is_active: boolean;
   menu_order?: number;
+  row_side?: string;
 }
 
-export const generateGroupMatches = (
+/**
+ * Genereert een max-variety schema voor R1 en R2
+ * Elke groep van 4 spelers speelt 3 wedstrijden waarbij iedereen 
+ * precies 1x met elke andere speler als partner speelt
+ */
+export const generateMaxVarietySchedule = (
   players: TournamentPlayer[], 
   courtPrefix: string, 
   courts: Court[],
@@ -20,7 +25,7 @@ export const generateGroupMatches = (
     .filter(court => court.is_active)
     .sort((a, b) => (a.menu_order || 0) - (b.menu_order || 0));
   
-  // Group players into groups of 4 for round-robin style matches
+  // Groepeer spelers in groepen van 4 voor round-robin style wedstrijden
   for (let groupStart = 0; groupStart < players.length; groupStart += 4) {
     const groupPlayers = players.slice(groupStart, groupStart + 4);
     
@@ -28,15 +33,14 @@ export const generateGroupMatches = (
       const courtIndex = Math.floor(groupStart / 4);
       const assignedCourt = activeCourts[courtIndex % activeCourts.length];
       
-      // Create more meaningful court names that include group info
-      const courtName = assignedCourt ? 
-        `${assignedCourt.name} (${courtPrefix})` : 
-        `${courtPrefix} Baan ${courtIndex + 1}`;
+      const courtName = assignedCourt 
+        ? `${assignedCourt.name} (${courtPrefix})` 
+        : `${courtPrefix} Baan ${courtIndex + 1}`;
       const courtId = assignedCourt ? assignedCourt.id : undefined;
       const courtMenuOrder = assignedCourt?.menu_order || 0;
       
-      // Based on the Excel pattern:
-      // Round 1: Player 1&3 vs Player 2&4
+      // Round-robin patroon voor max variety:
+      // Ronde 1: Speler 1&3 vs Speler 2&4
       matches.push({
         id: `${courtPrefix.toLowerCase()}-g${courtIndex + 1}-r1`,
         team1_player1_id: groupPlayers[0].player_id,
@@ -52,9 +56,9 @@ export const generateGroupMatches = (
         court_id: courtId,
         round_within_group: 1,
         courtMenuOrder,
-      } as any);
+      } as ScheduleMatch & { courtMenuOrder: number });
 
-      // Round 2: Player 1&4 vs Player 2&3 
+      // Ronde 2: Speler 1&4 vs Speler 2&3
       matches.push({
         id: `${courtPrefix.toLowerCase()}-g${courtIndex + 1}-r2`,
         team1_player1_id: groupPlayers[0].player_id,
@@ -70,9 +74,9 @@ export const generateGroupMatches = (
         court_id: courtId,
         round_within_group: 2,
         courtMenuOrder,
-      } as any);
+      } as ScheduleMatch & { courtMenuOrder: number });
 
-      // Round 3: Player 1&2 vs Player 3&4
+      // Ronde 3: Speler 1&2 vs Speler 3&4
       matches.push({
         id: `${courtPrefix.toLowerCase()}-g${courtIndex + 1}-r3`,
         team1_player1_id: groupPlayers[0].player_id,
@@ -88,11 +92,11 @@ export const generateGroupMatches = (
         court_id: courtId,
         round_within_group: 3,
         courtMenuOrder,
-      } as any);
+      } as ScheduleMatch & { courtMenuOrder: number });
     }
   }
   
-  // Sort round-robin style: first by round_within_group, then by court menu_order
+  // Sorteer: eerst op round_within_group, dan op court menu_order
   matches.sort((a: any, b: any) => {
     if (a.round_within_group !== b.round_within_group) {
       return a.round_within_group - b.round_within_group;
@@ -100,7 +104,7 @@ export const generateGroupMatches = (
     return a.courtMenuOrder - b.courtMenuOrder;
   });
   
-  // Assign sequential match numbers
+  // Wijs sequentiële match nummers toe
   const numberedMatches = matches.map((match, index) => ({
     ...match,
     match_number: startMatchNumber + index,
@@ -113,3 +117,6 @@ export const generateGroupMatches = (
     nextMatchNumber 
   };
 };
+
+// Behoud backward compatibility
+export const generateGroupMatches = generateMaxVarietySchedule;
