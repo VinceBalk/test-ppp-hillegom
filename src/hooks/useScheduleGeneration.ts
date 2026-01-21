@@ -20,27 +20,38 @@ export const useScheduleGeneration = () => {
       console.log('Round Number:', roundNumber);
       console.log('Preview matches:', preview?.matches?.length || 0);
       
-      // If we have a preview, use those matches directly
       if (preview && preview.matches.length > 0) {
         console.log('Using preview matches for generation');
         
-        const matches = preview.matches.map(match => ({
-          tournament_id: tournamentId,
-          team1_player1_id: match.team1_player1_id,
-          team1_player2_id: match.team1_player2_id,
-          team2_player1_id: match.team2_player1_id,
-          team2_player2_id: match.team2_player2_id,
-          match_number: match.match_number,
-          court_id: match.court_id || null,
-          court_number: match.court_number?.toString() || '1',
-          round_number: roundNumber,
-          status: 'scheduled' as const,
-          team1_score: 0,
-          team2_score: 0,
-          notes: match.court_name ? `Baan: ${match.court_name} - Ronde ${match.round_within_group}` : undefined
-        }));
+        const matches = preview.matches.map(match => {
+          // Bepaal round_number op basis van match ID (-r1- of -r2-)
+          let matchRoundNumber = roundNumber;
+          if (match.id.includes('-r1-')) {
+            matchRoundNumber = 1;
+          } else if (match.id.includes('-r2-')) {
+            matchRoundNumber = 2;
+          }
+          
+          return {
+            tournament_id: tournamentId,
+            team1_player1_id: match.team1_player1_id,
+            team1_player2_id: match.team1_player2_id,
+            team2_player1_id: match.team2_player1_id,
+            team2_player2_id: match.team2_player2_id,
+            match_number: match.match_number,
+            court_id: match.court_id || null,
+            court_number: match.court_number?.toString() || '1',
+            round_number: matchRoundNumber,
+            status: 'scheduled' as const,
+            team1_score: 0,
+            team2_score: 0,
+            notes: match.court_name ? `Baan: ${match.court_name}` : undefined
+          };
+        });
 
         console.log('Prepared matches for database insert:', matches);
+        console.log('R1 matches:', matches.filter(m => m.round_number === 1).length);
+        console.log('R2 matches:', matches.filter(m => m.round_number === 2).length);
 
         // Sla wedstrijden op in database
         const { data: createdMatches, error: matchesError } = await supabase
@@ -65,12 +76,12 @@ export const useScheduleGeneration = () => {
         console.log('=== MATCHES CREATED SUCCESSFULLY ===');
         console.log('Created matches:', createdMatches);
 
-        // Update toernooi status en markeer de ronde als gegenereerd
-        const roundKey = `round_${roundNumber}_schedule_generated`;
+        // Update toernooi status - markeer BEIDE rondes als gegenereerd
         const { error: tournamentError } = await supabase
           .from('tournaments')
           .update({
-            [roundKey]: true,
+            round_1_schedule_generated: true,
+            round_2_schedule_generated: true,
             status: 'in_progress',
             updated_at: new Date().toISOString()
           })
@@ -96,29 +107,24 @@ export const useScheduleGeneration = () => {
 
         if (previewError) {
           console.error('Error updating preview status:', previewError);
-          // Don't throw here as the main operation succeeded
         }
 
         return createdMatches;
       }
 
-      // Fallback: generate matches from scratch if no preview provided
       throw new Error('Geen preview beschikbaar. Genereer eerst een preview.');
     },
     onSuccess: (data) => {
       console.log('=== SCHEDULE GENERATION SUCCESS ===');
       console.log('Generated matches count:', data.length);
       
-      // Invalidate ALL relevant queries to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ['matches'] });
       queryClient.invalidateQueries({ queryKey: ['tournaments'] });
-      
-      // Force refetch matches for all tournaments
       queryClient.refetchQueries({ queryKey: ['matches'] });
       
       toast({
-        title: "2v2 Schema goedgekeurd en opgeslagen",
-        description: `${data.length} 2v2 wedstrijden zijn succesvol aangemaakt met baan-toewijzingen.`,
+        title: "Schema goedgekeurd en opgeslagen",
+        description: `${data.length} wedstrijden zijn succesvol aangemaakt (R1 + R2).`,
       });
     },
     onError: (error) => {
@@ -127,7 +133,7 @@ export const useScheduleGeneration = () => {
       
       toast({
         title: "Fout",
-        description: error.message || "Er is een fout opgetreden bij het genereren van het 2v2 schema.",
+        description: error.message || "Er is een fout opgetreden bij het genereren van het schema.",
         variant: "destructive",
       });
     },
