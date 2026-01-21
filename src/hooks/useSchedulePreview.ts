@@ -3,7 +3,7 @@ import { useTournamentPlayers } from './useTournamentPlayers';
 import { useCourts } from './useCourts';
 import { ScheduleMatch, SchedulePreview } from '@/types/schedule';
 import { checkIfScheduleExists, savePreviewToDatabase, clearPreviewFromDatabase } from '@/services/schedulePreviewService';
-import { generateGroupMatches } from '@/utils/matchGenerator';
+import { generateR1R2Schedule } from '@/utils/matchGenerator';
 import { generateRound3Schedule } from '@/services/round3Generator';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -17,10 +17,10 @@ export const useSchedulePreview = (tournamentId?: string) => {
     if (!tournamentId) return;
     
     setIsGenerating(true);
-    console.log('Generating preview for tournament:', tournamentId, 'round:', roundNumber);
+    console.log('Generating preview for tournament:', tournamentId);
     
     try {
-      // Voor ronde 3: ALTIJD regenereren om laatste logica te gebruiken
+      // Check voor bestaande preview (niet voor R3)
       if (roundNumber !== 3) {
         const existingSchedule = await checkIfScheduleExists(tournamentId, roundNumber);
         if (existingSchedule && existingSchedule.preview_data) {
@@ -30,7 +30,6 @@ export const useSchedulePreview = (tournamentId?: string) => {
           return existingPreview;
         }
       } else {
-        console.log('🔄 Round 3: Clearing existing preview to force regeneration');
         await clearPreviewFromDatabase(tournamentId, roundNumber);
       }
 
@@ -38,23 +37,10 @@ export const useSchedulePreview = (tournamentId?: string) => {
       let leftMatches: ScheduleMatch[];
       let rightMatches: ScheduleMatch[];
 
-      const { data: existingMatches } = await supabase
-        .from('matches')
-        .select('match_number')
-        .eq('tournament_id', tournamentId)
-        .order('match_number', { ascending: false })
-        .limit(1);
-      
-      const highestMatchNumber = existingMatches?.[0]?.match_number || 0;
-      const startMatchNumber = roundNumber === 1 ? 1 : highestMatchNumber + 1;
-
+      // R3: aparte logica
       if (roundNumber === 3) {
         if (courtsLoading) {
-          throw new Error('Banen worden nog geladen. Probeer het opnieuw.');
-        }
-        
-        if (!courts || courts.length === 0) {
-          throw new Error('Geen banen beschikbaar.');
+          throw new Error('Banen worden nog geladen.');
         }
         
         const activeCourts = courts.filter(c => c.is_active);
@@ -67,15 +53,25 @@ export const useSchedulePreview = (tournamentId?: string) => {
         
         leftMatches = allMatches.filter(m => m.id.startsWith('links-'));
         rightMatches = allMatches.filter(m => m.id.startsWith('rechts-'));
-        
-        console.log('Generated Round 3 - Left:', leftMatches.length, 'Right:', rightMatches.length);
       } else {
-        // R1 en R2: player group generatie
-        const leftPlayers = tournamentPlayers.filter(tp => tp.group === 'left');
-        const rightPlayers = tournamentPlayers.filter(tp => tp.group === 'right');
+        // R1 + R2 samen genereren
+        const leftPlayers = tournamentPlayers
+          .filter(tp => tp.group === 'left')
+          .sort((a, b) => (b.player.ranking_score || 0) - (a.player.ranking_score || 0));
         
-        console.log('Left players:', leftPlayers.length);
-        console.log('Right players:', rightPlayers.length);
+        const rightPlayers = tournamentPlayers
+          .filter(tp => tp.group === 'right')
+          .sort((a, b) => (b.player.ranking_score || 0) - (a.player.ranking_score || 0));
+        
+        console.log('Left players (sorted by ranking):', leftPlayers.map(p => `${p.player.name} (${p.player.ranking_score})`));
+        console.log('Right players (sorted by ranking):', rightPlayers.map(p => `${p.player.name} (${p.player.ranking_score})`));
+
+        if (leftPlayers.length !== 8) {
+          throw new Error(`Linker groep heeft ${leftPlayers.length} spelers, maar 8 zijn vereist.`);
+        }
+        if (rightPlayers.length !== 8) {
+          throw new Error(`Rechter groep heeft ${rightPlayers.length} spelers, maar 8 zijn vereist.`);
+        }
 
         // Filter courts per row_side
         const leftCourts = courts.filter(c => c.is_active && c.row_side === 'left');
@@ -84,41 +80,49 @@ export const useSchedulePreview = (tournamentId?: string) => {
         console.log('Left courts:', leftCourts.map(c => c.name));
         console.log('Right courts:', rightCourts.map(c => c.name));
 
-        const leftResult = generateGroupMatches(leftPlayers, 'links', leftCourts, 0);
-        const rightResult = generateGroupMatches(rightPlayers, 'rechts', rightCourts, 0);
+        if (leftCourts.length < 2) {
+          throw new Error(`Onvoldoende linker banen: ${leftCourts.length}/2`);
+        }
+        if (rightCourts.length < 2) {
+          throw new Error(`Onvoldoende rechter banen: ${rightCourts.length}/2`);
+        }
+
+        // Genereer R1+R2 voor links (12 wedstrijden)
+        const leftResult = generateR1R2Schedule(leftPlayers, 'links', leftCourts, 1);
         
+        // Genereer R1+R2 voor rechts (12 wedstrijden)
+        const rightResult = generateR1R2Schedule(rightPlayers, 'rechts', rightCourts, leftResult.nextMatchNumber);
+
         leftMatches = leftResult.matches;
         rightMatches = rightResult.matches;
         
-        console.log('Generated left matches:', leftMatches.length);
-        console.log('Generated right matches:', rightMatches.length);
+        // Combineer en sorteer alle matches
+        allMatches = [...leftMatches, ...rightMatches];
         
-        // Combineer en sorteer
-        const combinedMatches = [...leftMatches, ...rightMatches];
-        const courtOrderMap = new Map(courts.map(c => [c.id, c.menu_order || 0]));
-        
-        combinedMatches.sort((a, b) => {
-          if (a.round_within_group !== b.round_within_group) {
-            return a.round_within_group - b.round_within_group;
-          }
-          const orderA = a.court_id ? (courtOrderMap.get(a.court_id) || 0) : 0;
-          const orderB = b.court_id ? (courtOrderMap.get(b.court_id) || 0) : 0;
-          return orderA - orderB;
+        // Sorteer op: R1 eerst, dan R2. Binnen elke ronde: op round_within_group, dan court
+        allMatches.sort((a, b) => {
+          const aIsR1 = a.id.includes('-r1-');
+          const bIsR1 = b.id.includes('-r1-');
+          
+          if (aIsR1 !== bIsR1) return aIsR1 ? -1 : 1;
+          if (a.round_within_group !== b.round_within_group) return a.round_within_group - b.round_within_group;
+          
+          const aCourtOrder = courts.find(c => c.id === a.court_id)?.menu_order || 0;
+          const bCourtOrder = courts.find(c => c.id === b.court_id)?.menu_order || 0;
+          return aCourtOrder - bCourtOrder;
         });
-        
-        // Nummeren
-        let currentMatchNumber = startMatchNumber;
-        combinedMatches.forEach(match => {
-          match.match_number = currentMatchNumber++;
-        });
-        
-        allMatches = combinedMatches;
-        
-        // Re-split na nummering
+
+        // Hernummer na sortering
+        allMatches = allMatches.map((match, index) => ({
+          ...match,
+          match_number: index + 1,
+        }));
+
+        // Re-split voor display
         leftMatches = allMatches.filter(m => m.id.startsWith('links-'));
         rightMatches = allMatches.filter(m => m.id.startsWith('rechts-'));
-        
-        console.log('Final - Left:', leftMatches.length, 'Right:', rightMatches.length);
+
+        console.log(`Generated ${allMatches.length} total matches (${leftMatches.length} left, ${rightMatches.length} right)`);
       }
 
       const schedulePreview: SchedulePreview = {
