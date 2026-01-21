@@ -1,10 +1,9 @@
-
 import { useState } from 'react';
 import { useTournamentPlayers } from './useTournamentPlayers';
 import { useCourts } from './useCourts';
 import { ScheduleMatch, SchedulePreview } from '@/types/schedule';
 import { checkIfScheduleExists, savePreviewToDatabase, clearPreviewFromDatabase } from '@/services/schedulePreviewService';
-import { generateGroupMatches } from '@/utils/matchGenerator';
+import { generateMaxVarietySchedule } from '@/utils/matchGenerator';
 import { generateRound3Schedule } from '@/services/round3Generator';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -18,23 +17,22 @@ export const useSchedulePreview = (tournamentId?: string) => {
     if (!tournamentId) return;
     
     setIsGenerating(true);
-    console.log('Generating 2v2 preview for tournament:', tournamentId, 'round:', roundNumber);
+    console.log('Generating preview for tournament:', tournamentId, 'round:', roundNumber);
     
     try {
-      // For round 3, ALWAYS regenerate to ensure latest logic is used
+      // Voor ronde 3: ALTIJD regenereren om laatste logica te gebruiken
       if (roundNumber !== 3) {
-        // Check if schedule already exists (only for rounds 1 & 2)
+        // Check of schema al bestaat (alleen voor rondes 1 & 2)
         const existingSchedule = await checkIfScheduleExists(tournamentId, roundNumber);
         if (existingSchedule && existingSchedule.preview_data) {
           console.log('Loading existing schedule from database');
-          // Safely cast the Json data back to SchedulePreview
           const existingPreview = existingSchedule.preview_data as unknown as SchedulePreview;
           setPreview(existingPreview);
           return existingPreview;
         }
       } else {
-        // Round 3: Clear existing preview first to force regeneration
-        console.log('🔄 Round 3: Clearing existing preview to force regeneration with latest logic');
+        // Ronde 3: Clear bestaande preview eerst om regeneratie te forceren
+        console.log('🔄 Round 3: Clearing existing preview to force regeneration');
         await clearPreviewFromDatabase(tournamentId, roundNumber);
       }
 
@@ -42,7 +40,7 @@ export const useSchedulePreview = (tournamentId?: string) => {
       let leftMatches: ScheduleMatch[];
       let rightMatches: ScheduleMatch[];
 
-      // Get highest existing match number for this tournament
+      // Haal hoogste bestaande match nummer op voor dit toernooi
       const { data: existingMatches } = await supabase
         .from('matches')
         .select('match_number')
@@ -53,9 +51,8 @@ export const useSchedulePreview = (tournamentId?: string) => {
       const highestMatchNumber = existingMatches?.[0]?.match_number || 0;
       const startMatchNumber = roundNumber === 1 ? 1 : highestMatchNumber + 1;
 
-      // Round 3 uses stats-based generation
+      // Ronde 3 gebruikt stats-based generatie
       if (roundNumber === 3) {
-        // CRITICAL: Check if courts are loaded
         if (courtsLoading) {
           console.error('❌ Courts are still loading, cannot generate Round 3 yet');
           throw new Error('Banen worden nog geladen. Probeer het opnieuw over een paar seconden.');
@@ -77,24 +74,23 @@ export const useSchedulePreview = (tournamentId?: string) => {
         const round3Result = await generateRound3Schedule(tournamentId, activeCourts);
         allMatches = round3Result.matches;
         
-        // Split matches by group for display - gebruik startsWith voor betrouwbare filtering
+        // Split matches per groep voor display
         leftMatches = allMatches.filter(m => m.id.startsWith('links-'));
         rightMatches = allMatches.filter(m => m.id.startsWith('rechts-'));
         
         console.log('Split matches - Left:', leftMatches.length, 'Right:', rightMatches.length);
-        
         console.log('Generated Round 3 matches:', allMatches.length);
       } else {
-        // Rounds 1 and 2 use player group generation
+        // Rondes 1 en 2 gebruiken max variety schedule generatie
         const leftPlayers = tournamentPlayers.filter(tp => tp.group === 'left');
         const rightPlayers = tournamentPlayers.filter(tp => tp.group === 'right');
         
-        console.log('Left players for 2v2:', leftPlayers.length);
-        console.log('Right players for 2v2:', rightPlayers.length);
+        console.log('Left players:', leftPlayers.length);
+        console.log('Right players:', rightPlayers.length);
         console.log('Available courts:', courts);
 
-        const leftResult = generateGroupMatches(leftPlayers, 'Links', courts, 0); // Tijdelijk nummer
-        const rightResult = generateGroupMatches(rightPlayers, 'Rechts', courts, 0); // Tijdelijk nummer
+        const leftResult = generateMaxVarietySchedule(leftPlayers, 'Links', courts, 0);
+        const rightResult = generateMaxVarietySchedule(rightPlayers, 'Rechts', courts, 0);
         
         // Maak court menu_order lookup
         const courtOrderMap = new Map(courts.map(c => [c.id, c.menu_order || 0]));
@@ -121,8 +117,8 @@ export const useSchedulePreview = (tournamentId?: string) => {
         rightMatches = combinedMatches.filter(m => m.court_name?.includes('Rechts'));
         allMatches = combinedMatches;
         
-        console.log('Generated 2v2 matches with court assignments and match numbers:', allMatches.length);
-        console.log('Match numbers range:', startMatchNumber, 'to', rightResult.nextMatchNumber - 1);
+        console.log('Generated matches with court assignments and match numbers:', allMatches.length);
+        console.log('Match numbers range:', startMatchNumber, 'to', currentMatchNumber - 1);
       }
 
       const schedulePreview: SchedulePreview = {
@@ -138,7 +134,7 @@ export const useSchedulePreview = (tournamentId?: string) => {
       setPreview(schedulePreview);
       return schedulePreview;
     } catch (error) {
-      console.error('Error generating 2v2 preview:', error);
+      console.error('Error generating preview:', error);
       throw error;
     } finally {
       setIsGenerating(false);
@@ -192,6 +188,6 @@ export const useSchedulePreview = (tournamentId?: string) => {
     updateMatch,
     clearPreview,
     isGenerating,
-    courtsLoading, // Export loading state for UI
+    courtsLoading,
   };
 };
