@@ -3,7 +3,7 @@ import { useTournamentPlayers } from './useTournamentPlayers';
 import { useCourts } from './useCourts';
 import { ScheduleMatch, SchedulePreview } from '@/types/schedule';
 import { checkIfScheduleExists, savePreviewToDatabase, clearPreviewFromDatabase } from '@/services/schedulePreviewService';
-import { generateMaxVarietySchedule } from '@/utils/matchGenerator';
+import { generateGroupMatches } from '@/utils/matchGenerator';
 import { generateRound3Schedule } from '@/services/round3Generator';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -74,14 +74,14 @@ export const useSchedulePreview = (tournamentId?: string) => {
         const round3Result = await generateRound3Schedule(tournamentId, activeCourts);
         allMatches = round3Result.matches;
         
-        // Split matches per groep voor display
+        // Split matches per groep voor display - R3 gebruikt id prefix
         leftMatches = allMatches.filter(m => m.id.startsWith('links-'));
         rightMatches = allMatches.filter(m => m.id.startsWith('rechts-'));
         
         console.log('Split matches - Left:', leftMatches.length, 'Right:', rightMatches.length);
         console.log('Generated Round 3 matches:', allMatches.length);
       } else {
-        // Rondes 1 en 2 gebruiken max variety schedule generatie
+        // Rondes 1 en 2 gebruiken player group generatie
         const leftPlayers = tournamentPlayers.filter(tp => tp.group === 'left');
         const rightPlayers = tournamentPlayers.filter(tp => tp.group === 'right');
         
@@ -89,14 +89,21 @@ export const useSchedulePreview = (tournamentId?: string) => {
         console.log('Right players:', rightPlayers.length);
         console.log('Available courts:', courts);
 
-        const leftResult = generateMaxVarietySchedule(leftPlayers, 'Links', courts, 0);
-        const rightResult = generateMaxVarietySchedule(rightPlayers, 'Rechts', courts, 0);
+        const leftResult = generateGroupMatches(leftPlayers, 'Links', courts, 0);
+        const rightResult = generateGroupMatches(rightPlayers, 'Rechts', courts, 0);
+        
+        // DIRECT toewijzen - matches hebben al correcte id prefixes (links-*, rechts-*)
+        leftMatches = leftResult.matches;
+        rightMatches = rightResult.matches;
+        
+        console.log('Generated left matches:', leftMatches.length, 'IDs:', leftMatches.map(m => m.id));
+        console.log('Generated right matches:', rightMatches.length, 'IDs:', rightMatches.map(m => m.id));
         
         // Maak court menu_order lookup
         const courtOrderMap = new Map(courts.map(c => [c.id, c.menu_order || 0]));
         
         // Combineer matches en sorteer HORIZONTAAL: eerst ronde, dan baan menu_order
-        const combinedMatches = [...leftResult.matches, ...rightResult.matches];
+        const combinedMatches = [...leftMatches, ...rightMatches];
         combinedMatches.sort((a, b) => {
           if (a.round_within_group !== b.round_within_group) {
             return a.round_within_group - b.round_within_group;
@@ -112,11 +119,13 @@ export const useSchedulePreview = (tournamentId?: string) => {
           match.match_number = currentMatchNumber++;
         });
         
-        // Split terug voor display
-        leftMatches = combinedMatches.filter(m => m.court_name?.includes('Links'));
-        rightMatches = combinedMatches.filter(m => m.court_name?.includes('Rechts'));
         allMatches = combinedMatches;
         
+        // Re-split na nummering voor correcte arrays
+        leftMatches = allMatches.filter(m => m.id.startsWith('links-'));
+        rightMatches = allMatches.filter(m => m.id.startsWith('rechts-'));
+        
+        console.log('Final split - Left:', leftMatches.length, 'Right:', rightMatches.length);
         console.log('Generated matches with court assignments and match numbers:', allMatches.length);
         console.log('Match numbers range:', startMatchNumber, 'to', currentMatchNumber - 1);
       }
@@ -127,6 +136,12 @@ export const useSchedulePreview = (tournamentId?: string) => {
         leftGroupMatches: leftMatches,
         rightGroupMatches: rightMatches,
       };
+
+      console.log('Final preview:', {
+        total: schedulePreview.totalMatches,
+        left: schedulePreview.leftGroupMatches.length,
+        right: schedulePreview.rightGroupMatches.length,
+      });
 
       // Save to database
       await savePreviewToDatabase(tournamentId, roundNumber, schedulePreview);
@@ -150,6 +165,7 @@ export const useSchedulePreview = (tournamentId?: string) => {
     );
     console.log('Preview updated, updatedMatches count:', updatedMatches.length);
     
+    // Consistent filtering: altijd op id prefix
     const updatedLeftMatches = updatedMatches.filter(m => m.id.startsWith('links-'));
     const updatedRightMatches = updatedMatches.filter(m => m.id.startsWith('rechts-'));
     
