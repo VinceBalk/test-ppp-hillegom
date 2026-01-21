@@ -18,41 +18,41 @@ export default function ScheduleGroupSection({
   onUpdateMatch,
   groupColor = "bg-blue-500"
 }: ScheduleGroupSectionProps) {
-  // Groepeer matches per baan
-  const groupMatchesByCourt = (matches: ScheduleMatch[]) => {
-    const grouped: { [courtName: string]: ScheduleMatch[] } = {};
+  
+  const groupMatchesByRound = (matches: ScheduleMatch[]) => {
+    const grouped: { [round: number]: ScheduleMatch[] } = {};
     
     matches.forEach(match => {
-      const courtKey = match.court_name || 'Onbekende Baan';
-      if (!grouped[courtKey]) {
-        grouped[courtKey] = [];
+      const round = match.round_within_group || 1;
+      if (!grouped[round]) {
+        grouped[round] = [];
       }
-      grouped[courtKey].push(match);
+      grouped[round].push(match);
     });
     
-    // Sorteer matches binnen elke baan op ronde
-    Object.keys(grouped).forEach(courtName => {
-      grouped[courtName].sort((a, b) => a.round_within_group - b.round_within_group);
+    Object.keys(grouped).forEach(round => {
+      grouped[Number(round)].sort((a, b) => {
+        if (a.match_number && b.match_number) {
+          return a.match_number - b.match_number;
+        }
+        return (a.court_name || '').localeCompare(b.court_name || '');
+      });
     });
     
     return grouped;
   };
 
-  const courtGroups = groupMatchesByCourt(matches);
-  
-  // Haal alle unieke court names op en sorteer ze
-  // Dit werkt nu dynamisch i.p.v. hardcoded namen
-  const sortedCourtNames = Object.keys(courtGroups).sort((a, b) => {
-    // Sorteer op basis van de eerste match's court menu order als beschikbaar
-    const aMatch = courtGroups[a][0];
-    const bMatch = courtGroups[b][0];
-    const aOrder = (aMatch as any)?.courtMenuOrder || 0;
-    const bOrder = (bMatch as any)?.courtMenuOrder || 0;
-    return aOrder - bOrder;
-  });
+  const roundGroups = groupMatchesByRound(matches);
+  const sortedRounds = Object.keys(roundGroups).map(Number).sort((a, b) => a - b);
+
+  const roundColors: { [key: number]: string } = {
+    1: 'bg-emerald-500',
+    2: 'bg-amber-500', 
+    3: 'bg-purple-500'
+  };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center gap-3">
         <h2 className="text-xl font-bold text-gray-900">{title}</h2>
         <Badge variant="secondary" className={`${groupColor} text-white px-3 py-1`}>
@@ -60,30 +60,36 @@ export default function ScheduleGroupSection({
         </Badge>
       </div>
       
-      {sortedCourtNames.length === 0 ? (
+      {sortedRounds.length === 0 ? (
         <div className="text-center text-muted-foreground py-8 border-2 border-dashed rounded-lg bg-gray-50">
           <p className="text-lg">Geen wedstrijden in {title.toLowerCase()}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {sortedCourtNames.map((courtName) => (
-            <div key={courtName} className="space-y-3">
-              <div className="flex items-center gap-2 p-3 rounded-lg border bg-gray-50">
-                <h3 className="font-semibold text-gray-900">{courtName}</h3>
-                <Badge variant="secondary" className={`${groupColor} text-white`}>
-                  {courtGroups[courtName].length}
+        <div className="space-y-6">
+          {sortedRounds.map((round) => (
+            <div key={round} className="space-y-3">
+              <div className={`flex items-center gap-3 p-3 rounded-lg ${roundColors[round] || 'bg-gray-500'}`}>
+                <h3 className="font-bold text-white text-lg">Ronde {round}</h3>
+                <Badge variant="secondary" className="bg-white/20 text-white border-0">
+                  {roundGroups[round].length} wedstrijden
                 </Badge>
               </div>
               
-              <div className="space-y-2">
-                {courtGroups[courtName].map((match) => (
-                  <MatchEditor
-                    key={match.id}
-                    match={match}
-                    tournamentId={tournamentId}
-                    onUpdate={onUpdateMatch}
-                    isPreviewMode={true}
-                  />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {roundGroups[round].map((match) => (
+                  <div key={match.id} className="relative">
+                    <div className="absolute -top-2 left-3 z-10">
+                      <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full border">
+                        {match.court_name || 'Onbekende Baan'}
+                      </span>
+                    </div>
+                    <MatchEditor
+                      match={match}
+                      tournamentId={tournamentId}
+                      onUpdate={onUpdateMatch}
+                      isPreviewMode={true}
+                    />
+                  </div>
                 ))}
               </div>
             </div>
