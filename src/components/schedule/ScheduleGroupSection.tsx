@@ -1,4 +1,3 @@
-
 import { ScheduleMatch } from '@/types/schedule';
 import { Badge } from '@/components/ui/badge';
 import MatchEditor from './MatchEditor';
@@ -19,7 +18,7 @@ export default function ScheduleGroupSection({
   onUpdateMatch,
   groupColor = "bg-blue-500"
 }: ScheduleGroupSectionProps) {
-  // Groepeer matches per baan en sorteer op specifieke volgorde
+  // Groepeer matches per baan
   const groupMatchesByCourt = (matches: ScheduleMatch[]) => {
     const grouped: { [courtName: string]: ScheduleMatch[] } = {};
     
@@ -41,12 +40,16 @@ export default function ScheduleGroupSection({
 
   const courtGroups = groupMatchesByCourt(matches);
   
-  // Definieer vaste volgorde: voor Links eerst Jopen dan New York, voor Rechts eerst BTA dan KEEK
-  const courtOrder = title.includes('Linker') 
-    ? ['Jopen Bier Baan', 'New York Pizza Baan']
-    : ['BTA Baan', 'KEEK Baan'];
-  
-  const sortedCourtNames = courtOrder.filter(name => courtGroups[name]);
+  // Haal alle unieke court names op en sorteer ze
+  // Dit werkt nu dynamisch i.p.v. hardcoded namen
+  const sortedCourtNames = Object.keys(courtGroups).sort((a, b) => {
+    // Sorteer op basis van de eerste match's court menu order als beschikbaar
+    const aMatch = courtGroups[a][0];
+    const bMatch = courtGroups[b][0];
+    const aOrder = (aMatch as any)?.courtMenuOrder || 0;
+    const bOrder = (bMatch as any)?.courtMenuOrder || 0;
+    return aOrder - bOrder;
+  });
 
   return (
     <div className="space-y-4">
