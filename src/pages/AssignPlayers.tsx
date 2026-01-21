@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useTournaments } from '@/hooks/useTournaments';
 import { usePlayers } from '@/hooks/usePlayers';
 import { useTournamentPlayers } from '@/hooks/useTournamentPlayers';
+import { usePlayerRankings } from '@/hooks/usePlayerRankings';
 import PlayerAddForm from '@/components/tournaments/PlayerAddForm';
 import TournamentStatsCard from '@/components/tournaments/TournamentStatsCard';
 import PlayerGroupTable from '@/components/tournaments/PlayerGroupTable';
@@ -22,6 +23,9 @@ export default function AssignPlayers() {
     updatePlayerGroup,
     isAddingPlayer 
   } = useTournamentPlayers(tournamentId);
+
+  // Fetch player rankings
+  const { data: rankings } = usePlayerRankings();
 
   const tournament = tournaments.find(t => t.id === tournamentId);
 
@@ -45,10 +49,34 @@ export default function AssignPlayers() {
     updatePlayerGroup({ tournamentPlayerId, group: newGroup });
   };
 
-  // Players are already sorted by ranking in the useTournamentPlayers hook
-  // No need for additional sorting here
-  const leftPlayers = tournamentPlayers.filter(tp => tp.group === 'left');
-  const rightPlayers = tournamentPlayers.filter(tp => tp.group === 'right');
+  // Enrich tournament players with ranking data
+  const enrichedTournamentPlayers = tournamentPlayers.map(tp => {
+    const ranking = rankings?.find(r => r.player_id === tp.player_id);
+    return {
+      ...tp,
+      avg_position: ranking?.avg_position ?? 99,
+      total_games_won: ranking?.total_games_won ?? 0,
+    };
+  });
+
+  // Sort players by group, then by avg_position (lowest first), then by total_games_won (highest first)
+  const sortedTournamentPlayers = [...enrichedTournamentPlayers].sort((a, b) => {
+    // First sort by group
+    if (a.group !== b.group) {
+      return a.group === 'left' ? -1 : 1;
+    }
+    
+    // Then by avg_position (lower is better)
+    if (a.avg_position !== b.avg_position) {
+      return a.avg_position - b.avg_position;
+    }
+    
+    // Finally by total_games_won (higher is better)
+    return b.total_games_won - a.total_games_won;
+  });
+
+  const leftPlayers = sortedTournamentPlayers.filter(tp => tp.group === 'left');
+  const rightPlayers = sortedTournamentPlayers.filter(tp => tp.group === 'right');
 
   if (isLoading || !tournament) {
     return (
