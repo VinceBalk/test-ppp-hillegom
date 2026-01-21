@@ -24,7 +24,7 @@ export default function AssignPlayers() {
     isAddingPlayer 
   } = useTournamentPlayers(tournamentId);
 
-  // Fetch player rankings
+  // Fetch player rankings to get avg_position
   const { data: rankings } = usePlayerRankings();
 
   const tournament = tournaments.find(t => t.id === tournamentId);
