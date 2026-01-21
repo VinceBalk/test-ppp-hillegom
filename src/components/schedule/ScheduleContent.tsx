@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useTournaments } from '@/hooks/useTournaments';
 import { useSchedulePreview } from '@/hooks/useSchedulePreview';
@@ -7,7 +6,6 @@ import { useTournamentPlayers } from '@/hooks/useTournamentPlayers';
 import { useMatches } from '@/hooks/useMatches';
 import { useToast } from '@/hooks/use-toast';
 import TournamentSelector from '@/components/schedule/TournamentSelector';
-import RoundSelector from '@/components/schedule/RoundSelector';
 import PreviewGenerator from '@/components/schedule/PreviewGenerator';
 import SchedulePreview from '@/components/schedule/SchedulePreview';
 import ManualMatchBuilder from '@/components/schedule/ManualMatchBuilder';
@@ -20,7 +18,6 @@ interface ScheduleContentProps {
 
 export default function ScheduleContent({ urlTournamentId }: ScheduleContentProps) {
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>(urlTournamentId || '');
-  const [selectedRound, setSelectedRound] = useState(1);
   const { toast } = useToast();
   
   const { tournaments: allTournaments } = useTournaments();
@@ -64,45 +61,32 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
 
   const handleTournamentChange = (tournamentId: string) => {
     setSelectedTournamentId(tournamentId);
-    setSelectedRound(1); // Reset round when tournament changes
-    clearPreview(); // Clear any existing preview
+    clearPreview();
   };
 
   const handleGeneratePreview = async () => {
     if (!tournament) return;
     
     try {
-      console.log('Generating preview for tournament:', tournament.id, 'round:', selectedRound);
+      console.log('Generating preview for tournament:', tournament.id);
       
-      // Check if this round has already been generated and approved
-      const roundKey = `round_${selectedRound}_schedule_generated` as keyof typeof tournament;
-      if (tournament[roundKey]) {
+      // Check of R1+R2 al gegenereerd zijn
+      if (tournament.round_1_schedule_generated && tournament.round_2_schedule_generated) {
         toast({
           title: "Schema al gegenereerd",
-          description: `Ronde ${selectedRound} is al eerder gegenereerd en goedgekeurd.`,
+          description: "Ronde 1 en 2 zijn al eerder gegenereerd en goedgekeurd.",
           variant: "destructive",
         });
         return;
       }
 
-      // For round 3, verify rounds 1 and 2 are complete
-      if (selectedRound === 3) {
-        if (!tournament.round_1_schedule_generated || !tournament.round_2_schedule_generated) {
-          toast({
-            title: "Vorige rondes niet compleet",
-            description: "Ronde 1 en 2 moeten eerst gegenereerd zijn voordat je ronde 3 kunt genereren.",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
-      await generatePreview(selectedRound);
+      // Genereer voor ronde 1 (R1 en R2 samen)
+      await generatePreview(1);
     } catch (error) {
       console.error('Error generating preview:', error);
       toast({
         title: "Fout bij genereren",
-        description: "Er is een fout opgetreden bij het genereren van het schema.",
+        description: error instanceof Error ? error.message : "Er is een fout opgetreden.",
         variant: "destructive",
       });
     }
@@ -112,10 +96,11 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
     if (!tournament || !preview) return;
     
     try {
-      console.log('Approving schedule for tournament:', tournament.id, 'round:', selectedRound);
+      console.log('Approving schedule for tournament:', tournament.id);
+      // Sla op als ronde 1 (bevat R1+R2 matches)
       generateSchedule({ 
         tournamentId: tournament.id, 
-        roundNumber: selectedRound, 
+        roundNumber: 1, 
         preview 
       });
       clearPreview();
@@ -124,7 +109,7 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
     }
   };
 
-  // Show message if no tournaments exist
+  // Geen toernooien
   if (!tournaments || tournaments.length === 0) {
     return (
       <Card>
@@ -133,19 +118,18 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
-            Er zijn nog geen toernooien aangemaakt. Maak eerst een toernooi aan voordat je een schema kunt genereren.
+            Er zijn nog geen toernooien aangemaakt. Maak eerst een toernooi aan.
           </p>
         </CardContent>
       </Card>
     );
   }
 
-  const roundKey = `round_${selectedRound}_schedule_generated` as keyof typeof tournament;
-  const isRoundGenerated = tournament && tournament[roundKey];
-
-  // Filter matches for the selected round
-  const roundMatches = matches.filter(match => match.round_number === selectedRound);
-  const hasExistingMatches = roundMatches.length > 0;
+  const isScheduleGenerated = tournament?.round_1_schedule_generated && tournament?.round_2_schedule_generated;
+  
+  // Filter matches voor R1+R2 (niet R3)
+  const r1r2Matches = matches.filter(match => match.round_number === 1 || match.round_number === 2);
+  const hasExistingMatches = r1r2Matches.length > 0;
 
   return (
     <>
@@ -160,42 +144,39 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
       {/* Show rest of the interface only when tournament is selected */}
       {selectedTournamentId && tournament && (
         <>
-          <RoundSelector 
-            selectedRound={selectedRound}
-            onRoundChange={setSelectedRound}
-          />
-
-          {/* Show existing matches with same styling as matches page */}
+          {/* Bestaande matches tonen */}
           {hasExistingMatches && (
             <ScheduleMatchesDisplay 
-              matches={roundMatches}
-              roundNumber={selectedRound}
+              matches={r1r2Matches}
+              roundNumber={1}
             />
           )}
 
-          {!preview && !isRoundGenerated && !hasExistingMatches && (
+          {/* Preview generator - alleen als nog niet gegenereerd */}
+          {!preview && !isScheduleGenerated && !hasExistingMatches && (
             <PreviewGenerator
-              selectedRound={selectedRound}
+              selectedRound={1}
               onGeneratePreview={handleGeneratePreview}
               isGenerating={isGenerating}
               courtsLoading={courtsLoading}
             />
           )}
 
-          {isRoundGenerated && !preview && !hasExistingMatches && (
+          {/* Al gegenereerd melding */}
+          {isScheduleGenerated && !preview && !hasExistingMatches && (
             <div className="text-center py-8">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-blue-900 mb-2">
-                  Ronde {selectedRound} al gegenereerd
+                  Schema al gegenereerd
                 </h3>
                 <p className="text-blue-700">
-                  Het schema voor ronde {selectedRound} is al eerder gegenereerd en goedgekeurd.
+                  Het schema voor ronde 1 en 2 is al eerder gegenereerd en goedgekeurd.
                 </p>
               </div>
             </div>
           )}
 
-
+          {/* Preview tonen met edit mogelijkheid */}
           {preview && (
             <SchedulePreview
               preview={preview}
@@ -205,16 +186,16 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
               isApproving={isGeneratingSchedule}
               tournamentName={tournament.name}
               tournamentId={tournament.id}
-              roundNumber={selectedRound}
+              roundNumber={1}
             />
           )}
 
-          {/* Handmatig wedstrijden toevoegen - beschikbaar voor alle rondes */}
-          <ManualMatchBuilder tournamentId={selectedTournamentId} initialRound={selectedRound} />
+          {/* Handmatig wedstrijden toevoegen */}
+          <ManualMatchBuilder tournamentId={selectedTournamentId} initialRound={1} />
         </>
       )}
 
-      {/* Show message when no tournament is selected */}
+      {/* Geen toernooi geselecteerd */}
       {!selectedTournamentId && (
         <Card>
           <CardHeader>
