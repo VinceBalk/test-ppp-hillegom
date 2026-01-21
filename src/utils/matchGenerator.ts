@@ -12,7 +12,7 @@ interface Court {
 /**
  * Genereert matches voor een specifieke toernooironde (R1 of R2)
  * 
- * R1: Spelers blijven op hun toegewezen baan, spelen 3 potjes in round-robin
+ * R1: Spelers blijven op hun toegewezen baan, spelen 3 potjes
  * R2: Spelers worden herschikt voor maximale variatie in tegenstanders
  */
 export const generateGroupMatches = (
@@ -37,8 +37,7 @@ export const generateGroupMatches = (
   const courtsToUse = sideCourts.length > 0 ? sideCourts : activeCourts;
 
   if (roundNumber === 2) {
-    // R2: Herschik spelers voor maximale variatie
-    return generateRound2Matches(players, courtPrefix, courtsToUse, startMatchNumber);
+    return generateRound2Matches(players, courtPrefix, courtsToUse, startMatchNumber, roundNumber);
   }
 
   // R1: Standaard groepering - 4 spelers per baan, 3 potjes
@@ -53,42 +52,29 @@ export const generateGroupMatches = (
       const courtId = assignedCourt?.id;
       const courtMenuOrder = assignedCourt?.menu_order || 0;
       
-      // 3 potjes per groep - alle mogelijke 2v2 combinaties
       // Potje 1: Speler 1+3 vs Speler 2+4
-      matches.push(createMatch({
-        courtPrefix,
-        courtIndex,
-        potje: 1,
-        team1: [groupPlayers[0], groupPlayers[2]],
-        team2: [groupPlayers[1], groupPlayers[3]],
-        courtName,
-        courtId,
-        courtMenuOrder,
-      }));
+      matches.push(createMatch(
+        courtPrefix, courtIndex, 1, roundNumber,
+        [groupPlayers[0], groupPlayers[2]],
+        [groupPlayers[1], groupPlayers[3]],
+        courtName, courtId, courtMenuOrder
+      ));
 
       // Potje 2: Speler 1+4 vs Speler 2+3
-      matches.push(createMatch({
-        courtPrefix,
-        courtIndex,
-        potje: 2,
-        team1: [groupPlayers[0], groupPlayers[3]],
-        team2: [groupPlayers[1], groupPlayers[2]],
-        courtName,
-        courtId,
-        courtMenuOrder,
-      }));
+      matches.push(createMatch(
+        courtPrefix, courtIndex, 2, roundNumber,
+        [groupPlayers[0], groupPlayers[3]],
+        [groupPlayers[1], groupPlayers[2]],
+        courtName, courtId, courtMenuOrder
+      ));
 
       // Potje 3: Speler 1+2 vs Speler 3+4
-      matches.push(createMatch({
-        courtPrefix,
-        courtIndex,
-        potje: 3,
-        team1: [groupPlayers[0], groupPlayers[1]],
-        team2: [groupPlayers[2], groupPlayers[3]],
-        courtName,
-        courtId,
-        courtMenuOrder,
-      }));
+      matches.push(createMatch(
+        courtPrefix, courtIndex, 3, roundNumber,
+        [groupPlayers[0], groupPlayers[1]],
+        [groupPlayers[2], groupPlayers[3]],
+        courtName, courtId, courtMenuOrder
+      ));
     }
   }
   
@@ -100,7 +86,6 @@ export const generateGroupMatches = (
     return a.courtMenuOrder - b.courtMenuOrder;
   });
   
-  // Nummer de wedstrijden
   const numberedMatches = matches.map((match, index) => ({
     ...match,
     match_number: startMatchNumber + index,
@@ -114,20 +99,16 @@ export const generateGroupMatches = (
 
 /**
  * R2: Herschik spelers zodat ze tegen andere tegenstanders spelen
- * 
- * Strategie: Roteer spelers tussen banen
- * - Van elke baan gaan 2 spelers naar een andere baan
- * - Dit maximaliseert nieuwe tegenstanders
  */
 function generateRound2Matches(
   players: TournamentPlayer[],
   courtPrefix: string,
   courts: Court[],
-  startMatchNumber: number
+  startMatchNumber: number,
+  roundNumber: number
 ): { matches: ScheduleMatch[], nextMatchNumber: number } {
   const matches: ScheduleMatch[] = [];
   
-  // Splits spelers in groepen van 4 (zoals in R1)
   const groups: TournamentPlayer[][] = [];
   for (let i = 0; i < players.length; i += 4) {
     const group = players.slice(i, i + 4);
@@ -137,70 +118,66 @@ function generateRound2Matches(
   }
 
   if (groups.length < 2) {
-    // Te weinig groepen voor rotatie, gebruik zelfde als R1 maar andere combinaties
-    return generateRound2SameGroup(players, courtPrefix, courts, startMatchNumber);
+    return generateRound2SameGroup(players, courtPrefix, courts, startMatchNumber, roundNumber);
   }
 
-  // Rotatie: wissel spelers 2 en 4 tussen opeenvolgende groepen
-  // Groep A: [A1, A2, A3, A4] -> [A1, B2, A3, B4]
-  // Groep B: [B1, B2, B3, B4] -> [B1, A2, B3, A4]
-  const rotatedGroups: TournamentPlayer[][] = groups.map((group, idx) => {
-    const nextIdx = (idx + 1) % groups.length;
-    const nextGroup = groups[nextIdx];
-    
-    return [
-      group[0],      // Blijft
-      nextGroup[1],  // Van volgende groep
-      group[2],      // Blijft
-      nextGroup[3],  // Van volgende groep
-    ];
-  });
+  // Optimale rotatie: maximale variatie in tegenstanders
+  // R1 Baan 1: [A, B, C, D], Baan 2: [E, F, G, H]
+  // R2 Baan 1: [A, B, E, F], Baan 2: [C, D, G, H]
+  // Zo speelt iedereen tegen volledig nieuwe tegenstanders
+  const rotatedGroups: TournamentPlayer[][] = [];
+  
+  if (groups.length === 2) {
+    // 2 banen: wissel onderste helft
+    rotatedGroups.push([
+      groups[0][0], groups[0][1],
+      groups[1][0], groups[1][1],
+    ]);
+    rotatedGroups.push([
+      groups[0][2], groups[0][3],
+      groups[1][2], groups[1][3],
+    ]);
+  } else {
+    // Fallback voor meer dan 2 banen: roteer paren
+    groups.forEach((group, idx) => {
+      const nextIdx = (idx + 1) % groups.length;
+      const nextGroup = groups[nextIdx];
+      
+      rotatedGroups.push([
+        group[0], group[1],
+        nextGroup[2], nextGroup[3],
+      ]);
+    });
+  }
 
-  // Genereer matches voor geroteerde groepen
   rotatedGroups.forEach((groupPlayers, courtIndex) => {
     const assignedCourt = courts[courtIndex % courts.length];
     const courtName = assignedCourt?.name || `${courtPrefix} Baan ${courtIndex + 1}`;
     const courtId = assignedCourt?.id;
     const courtMenuOrder = assignedCourt?.menu_order || 0;
 
-    // Potje 1: Speler 1+3 vs Speler 2+4
-    matches.push(createMatch({
-      courtPrefix,
-      courtIndex,
-      potje: 1,
-      team1: [groupPlayers[0], groupPlayers[2]],
-      team2: [groupPlayers[1], groupPlayers[3]],
-      courtName,
-      courtId,
-      courtMenuOrder,
-    }));
+    matches.push(createMatch(
+      courtPrefix, courtIndex, 1, roundNumber,
+      [groupPlayers[0], groupPlayers[2]],
+      [groupPlayers[1], groupPlayers[3]],
+      courtName, courtId, courtMenuOrder
+    ));
 
-    // Potje 2: Speler 1+4 vs Speler 2+3
-    matches.push(createMatch({
-      courtPrefix,
-      courtIndex,
-      potje: 2,
-      team1: [groupPlayers[0], groupPlayers[3]],
-      team2: [groupPlayers[1], groupPlayers[2]],
-      courtName,
-      courtId,
-      courtMenuOrder,
-    }));
+    matches.push(createMatch(
+      courtPrefix, courtIndex, 2, roundNumber,
+      [groupPlayers[0], groupPlayers[3]],
+      [groupPlayers[1], groupPlayers[2]],
+      courtName, courtId, courtMenuOrder
+    ));
 
-    // Potje 3: Speler 1+2 vs Speler 3+4
-    matches.push(createMatch({
-      courtPrefix,
-      courtIndex,
-      potje: 3,
-      team1: [groupPlayers[0], groupPlayers[1]],
-      team2: [groupPlayers[2], groupPlayers[3]],
-      courtName,
-      courtId,
-      courtMenuOrder,
-    }));
+    matches.push(createMatch(
+      courtPrefix, courtIndex, 3, roundNumber,
+      [groupPlayers[0], groupPlayers[1]],
+      [groupPlayers[2], groupPlayers[3]],
+      courtName, courtId, courtMenuOrder
+    ));
   });
 
-  // Sorteer en nummer
   matches.sort((a: any, b: any) => {
     if (a.round_within_group !== b.round_within_group) {
       return a.round_within_group - b.round_within_group;
@@ -220,13 +197,14 @@ function generateRound2Matches(
 }
 
 /**
- * Fallback voor R2 als er maar 1 groep is: gebruik andere combinatievolgorde
+ * Fallback voor R2 als er maar 1 groep is
  */
 function generateRound2SameGroup(
   players: TournamentPlayer[],
   courtPrefix: string,
   courts: Court[],
-  startMatchNumber: number
+  startMatchNumber: number,
+  roundNumber: number
 ): { matches: ScheduleMatch[], nextMatchNumber: number } {
   const matches: ScheduleMatch[] = [];
 
@@ -240,42 +218,27 @@ function generateRound2SameGroup(
       const courtId = assignedCourt?.id;
       const courtMenuOrder = assignedCourt?.menu_order || 0;
 
-      // Andere volgorde dan R1 voor variatie
-      // Potje 1: Speler 1+2 vs Speler 3+4 (was potje 3 in R1)
-      matches.push(createMatch({
-        courtPrefix,
-        courtIndex,
-        potje: 1,
-        team1: [groupPlayers[0], groupPlayers[1]],
-        team2: [groupPlayers[2], groupPlayers[3]],
-        courtName,
-        courtId,
-        courtMenuOrder,
-      }));
+      // Andere volgorde dan R1
+      matches.push(createMatch(
+        courtPrefix, courtIndex, 1, roundNumber,
+        [groupPlayers[0], groupPlayers[1]],
+        [groupPlayers[2], groupPlayers[3]],
+        courtName, courtId, courtMenuOrder
+      ));
 
-      // Potje 2: Speler 1+3 vs Speler 2+4 (was potje 1 in R1)
-      matches.push(createMatch({
-        courtPrefix,
-        courtIndex,
-        potje: 2,
-        team1: [groupPlayers[0], groupPlayers[2]],
-        team2: [groupPlayers[1], groupPlayers[3]],
-        courtName,
-        courtId,
-        courtMenuOrder,
-      }));
+      matches.push(createMatch(
+        courtPrefix, courtIndex, 2, roundNumber,
+        [groupPlayers[0], groupPlayers[2]],
+        [groupPlayers[1], groupPlayers[3]],
+        courtName, courtId, courtMenuOrder
+      ));
 
-      // Potje 3: Speler 1+4 vs Speler 2+3 (was potje 2 in R1)
-      matches.push(createMatch({
-        courtPrefix,
-        courtIndex,
-        potje: 3,
-        team1: [groupPlayers[0], groupPlayers[3]],
-        team2: [groupPlayers[1], groupPlayers[2]],
-        courtName,
-        courtId,
-        courtMenuOrder,
-      }));
+      matches.push(createMatch(
+        courtPrefix, courtIndex, 3, roundNumber,
+        [groupPlayers[0], groupPlayers[3]],
+        [groupPlayers[1], groupPlayers[2]],
+        courtName, courtId, courtMenuOrder
+      ));
     }
   }
 
@@ -297,22 +260,19 @@ function generateRound2SameGroup(
   };
 }
 
-interface CreateMatchParams {
-  courtPrefix: string;
-  courtIndex: number;
-  potje: number;
-  team1: TournamentPlayer[];
-  team2: TournamentPlayer[];
-  courtName: string;
-  courtId?: string;
-  courtMenuOrder: number;
-}
-
-function createMatch(params: CreateMatchParams): ScheduleMatch {
-  const { courtPrefix, courtIndex, potje, team1, team2, courtName, courtId, courtMenuOrder } = params;
-  
+function createMatch(
+  courtPrefix: string,
+  courtIndex: number,
+  potje: number,
+  roundNumber: number,
+  team1: TournamentPlayer[],
+  team2: TournamentPlayer[],
+  courtName: string,
+  courtId: string | undefined,
+  courtMenuOrder: number
+): ScheduleMatch {
   return {
-    id: `${courtPrefix.toLowerCase()}-g${courtIndex + 1}-p${potje}`,
+    id: `${courtPrefix.toLowerCase()}-r${roundNumber}-g${courtIndex + 1}-p${potje}`,
     team1_player1_id: team1[0].player_id,
     team1_player2_id: team1[1].player_id,
     team2_player1_id: team2[0].player_id,
