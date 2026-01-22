@@ -70,7 +70,10 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament, 
   };
 
   const { team1, team2 } = getPlayerTeams(match);
-  const displayMatchNumber = match.match_number || matchNumberInCourtRound;
+  
+  // matchNumberInCourtRound krijgt voorrang (voor display als "Wedstrijd 1, 2, 3")
+  // match.match_number is fallback (globale nummering)
+  const displayMatchNumber = matchNumberInCourtRound || match.match_number;
 
   // Use passed tournament or create from match data
   const effectiveTournament = tournament || {
@@ -153,7 +156,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament, 
           <div className="flex justify-between items-start">
             {displayMatchNumber && (
               <Badge variant="secondary" className="text-xs">
-                Wedstrijd #{displayMatchNumber}
+                Wedstrijd {displayMatchNumber}
               </Badge>
             )}
             <div className="text-xs text-muted-foreground">
@@ -294,7 +297,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament, 
         <div className="flex justify-between items-start">
           {displayMatchNumber && (
             <Badge variant="secondary" className="text-xs">
-              Wedstrijd #{displayMatchNumber}
+              Wedstrijd {displayMatchNumber}
             </Badge>
           )}
           <div className="text-xs text-muted-foreground">
