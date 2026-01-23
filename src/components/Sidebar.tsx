@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -61,13 +61,15 @@ export function Sidebar() {
 
   return (
     <aside className="w-64 min-h-screen bg-background border-r border-border flex flex-col justify-between">
-      {/* Logo */}
+      {/* Logo - klikbaar naar dashboard */}
       <div className="h-16 flex items-center justify-center border-b border-border px-4">
-        <img
-          src="/PPP_logo.svg"
-          alt="PPP Hillegom logo"
-          className="h-8 object-contain"
-        />
+        <Link to="/" className="cursor-pointer">
+          <img
+            src="/PPP_logo.svg"
+            alt="PPP Hillegom logo"
+            className="h-8 object-contain"
+          />
+        </Link>
       </div>
 
       {/* Navigatie */}
