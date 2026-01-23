@@ -46,12 +46,15 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
 
   const tournament = tournaments?.find(t => t.id === selectedTournamentId);
 
-  // Set initial tournament from URL parameter
+  // Set initial tournament from URL parameter OR select first available tournament
   useEffect(() => {
     if (urlTournamentId && tournaments?.length > 0) {
       setSelectedTournamentId(urlTournamentId);
+    } else if (!selectedTournamentId && tournaments?.length > 0) {
+      // Automatisch eerste (komende/actieve) toernooi selecteren
+      setSelectedTournamentId(tournaments[0].id);
     }
-  }, [urlTournamentId, tournaments]);
+  }, [urlTournamentId, tournaments, selectedTournamentId]);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -327,8 +330,10 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
             />
           )}
 
-          {/* Handmatig wedstrijden toevoegen */}
-          <ManualMatchBuilder tournamentId={selectedTournamentId} initialRound={parseInt(selectedRound)} />
+          {/* Handmatig wedstrijden toevoegen - alleen als er nog geen wedstrijden zijn voor deze ronde */}
+          {!hasMatchesForRound && (
+            <ManualMatchBuilder tournamentId={selectedTournamentId} initialRound={parseInt(selectedRound)} />
+          )}
         </>
       )}
 
