@@ -1,36 +1,36 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import { 
-  Home, 
+  LayoutDashboard, 
   Users, 
   Trophy, 
   Calendar, 
-  Target, 
-  Award, 
-  Settings, 
-  UserCog,
+  Hash, 
+  Map, 
+  User,
+  Sliders,
+  Shield,
+  BarChart3,
   TrendingUp,
-  List,
-  Hash,
-  Map,
-  User
+  List
 } from 'lucide-react';
 
 const navigationItems = [
-  { name: 'Dashboard', href: '/', icon: Home, roles: ['speler', 'organisator', 'beheerder'] },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['speler', 'organisator', 'beheerder'] },
   { name: 'Standen', href: '/standings', icon: TrendingUp, roles: ['speler', 'organisator', 'beheerder'] },
+  { name: 'Statistieken', href: '/statistics', icon: BarChart3, roles: ['speler', 'organisator', 'beheerder'] },
   { name: 'Spelers', href: '/players', icon: Users, roles: ['speler', 'organisator', 'beheerder'] },
   { name: 'Toernooien', href: '/tournaments', icon: Trophy, roles: ['speler', 'organisator', 'beheerder'] },
-  { name: 'Wedstrijden', href: '/matches', icon: Target, roles: ['speler', 'organisator', 'beheerder'] },
+  { name: 'Wedstrijden', href: '/matches', icon: Calendar, roles: ['speler', 'organisator', 'beheerder'] },
   { name: 'Schema', href: '/schedule', icon: List, roles: ['speler', 'organisator', 'beheerder'] },
-  { name: 'Scores', href: '/scores', icon: Award, roles: ['speler', 'organisator', 'beheerder'] },
+  { name: 'Scores', href: '/scores', icon: Hash, roles: ['speler', 'organisator', 'beheerder'] },
   { name: 'Specials', href: '/specials', icon: Hash, roles: ['organisator', 'beheerder'] },
   { name: 'Banen', href: '/courts', icon: Map, roles: ['organisator', 'beheerder'] },
   { name: 'Profiel', href: '/profile', icon: User, roles: ['speler', 'organisator', 'beheerder'] },
-  { name: 'Instellingen', href: '/settings', icon: Settings, roles: ['organisator', 'beheerder'] },
-  { name: 'Gebruikers', href: '/users', icon: UserCog, roles: ['beheerder'] },
+  { name: 'Instellingen', href: '/settings', icon: Sliders, roles: ['organisator', 'beheerder'] },
+  { name: 'Gebruikers', href: '/users', icon: Shield, roles: ['beheerder'] },
 ];
 
 interface MobileMenuProps {
@@ -39,8 +39,8 @@ interface MobileMenuProps {
 }
 
 export function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
-  const { user, hasRole, isSuperAdmin } = useAuth();
-
+  const { user, profile, adminUser, hasRole, isSuperAdmin } = useAuth();
+  
   const filteredItems = navigationItems.filter(item => 
     isSuperAdmin() || item.roles.some(role => hasRole(role))
   );
@@ -50,14 +50,19 @@ export function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
       <SheetContent side="left" className="w-72 p-0">
         <SheetHeader className="p-6 border-b border-border">
           <SheetTitle className="flex items-center justify-center">
-            <img
-              src="/PPP_logo.svg"
-              alt="PPP Hillegom logo"
-              className="h-10 w-auto object-contain max-w-[160px]"
-            />
+            <Link 
+              to="/" 
+              onClick={() => onOpenChange(false)}
+              className="cursor-pointer"
+            >
+              <img
+                src="/PPP_logo.svg"
+                alt="PPP Hillegom logo"
+                className="h-10 w-auto object-contain max-w-[160px]"
+              />
+            </Link>
           </SheetTitle>
         </SheetHeader>
-
         <nav className="px-4 py-6 space-y-2">
           {filteredItems.map((item) => (
             <NavLink
@@ -78,7 +83,6 @@ export function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
             </NavLink>
           ))}
         </nav>
-
         <div className="absolute bottom-0 left-0 right-0 border-t border-border p-4">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -91,7 +95,7 @@ export function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
                 {user?.email}
               </p>
               <p className="text-xs text-muted-foreground capitalize">
-                {user?.role}
+                {adminUser?.is_super_admin ? 'Super Admin' : (profile?.role || 'Speler')}
               </p>
             </div>
           </div>
