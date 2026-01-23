@@ -44,6 +44,13 @@ export default function MatchesContent({
   console.log('Matches loading:', matchesLoading);
   console.log('Matches error:', matchesError);
 
+  // Auto-select eerste toernooi als er geen geselecteerd is
+  useEffect(() => {
+    if (!selectedTournamentId && tournaments && tournaments.length > 0) {
+      setSelectedTournamentId(tournaments[0].id);
+    }
+  }, [selectedTournamentId, tournaments, setSelectedTournamentId]);
+
   // Reset round filter when tournament changes
   useEffect(() => {
     setSelectedRound('all');
