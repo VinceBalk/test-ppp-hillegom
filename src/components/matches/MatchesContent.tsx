@@ -3,7 +3,6 @@ import { useTournaments } from '@/hooks/useTournaments';
 import { useMatches } from '@/hooks/useMatches';
 import { useCourts } from '@/hooks/useCourts';
 import { useSimulation } from '@/hooks/useSimulation';
-import { exportSimulationToPdf } from '@/services/simulationPdfExport';
 import MatchesHeader from './MatchesHeader';
 import MatchesFilter from './MatchesFilter';
 import MatchesEmptyState from './MatchesEmptyState';
@@ -134,15 +133,8 @@ export default function MatchesContent({
   };
 
   const handleExportPdf = () => {
-    if (!selectedTournament || !simulation.finalRankings) return;
-    
-    exportSimulationToPdf({
-      tournamentName: selectedTournament.name,
-      tournamentDate: new Date(selectedTournament.start_date).toLocaleDateString('nl-NL'),
-      matches: simulation.simulatedMatches,
-      round3Groups: simulation.round3Groups,
-      finalRankings: simulation.finalRankings,
-    });
+    // PDF export tijdelijk uitgeschakeld
+    console.log('PDF export komt later');
   };
 
   const handleSetScore = (matchId: string, team1Score: number, team2Score: number) => {
