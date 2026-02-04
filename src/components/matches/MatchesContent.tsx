@@ -2,7 +2,6 @@ import { useEffect, useState, useMemo } from 'react';
 import { useTournaments } from '@/hooks/useTournaments';
 import { useMatches } from '@/hooks/useMatches';
 import { useCourts } from '@/hooks/useCourts';
-import { useSimulation } from '@/hooks/useSimulation';
 import MatchesHeader from './MatchesHeader';
 import MatchesFilter from './MatchesFilter';
 import MatchesEmptyState from './MatchesEmptyState';
@@ -11,9 +10,6 @@ import MatchesResultsCount from './MatchesResultsCount';
 import MatchesLoading from './MatchesLoading';
 import MatchesError from './MatchesError';
 import MatchesAccessInfo from './MatchesAccessInfo';
-import SimulationControls from '@/components/simulation/SimulationControls';
-import SimulationRankingPreview from '@/components/simulation/SimulationRankingPreview';
-import SimulationScoreInput from '@/components/simulation/SimulationScoreInput';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -45,9 +41,6 @@ export default function MatchesContent({
   const [selectedRow, setSelectedRow] = useState<string>('all');
 
   const selectedTournament = tournaments?.find(t => t.id === selectedTournamentId);
-  
-  // Simulatie hook
-  const simulation = useSimulation(selectedTournamentId, matches || [], courts || []);
 
   // Auto-select eerste toernooi als er geen geselecteerd is
   useEffect(() => {
@@ -60,7 +53,6 @@ export default function MatchesContent({
   useEffect(() => {
     setSelectedRound('1');
     setSelectedRow('all');
-    simulation.resetSimulation();
   }, [selectedTournamentId]);
 
   // Handle browser back button properly
@@ -73,51 +65,42 @@ export default function MatchesContent({
     return () => window.removeEventListener('popstate', handlePopState);
   }, [refetch]);
 
-  // Gebruik gesimuleerde of echte matches
-  const effectiveMatches = simulation.isSimulationActive ? simulation.simulatedMatches : matches;
-
   // Check round completion status
   const roundStatus = useMemo(() => {
-    if (!effectiveMatches || effectiveMatches.length === 0) {
+    if (!matches || matches.length === 0) {
       return { round1Completed: false, round2Completed: false, round3Completed: false };
     }
     
-    const round1Matches = effectiveMatches.filter(m => m.round_number === 1);
-    const round2Matches = effectiveMatches.filter(m => m.round_number === 2);
-    const round3Matches = effectiveMatches.filter(m => m.round_number === 3);
+    const round1Matches = matches.filter(m => m.round_number === 1);
+    const round2Matches = matches.filter(m => m.round_number === 2);
+    const round3Matches = matches.filter(m => m.round_number === 3);
     
-    const isMatchComplete = (m: any) => {
-      if (simulation.isSimulationActive) {
-        return m.simulated_status === 'completed' || 
-          (m.simulated_team1_score !== null && m.simulated_team1_score !== undefined && m.simulated_team1_score >= 0);
-      }
-      return m.status === 'completed';
-    };
+    const isMatchComplete = (m: any) => m.status === 'completed';
     
     const round1Completed = round1Matches.length > 0 && round1Matches.every(isMatchComplete);
     const round2Completed = round2Matches.length > 0 && round2Matches.every(isMatchComplete);
     const round3Completed = round3Matches.length > 0 && round3Matches.every(isMatchComplete);
     
     return { round1Completed, round2Completed, round3Completed };
-  }, [effectiveMatches, simulation.isSimulationActive]);
+  }, [matches]);
 
   // Check if rounds have matches
   const roundsGenerated = useMemo(() => {
-    if (!effectiveMatches || effectiveMatches.length === 0) {
+    if (!matches || matches.length === 0) {
       return { round1: false, round2: false, round3: false };
     }
     
     return {
-      round1: effectiveMatches.some(m => m.round_number === 1),
-      round2: effectiveMatches.some(m => m.round_number === 2),
-      round3: effectiveMatches.some(m => m.round_number === 3),
+      round1: matches.some(m => m.round_number === 1),
+      round2: matches.some(m => m.round_number === 2),
+      round3: matches.some(m => m.round_number === 3),
     };
-  }, [effectiveMatches]);
+  }, [matches]);
 
   // Filter matches by selected round and row
   const filteredMatches = useMemo(() => {
     const roundNumber = parseInt(selectedRound);
-    let roundMatches = effectiveMatches?.filter(m => m.round_number === roundNumber) || [];
+    let roundMatches = matches?.filter(m => m.round_number === roundNumber) || [];
     
     // Filter by row if not "all"
     if (selectedRow !== 'all' && courts) {
@@ -126,24 +109,10 @@ export default function MatchesContent({
     }
     
     return roundMatches;
-  }, [effectiveMatches, selectedRound, selectedRow, courts]);
+  }, [matches, selectedRound, selectedRow, courts]);
 
   const handleRefresh = () => {
     refetch();
-  };
-
-  const handleExportPdf = () => {
-    // PDF export tijdelijk uitgeschakeld
-    console.log('PDF export komt later');
-  };
-
-  const handleSetScore = (matchId: string, team1Score: number, team2Score: number) => {
-    // Check of het een R3 match is
-    if (matchId.startsWith('sim-r3-')) {
-      simulation.setR3MatchScore(matchId, team1Score, team2Score);
-    } else {
-      simulation.setMatchScore(matchId, team1Score, team2Score);
-    }
   };
 
   const isLoading = tournamentsLoading || matchesLoading;
@@ -178,13 +147,9 @@ export default function MatchesContent({
     id: selectedTournament.id,
     status: (selectedTournament.status === 'in_progress' ? 'active' : 
              selectedTournament.status === 'completed' ? 'completed' :
-             selectedTournament.status === 'simulation' ? 'active' :
              selectedTournament.status === 'draft' ? 'not_started' : 
              'not_started') as "not_started" | "active" | "completed",
-    is_simulation: selectedTournament.is_simulation || selectedTournament.status === 'simulation',
   } : undefined;
-
-  const isSimulationMode = selectedTournament?.status === 'simulation';
 
   return (
     <div className="space-y-6">
@@ -211,41 +176,8 @@ export default function MatchesContent({
         selectedTournament={selectedTournament}
       />
 
-      {/* Simulatie Controls - alleen bij simulation status */}
-      {isSimulationMode && (
-        <SimulationControls
-          isSimulationActive={simulation.isSimulationActive}
-          simulationMode={simulation.simulationMode}
-          round3Generated={simulation.round3Generated}
-          r1r2Complete={simulation.r1r2Complete}
-          r3Complete={simulation.r3Complete}
-          onStartRandomSimulation={simulation.startRandomSimulation}
-          onStartManualSimulation={simulation.startManualSimulation}
-          onGenerateRound3={simulation.generateRound3}
-          onResetSimulation={simulation.resetSimulation}
-          onExportPdf={handleExportPdf}
-          tournamentStatus={selectedTournament?.status}
-        />
-      )}
-
-      {/* Tussenstand na R1+R2 (simulatie) */}
-      {simulation.isSimulationActive && simulation.r1r2Complete && !simulation.round3Generated && (
-        <SimulationRankingPreview 
-          playerStats={simulation.playerStatsAfterR1R2}
-          title="Tussenstand na Ronde 1 + 2 → Indeling Ronde 3"
-        />
-      )}
-
-      {/* Finale ranking (simulatie) */}
-      {simulation.isSimulationActive && simulation.r3Complete && simulation.finalRankings && (
-        <SimulationRankingPreview 
-          finalRankings={simulation.finalRankings}
-          title="🏆 Eindrangschikking"
-        />
-      )}
-
       {/* Round Tabs and Row Filter */}
-      {selectedTournamentId && effectiveMatches.length > 0 && (
+      {selectedTournamentId && matches && matches.length > 0 && (
         <Card>
           <CardContent className="py-4">
             <Tabs value={selectedRound} onValueChange={setSelectedRound}>
@@ -303,10 +235,7 @@ export default function MatchesContent({
             <div className="flex items-center gap-2 text-amber-800">
               <Lock className="h-4 w-4" />
               <span>
-                {isSimulationMode && simulation.isSimulationActive
-                  ? 'Vul eerst alle scores in voor R1 en R2, dan kan je R3 genereren.'
-                  : 'Ronde 3 wordt gegenereerd zodra Ronde 1 en Ronde 2 volledig zijn afgerond.'
-                }
+                Ronde 3 wordt gegenereerd zodra Ronde 1 en Ronde 2 volledig zijn afgerond.
               </span>
             </div>
           </CardContent>
@@ -314,7 +243,7 @@ export default function MatchesContent({
       )}
 
       {/* No matches for selected round */}
-      {selectedTournamentId && effectiveMatches.length > 0 && filteredMatches.length === 0 && (
+      {selectedTournamentId && matches && matches.length > 0 && filteredMatches.length === 0 && (
         <Card>
           <CardContent className="py-8">
             <div className="text-center">
@@ -328,7 +257,7 @@ export default function MatchesContent({
       )}
 
       {/* No matches alert */}
-      {selectedTournamentId && effectiveMatches.length === 0 && (
+      {selectedTournamentId && (!matches || matches.length === 0) && (
         <MatchesEmptyState type="no-matches" selectedTournamentId={selectedTournamentId} />
       )}
 
@@ -336,32 +265,13 @@ export default function MatchesContent({
       {!selectedTournamentId ? (
         <MatchesEmptyState type="no-selection" />
       ) : filteredMatches.length > 0 && (
-        simulation.isSimulationActive && simulation.simulationMode === 'manual' ? (
-          // Handmatige invoer mode - toon SimulationScoreInput
-          <SimulationMatchList 
-            matches={filteredMatches}
-            courts={courts || []}
-            onSetScore={handleSetScore}
-            onAddSpecial={simulation.addSpecial}
-            onRemoveSpecial={simulation.removeSpecial}
-            getMatchSpecials={simulation.getMatchSpecials}
-          />
-        ) : simulation.isSimulationActive ? (
-          // Random mode - toon read-only view
-          <SimulationMatchListReadOnly 
-            matches={filteredMatches}
-            courts={courts || []}
-          />
-        ) : (
-          // Normale mode
-          <MatchesList
-            matches={filteredMatches}
-            editMode={editMode}
-            selectedTournamentId={selectedTournamentId}
-            tournament={tournamentForMatches}
-            onRefetch={refetch}
-          />
-        )
+        <MatchesList
+          matches={filteredMatches}
+          editMode={editMode}
+          selectedTournamentId={selectedTournamentId}
+          tournament={tournamentForMatches}
+          onRefetch={refetch}
+        />
       )}
 
       {/* Results count */}
@@ -370,199 +280,9 @@ export default function MatchesContent({
           matchCount={filteredMatches.length} 
           selectedTournament={selectedTournament}
           selectedRound={selectedRound}
-          totalMatches={effectiveMatches.length}
+          totalMatches={matches?.length || 0}
         />
       )}
     </div>
-  );
-}
-
-// Handmatige invoer lijst
-function SimulationMatchList({ 
-  matches, 
-  courts,
-  onSetScore,
-  onAddSpecial,
-  onRemoveSpecial,
-  getMatchSpecials,
-}: { 
-  matches: any[]; 
-  courts: any[];
-  onSetScore: (matchId: string, team1: number, team2: number) => void;
-  onAddSpecial: (matchId: string, playerId: string, playerName: string) => void;
-  onRemoveSpecial: (matchId: string, playerId: string) => void;
-  getMatchSpecials: (matchId: string) => any[];
-}) {
-  // Groepeer per baan
-  const matchesByCourt = matches.reduce((acc, match) => {
-    const courtName = match.court?.name || 'Onbekend';
-    if (!acc[courtName]) {
-      acc[courtName] = { matches: [], rowSide: match.court?.row_side || 'left' };
-    }
-    acc[courtName].matches.push(match);
-    return acc;
-  }, {} as Record<string, { matches: any[]; rowSide: string }>);
-
-  const leftCourts = Object.entries(matchesByCourt).filter(([_, data]) => data.rowSide === 'left');
-  const rightCourts = Object.entries(matchesByCourt).filter(([_, data]) => data.rowSide === 'right');
-
-  return (
-    <Card>
-      <CardContent className="py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Links */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-center text-green-700 border-b pb-2">Rij Links</h3>
-            {leftCourts.map(([courtName, { matches: courtMatches }]) => (
-              <div key={courtName} className="space-y-3">
-                <div className="p-2 bg-amber-100 rounded text-center font-medium text-amber-800">
-                  {courtName}
-                </div>
-                {courtMatches
-                  .sort((a, b) => (a.match_number || 0) - (b.match_number || 0))
-                  .map((match, idx) => (
-                    <SimulationScoreInput
-                      key={match.id}
-                      match={match}
-                      index={idx}
-                      onSetScore={onSetScore}
-                      onAddSpecial={onAddSpecial}
-                      onRemoveSpecial={onRemoveSpecial}
-                      matchSpecials={getMatchSpecials(match.id)}
-                    />
-                  ))}
-              </div>
-            ))}
-          </div>
-
-          {/* Rechts */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-center text-red-700 border-b pb-2">Rij Rechts</h3>
-            {rightCourts.map(([courtName, { matches: courtMatches }]) => (
-              <div key={courtName} className="space-y-3">
-                <div className="p-2 bg-amber-100 rounded text-center font-medium text-amber-800">
-                  {courtName}
-                </div>
-                {courtMatches
-                  .sort((a, b) => (a.match_number || 0) - (b.match_number || 0))
-                  .map((match, idx) => (
-                    <SimulationScoreInput
-                      key={match.id}
-                      match={match}
-                      index={idx}
-                      onSetScore={onSetScore}
-                      onAddSpecial={onAddSpecial}
-                      onRemoveSpecial={onRemoveSpecial}
-                      matchSpecials={getMatchSpecials(match.id)}
-                    />
-                  ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// Read-only lijst voor random simulatie
-function SimulationMatchListReadOnly({ matches, courts }: { matches: any[]; courts: any[] }) {
-  // Groepeer per baan
-  const matchesByCourt = matches.reduce((acc, match) => {
-    const courtName = match.court?.name || 'Onbekend';
-    if (!acc[courtName]) {
-      acc[courtName] = { matches: [], rowSide: match.court?.row_side || 'left' };
-    }
-    acc[courtName].matches.push(match);
-    return acc;
-  }, {} as Record<string, { matches: any[]; rowSide: string }>);
-
-  const leftCourts = Object.entries(matchesByCourt).filter(([_, data]) => data.rowSide === 'left');
-  const rightCourts = Object.entries(matchesByCourt).filter(([_, data]) => data.rowSide === 'right');
-
-  return (
-    <Card>
-      <CardContent className="py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Links */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-center text-green-700 border-b pb-2">Rij Links</h3>
-            {leftCourts.map(([courtName, { matches: courtMatches }]) => (
-              <div key={courtName} className="space-y-3">
-                <div className="p-2 bg-amber-100 rounded text-center font-medium text-amber-800">
-                  {courtName}
-                </div>
-                {courtMatches
-                  .sort((a, b) => (a.match_number || 0) - (b.match_number || 0))
-                  .map((match, idx) => (
-                    <SimulationMatchCardReadOnly key={match.id} match={match} index={idx} />
-                  ))}
-              </div>
-            ))}
-          </div>
-
-          {/* Rechts */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-center text-red-700 border-b pb-2">Rij Rechts</h3>
-            {rightCourts.map(([courtName, { matches: courtMatches }]) => (
-              <div key={courtName} className="space-y-3">
-                <div className="p-2 bg-amber-100 rounded text-center font-medium text-amber-800">
-                  {courtName}
-                </div>
-                {courtMatches
-                  .sort((a, b) => (a.match_number || 0) - (b.match_number || 0))
-                  .map((match, idx) => (
-                    <SimulationMatchCardReadOnly key={match.id} match={match} index={idx} />
-                  ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// Read-only match card
-function SimulationMatchCardReadOnly({ match, index }: { match: any; index: number }) {
-  const score1 = match.simulated_team1_score ?? match.team1_score ?? '-';
-  const score2 = match.simulated_team2_score ?? match.team2_score ?? '-';
-  const specials = match.simulated_specials || [];
-
-  return (
-    <Card className="border-purple-200 bg-purple-50/50">
-      <CardContent className="py-3 px-4">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium text-purple-700">Wedstrijd {index + 1}</span>
-          <span className="text-xs bg-purple-200 text-purple-800 px-2 py-0.5 rounded">Simulatie</span>
-        </div>
-        
-        <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
-          {/* Team 1 */}
-          <div className="text-right text-sm">
-            <div className="font-medium">{match.team1_player1?.name || 'Speler 1'}</div>
-            <div className="text-muted-foreground">{match.team1_player2?.name || 'Speler 2'}</div>
-          </div>
-          
-          {/* Score */}
-          <div className="text-center px-3">
-            <span className="text-xl font-bold">{score1} - {score2}</span>
-          </div>
-          
-          {/* Team 2 */}
-          <div className="text-left text-sm">
-            <div className="font-medium">{match.team2_player1?.name || 'Speler 3'}</div>
-            <div className="text-muted-foreground">{match.team2_player2?.name || 'Speler 4'}</div>
-          </div>
-        </div>
-
-        {/* Specials */}
-        {specials.length > 0 && (
-          <div className="mt-2 text-xs text-orange-600">
-            ⭐ {specials.map((s: any) => s.playerName).join(', ')}
-          </div>
-        )}
-      </CardContent>
-    </Card>
   );
 }
