@@ -1,355 +1,466 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTournaments } from '@/hooks/useTournaments';
+import { useMatches } from '@/hooks/useMatches';
 import { useSchedulePreview } from '@/hooks/useSchedulePreview';
 import { useScheduleGeneration } from '@/hooks/useScheduleGeneration';
 import { useTournamentPlayers } from '@/hooks/useTournamentPlayers';
-import { useMatches } from '@/hooks/useMatches';
-import { useCourts } from '@/hooks/useCourts';
-import { useToast } from '@/hooks/use-toast';
-import TournamentSelector from '@/components/schedule/TournamentSelector';
-import PreviewGenerator from '@/components/schedule/PreviewGenerator';
-import SchedulePreview from '@/components/schedule/SchedulePreview';
-import ManualMatchBuilder from '@/components/schedule/ManualMatchBuilder';
-import ScheduleMatchesDisplay from '@/components/schedule/ScheduleMatchesDisplay';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle2, Lock } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Calendar, CheckCircle2, Clock, Loader2, Plus, Trophy, Users } from 'lucide-react';
+import { Round3GenerationSection } from '@/components/schedule/Round3GenerationSection';
 
 interface ScheduleContentProps {
   urlTournamentId?: string;
 }
 
 export default function ScheduleContent({ urlTournamentId }: ScheduleContentProps) {
+  const navigate = useNavigate();
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>(urlTournamentId || '');
-  const [selectedRound, setSelectedRound] = useState<string>('1');
-  const [selectedRow, setSelectedRow] = useState<string>('all');
-  const { toast } = useToast();
-  
-  const { tournaments: allTournaments } = useTournaments();
-  const tournaments = allTournaments?.filter(t => t.status !== 'completed');
+  const [activeTab, setActiveTab] = useState<string>('ronde-1');
+
+  const { tournaments, isLoading: tournamentsLoading } = useTournaments();
+  const { matches, isLoading: matchesLoading } = useMatches(selectedTournamentId);
   const { tournamentPlayers } = useTournamentPlayers(selectedTournamentId);
-  const { matches, refetch: refetchMatches } = useMatches(selectedTournamentId);
-  const { courts } = useCourts();
-  const { 
-    preview, 
-    generatePreview, 
-    updateMatch, 
-    clearPreview, 
-    isGenerating,
-    courtsLoading 
-  } = useSchedulePreview(selectedTournamentId);
-  const { 
-    generateSchedule, 
-    isGenerating: isGeneratingSchedule 
-  } = useScheduleGeneration();
+  const { preview, generatePreview, isGenerating, clearPreview } = useSchedulePreview(selectedTournamentId);
+  const { generateSchedule, isGenerating: isSaving } = useScheduleGeneration();
 
-  const tournament = tournaments?.find(t => t.id === selectedTournamentId);
+  const activeTournaments = tournaments?.filter(t => 
+    t.status === 'open' || t.status === 'in_progress'
+  ) || [];
 
-  // Set initial tournament from URL parameter OR select first available tournament
-  useEffect(() => {
-    if (urlTournamentId && tournaments?.length > 0) {
-      setSelectedTournamentId(urlTournamentId);
-    } else if (!selectedTournamentId && tournaments?.length > 0) {
-      // Automatisch eerste (komende/actieve) toernooi selecteren
-      setSelectedTournamentId(tournaments[0].id);
-    }
-  }, [urlTournamentId, tournaments, selectedTournamentId]);
+  const selectedTournament = tournaments?.find(t => t.id === selectedTournamentId);
 
-  useEffect(() => {
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (preview) {
-        event.preventDefault();
-        event.returnValue = "Weet je zeker dat je de pagina wilt verlaten? Het schema is nog niet opgeslagen.";
-        return event.returnValue;
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [preview]);
-
-  // Check round completion status
-  const roundStatus = useMemo(() => {
-    if (!matches || matches.length === 0) {
-      return { round1Completed: false, round2Completed: false, round3Completed: false };
-    }
-    
-    const round1Matches = matches.filter(m => m.round_number === 1);
-    const round2Matches = matches.filter(m => m.round_number === 2);
-    const round3Matches = matches.filter(m => m.round_number === 3);
-    
-    const round1Completed = round1Matches.length > 0 && round1Matches.every(m => m.status === 'completed');
-    const round2Completed = round2Matches.length > 0 && round2Matches.every(m => m.status === 'completed');
-    const round3Completed = round3Matches.length > 0 && round3Matches.every(m => m.status === 'completed');
-    
-    return { round1Completed, round2Completed, round3Completed };
-  }, [matches]);
-
-  // Check if rounds have matches (generated)
-  const roundsGenerated = useMemo(() => {
-    if (!matches || matches.length === 0) {
-      return { round1: false, round2: false, round3: false };
-    }
-    
-    return {
-      round1: matches.some(m => m.round_number === 1),
-      round2: matches.some(m => m.round_number === 2),
-      round3: matches.some(m => m.round_number === 3),
-    };
-  }, [matches]);
-
-  // Can generate round 3 only if round 1 and 2 are completed
-  const canGenerateRound3 = roundStatus.round1Completed && roundStatus.round2Completed && !roundsGenerated.round3;
-
-  // Filter matches by selected round and row
-  const filteredMatches = useMemo(() => {
-    const roundNumber = parseInt(selectedRound);
-    let roundMatches = matches?.filter(m => m.round_number === roundNumber) || [];
-    
-    // Filter by row if not "all"
-    if (selectedRow !== 'all' && courts) {
-      const rowCourts = courts.filter(c => c.row_side === selectedRow).map(c => c.id);
-      roundMatches = roundMatches.filter(m => m.court_id && rowCourts.includes(m.court_id));
-    }
-    
-    return roundMatches;
-  }, [matches, selectedRound, selectedRow, courts]);
-
-  // Check if we need to show generation controls for current round
-  const showGenerationControls = useMemo(() => {
-    if (!tournament) return false;
-    if (tournament.status === 'completed') return false;
-    
-    const roundNumber = parseInt(selectedRound);
-    
-    // Round 3 can only be generated if R1 and R2 are completed
-    if (roundNumber === 3) {
-      return canGenerateRound3;
-    }
-    
-    // For rounds 1 and 2, show if not yet generated
-    if (roundNumber === 1 && !roundsGenerated.round1) return true;
-    if (roundNumber === 2 && !roundsGenerated.round2 && roundsGenerated.round1) return true;
-    
-    return false;
-  }, [tournament, selectedRound, roundsGenerated, canGenerateRound3]);
+  // Separate matches by round
+  const round1Matches = matches?.filter(m => m.round_number === 1) || [];
+  const round2Matches = matches?.filter(m => m.round_number === 2) || [];
+  const round3Matches = matches?.filter(m => m.round_number === 3) || [];
 
   const handleTournamentChange = (tournamentId: string) => {
     setSelectedTournamentId(tournamentId);
-    clearPreview();
+    navigate(`/schedule/${tournamentId}`);
   };
 
   const handleGeneratePreview = async () => {
-    if (!tournament) return;
+    if (!selectedTournamentId) return;
     
     try {
-      const roundNumber = parseInt(selectedRound);
-      console.log('Generating preview for tournament:', tournament.id, 'round:', roundNumber);
-      
-      // Check of deze ronde al gegenereerd is
-      if (roundNumber === 1 && tournament.round_1_schedule_generated) {
-        toast({
-          title: "Schema al gegenereerd",
-          description: "Ronde 1 is al eerder gegenereerd en goedgekeurd.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      if (roundNumber === 2 && tournament.round_2_schedule_generated) {
-        toast({
-          title: "Schema al gegenereerd",
-          description: "Ronde 2 is al eerder gegenereerd en goedgekeurd.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      await generatePreview(roundNumber);
+      // Round 1 generates both R1 and R2 together
+      await generatePreview(1);
     } catch (error) {
       console.error('Error generating preview:', error);
-      toast({
-        title: "Fout bij genereren",
-        description: error instanceof Error ? error.message : "Er is een fout opgetreden.",
-        variant: "destructive",
-      });
     }
   };
 
   const handleApproveSchedule = async () => {
-    if (!tournament || !preview) return;
+    if (!preview || !selectedTournamentId) return;
     
     try {
-      const roundNumber = parseInt(selectedRound);
-      console.log('Approving schedule for tournament:', tournament.id, 'round:', roundNumber);
-      
-      generateSchedule({ 
-        tournamentId: tournament.id, 
-        roundNumber, 
-        preview 
+      await generateSchedule({
+        tournamentId: selectedTournamentId,
+        roundNumber: 1, // This saves both R1 and R2
+        preview
       });
       
-      await refetchMatches();
-      clearPreview();
+      // Clear preview after successful save
+      await clearPreview(1);
     } catch (error) {
-      console.error('Error approving schedule:', error);
+      console.error('Error saving schedule:', error);
     }
   };
 
-  // Geen toernooien
-  if (!tournaments || tournaments.length === 0) {
+  if (tournamentsLoading) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Geen Toernooien Gevonden</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            Er zijn nog geen toernooien aangemaakt. Maak eerst een toernooi aan.
-          </p>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Toernooien laden...</span>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
-  const hasMatchesForRound = filteredMatches.length > 0;
+  if (!activeTournaments || activeTournaments.length === 0) {
+    return (
+      <Alert>
+        <AlertDescription>
+          Geen actieve toernooien gevonden. Maak eerst een toernooi aan.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
-    <>
+    <div className="space-y-6">
       {/* Tournament Selection */}
-      <TournamentSelector
-        tournaments={tournaments}
-        selectedTournamentId={selectedTournamentId}
-        onTournamentChange={handleTournamentChange}
-        selectedTournament={tournament}
-      />
-
-      {/* Show rest of the interface only when tournament is selected */}
-      {selectedTournamentId && tournament && (
-        <>
-          {/* Round Tabs and Row Filter */}
-          <Card className="mt-4">
-            <CardContent className="py-4">
-              <Tabs value={selectedRound} onValueChange={setSelectedRound}>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <TabsList className="grid w-full sm:w-auto grid-cols-3">
-                    <TabsTrigger value="1" className="flex items-center gap-2">
-                      Ronde 1
-                      {roundStatus.round1Completed && <CheckCircle2 className="h-3 w-3 text-green-600" />}
-                    </TabsTrigger>
-                    <TabsTrigger value="2" className="flex items-center gap-2">
-                      Ronde 2
-                      {roundStatus.round2Completed && <CheckCircle2 className="h-3 w-3 text-green-600" />}
-                    </TabsTrigger>
-                    <TabsTrigger 
-                      value="3" 
-                      disabled={!roundStatus.round1Completed || !roundStatus.round2Completed}
-                      className="flex items-center gap-2"
-                    >
-                      Ronde 3
-                      {(!roundStatus.round1Completed || !roundStatus.round2Completed) && (
-                        <Lock className="h-3 w-3" />
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Toernooi Selectie
+          </CardTitle>
+          <CardDescription>Genereer wedstrijdschema voor Schema Generatie</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Selecteer Toernooi</label>
+              <Select value={selectedTournamentId} onValueChange={handleTournamentChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Kies een toernooi" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeTournaments.map((tournament) => (
+                    <SelectItem key={tournament.id} value={tournament.id}>
+                      {tournament.name}
+                      {tournament.start_date && (
+                        <span className="text-muted-foreground ml-2">
+                          ({new Date(tournament.start_date).toLocaleDateString('nl-NL', { 
+                            day: 'numeric', 
+                            month: 'short' 
+                          })})
+                        </span>
                       )}
-                      {roundStatus.round3Completed && <CheckCircle2 className="h-3 w-3 text-green-600" />}
-                    </TabsTrigger>
-                  </TabsList>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-                  <Select value={selectedRow} onValueChange={setSelectedRow}>
-                    <SelectTrigger className="w-full sm:w-48">
-                      <SelectValue placeholder="Filter op rij" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Alle Rijen</SelectItem>
-                      <SelectItem value="left">Rij Links</SelectItem>
-                      <SelectItem value="right">Rij Rechts</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </Tabs>
-            </CardContent>
-          </Card>
-
-          {/* Ronde 3 locked message */}
-          {selectedRound === '3' && (!roundStatus.round1Completed || !roundStatus.round2Completed) && (
-            <Card className="mt-4 border-amber-200 bg-amber-50">
-              <CardContent className="py-4">
-                <div className="flex items-center gap-2 text-amber-800">
-                  <Lock className="h-4 w-4" />
-                  <span>
-                    Ronde 3 wordt automatisch gegenereerd zodra Ronde 1 en Ronde 2 volledig zijn afgerond.
+            {selectedTournament && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-2">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">
+                    <span className="font-medium">{tournamentPlayers?.length || 0}</span>
+                    <span className="text-muted-foreground"> spelers</span>
                   </span>
                 </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Bestaande matches tonen voor geselecteerde ronde */}
-          {hasMatchesForRound && (
-            <ScheduleMatchesDisplay 
-              matches={filteredMatches}
-              roundNumber={parseInt(selectedRound)}
-            />
-          )}
-
-          {/* Preview generator - alleen als nog niet gegenereerd voor deze ronde */}
-          {!preview && showGenerationControls && !hasMatchesForRound && (
-            <PreviewGenerator
-              selectedRound={parseInt(selectedRound)}
-              onGeneratePreview={handleGeneratePreview}
-              isGenerating={isGenerating}
-              courtsLoading={courtsLoading}
-            />
-          )}
-
-          {/* Al gegenereerd melding voor deze ronde */}
-          {!showGenerationControls && !preview && !hasMatchesForRound && selectedRound !== '3' && (
-            <Card className="mt-4">
-              <CardContent className="py-8">
-                <div className="text-center">
-                  <p className="text-muted-foreground">
-                    Er zijn nog geen wedstrijden voor Ronde {selectedRound}
-                    {selectedRow !== 'all' && ` in ${selectedRow === 'left' ? 'Rij Links' : 'Rij Rechts'}`}.
-                  </p>
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">
+                    <span className="font-medium">{matches?.length || 0}</span>
+                    <span className="text-muted-foreground"> wedstrijden</span>
+                  </span>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                <div className="flex items-center gap-2">
+                  <Badge variant={
+                    selectedTournament.status === 'completed' ? 'default' :
+                    selectedTournament.status === 'in_progress' ? 'secondary' : 'outline'
+                  }>
+                    {selectedTournament.status === 'open' ? 'Open' :
+                     selectedTournament.status === 'in_progress' ? 'Bezig' : 'Voltooid'}
+                  </Badge>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-          {/* Preview tonen met edit mogelijkheid */}
-          {preview && (
-            <SchedulePreview
-              preview={preview}
-              onApprove={handleApproveSchedule}
-              onReject={clearPreview}
-              onUpdateMatch={updateMatch}
-              isApproving={isGeneratingSchedule}
-              tournamentName={tournament.name}
-              tournamentId={tournament.id}
-              roundNumber={parseInt(selectedRound)}
-            />
-          )}
+      {/* Tabs for Rounds */}
+      {selectedTournamentId && (
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="ronde-1" className="flex items-center gap-2">
+              Ronde 1
+              {round1Matches.length > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {round1Matches.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="ronde-2" className="flex items-center gap-2">
+              Ronde 2
+              {round2Matches.length > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {round2Matches.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="ronde-3" className="flex items-center gap-2">
+              Ronde 3
+              {round3Matches.length > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {round3Matches.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
 
-          {/* Handmatig wedstrijden toevoegen - alleen als er nog geen wedstrijden zijn voor deze ronde */}
-          {!hasMatchesForRound && (
-            <ManualMatchBuilder tournamentId={selectedTournamentId} initialRound={parseInt(selectedRound)} />
-          )}
-        </>
+          {/* Ronde 1 & 2 Combined Generation */}
+          <TabsContent value="ronde-1">
+            <div className="space-y-4">
+              {/* Show preview or generation button */}
+              {!preview && round1Matches.length === 0 && (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="space-y-3">
+                      <h3 className="text-lg font-semibold">2v2 Schema Genereren</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Genereer wedstrijdschema voor Ronde 1 en 2 (24 wedstrijden)
+                      </p>
+                      <Button
+                        onClick={handleGeneratePreview}
+                        disabled={isGenerating || (tournamentPlayers?.length || 0) < 16}
+                        className="w-full"
+                      >
+                        {isGenerating ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Preview Genereren...
+                          </>
+                        ) : (
+                          <>Preview Genereren</>
+                        )}
+                      </Button>
+                      {(tournamentPlayers?.length || 0) < 16 && (
+                        <p className="text-sm text-red-600">
+                          Minimaal 16 spelers nodig (8 per groep). Momenteel: {tournamentPlayers?.length || 0}
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Show preview if generated */}
+              {preview && preview.matches.length > 0 && (
+                <div className="space-y-4">
+                  <Alert className="bg-green-50 border-green-200">
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-green-800">
+                      Preview gegenereerd! {preview.totalMatches} wedstrijden (12 Ronde 1 + 12 Ronde 2) klaar om op te slaan.
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Links Groep</CardTitle>
+                        <CardDescription>{preview.leftGroupMatches.length} wedstrijden</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2 text-sm">
+                          {preview.leftGroupMatches.slice(0, 5).map((match) => (
+                            <div key={match.id} className="p-2 bg-muted rounded">
+                              <div className="font-medium">Wedstrijd #{match.match_number}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {match.team1_player1_name} & {match.team1_player2_name} vs{' '}
+                                {match.team2_player1_name} & {match.team2_player2_name}
+                              </div>
+                            </div>
+                          ))}
+                          {preview.leftGroupMatches.length > 5 && (
+                            <div className="text-center text-xs text-muted-foreground">
+                              + {preview.leftGroupMatches.length - 5} meer...
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Rechts Groep</CardTitle>
+                        <CardDescription>{preview.rightGroupMatches.length} wedstrijden</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2 text-sm">
+                          {preview.rightGroupMatches.slice(0, 5).map((match) => (
+                            <div key={match.id} className="p-2 bg-muted rounded">
+                              <div className="font-medium">Wedstrijd #{match.match_number}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {match.team1_player1_name} & {match.team1_player2_name} vs{' '}
+                                {match.team2_player1_name} & {match.team2_player2_name}
+                              </div>
+                            </div>
+                          ))}
+                          {preview.rightGroupMatches.length > 5 && (
+                            <div className="text-center text-xs text-muted-foreground">
+                              + {preview.rightGroupMatches.length - 5} meer...
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handleApproveSchedule}
+                      disabled={isSaving}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Opslaan...
+                        </>
+                      ) : (
+                        <>✓ Wedstrijden Toevoegen</>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={() => clearPreview(1)}
+                      variant="outline"
+                      disabled={isSaving}
+                    >
+                      Annuleren
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Show existing R1 matches */}
+              {round1Matches.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Ronde 1 Wedstrijden</CardTitle>
+                    <CardDescription>
+                      {round1Matches.length} wedstrijden gegenereerd
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {round1Matches.map((match) => (
+                        <div key={match.id} className="flex items-center justify-between p-3 bg-muted rounded">
+                          <div className="flex-1">
+                            <div className="font-medium text-sm">Wedstrijd #{match.match_number}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {match.court?.name || `Baan ${match.court_number || '?'}`}
+                            </div>
+                          </div>
+                          <Badge variant={
+                            match.status === 'completed' ? 'default' :
+                            match.status === 'in_progress' ? 'secondary' : 'outline'
+                          }>
+                            {match.status === 'scheduled' ? 'Gepland' :
+                             match.status === 'in_progress' ? 'Bezig' : 'Afgerond'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Ronde 2 Tab */}
+          <TabsContent value="ronde-2">
+            <div className="space-y-4">
+              {round2Matches.length > 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Ronde 2 Wedstrijden</CardTitle>
+                    <CardDescription>
+                      {round2Matches.length} wedstrijden gegenereerd
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {round2Matches.map((match) => (
+                        <div key={match.id} className="flex items-center justify-between p-3 bg-muted rounded">
+                          <div className="flex-1">
+                            <div className="font-medium text-sm">Wedstrijd #{match.match_number}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {match.court?.name || `Baan ${match.court_number || '?'}`}
+                            </div>
+                          </div>
+                          <Badge variant={
+                            match.status === 'completed' ? 'default' :
+                            match.status === 'in_progress' ? 'secondary' : 'outline'
+                          }>
+                            {match.status === 'scheduled' ? 'Gepland' :
+                             match.status === 'in_progress' ? 'Bezig' : 'Afgerond'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Alert>
+                  <AlertDescription>
+                    Ronde 2 wordt automatisch gegenereerd samen met Ronde 1. Ga naar Ronde 1 tab om het schema te maken.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Ronde 3 Tab - WITH NEW R3 GENERATION SECTION */}
+          <TabsContent value="ronde-3">
+            <div className="space-y-6">
+              {/* NIEUW: R3 Generation Section */}
+              <Round3GenerationSection tournamentId={selectedTournamentId} />
+
+              {/* Existing R3 matches display */}
+              {round3Matches.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Ronde 3 Wedstrijden</CardTitle>
+                    <CardDescription>
+                      {round3Matches.length} finalegroep wedstrijden
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {round3Matches.map((match) => (
+                        <div key={match.id} className="flex items-center justify-between p-3 bg-muted rounded">
+                          <div className="flex-1">
+                            <div className="font-medium text-sm">Wedstrijd #{match.match_number}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {match.court?.name || `Baan ${match.court_number || '?'}`}
+                            </div>
+                          </div>
+                          <Badge variant={
+                            match.status === 'completed' ? 'default' :
+                            match.status === 'in_progress' ? 'secondary' : 'outline'
+                          }>
+                            {match.status === 'scheduled' ? 'Gepland' :
+                             match.status === 'in_progress' ? 'Bezig' : 'Afgerond'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Manual match addition section (if you have it) */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Handmatig 2v2 Wedstrijd Toevoegen – Ronde 3</CardTitle>
+                  <CardDescription>
+                    Klik op "Voeg 2v2 Wedstrijd Toe" om een nieuwe wedstrijd aan ronde 3 toe te voegen.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      // Navigate to manual match creation if you have that feature
+                      // navigate(`/matches/create?tournament=${selectedTournamentId}&round=3`);
+                    }}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Voeg 2v2 Wedstrijd Toe
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       )}
-
-      {/* Geen toernooi geselecteerd */}
-      {!selectedTournamentId && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Selecteer een Toernooi</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              Selecteer eerst een toernooi hierboven om een schema te kunnen genereren.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-    </>
+    </div>
   );
 }
