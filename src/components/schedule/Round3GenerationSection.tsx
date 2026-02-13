@@ -192,19 +192,3 @@ export default function Round3GenerationSection({ tournamentId }: Round3Generati
   );
 }
 ```
-
----
-
-## Samenvattende GitHub Prompt
-
-Kopieer deze prompt en voer hem uit in GitHub:
-```
-Fix Round 3 generation build error en maak checks dynamisch:
-
-1. Vervang src/hooks/useRound3Readiness.ts met de nieuwe versie die DYNAMISCHE checks gebruikt in plaats van hardcoded "12"
-2. Creëer nieuw bestand src/components/schedule/Round3GenerationSection.tsx met complete Round 3 generatie UI
-
-Belangrijkste wijzigingen:
-- useRound3Readiness: r1Complete en r2Complete checks zijn nu dynamisch (vergelijken met totaal aantal matches in plaats van hardcoded 12)
-- Round3GenerationSection: nieuwe component met readiness checks, preview generatie en schema goedkeuring
-- Fixes build error: "Could not load /vercel/path0/src/hooks/useRound3Readiness"
