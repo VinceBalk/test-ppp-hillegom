@@ -12,16 +12,16 @@ interface Round3GenerationSectionProps {
   tournamentId?: string;
 }
 
-export default function Round3GenerationSection({ tournamentId }: Round3GenerationSectionProps) {
+export function Round3GenerationSection({ tournamentId }: Round3GenerationSectionProps) {
   const { readiness, isLoading: readinessLoading } = useRound3Readiness(tournamentId);
   const { generatePreview, isGenerating: previewGenerating, preview } = useSchedulePreview(tournamentId);
   const { generateSchedule, isGenerating: scheduleGenerating } = useScheduleGeneration();
-  
+
   const [showPreview, setShowPreview] = useState(false);
 
   const handleGeneratePreview = async () => {
     if (!tournamentId) return;
-    
+
     try {
       await generatePreview(3);
       setShowPreview(true);
@@ -37,7 +37,7 @@ export default function Round3GenerationSection({ tournamentId }: Round3Generati
       await generateSchedule({
         tournamentId,
         roundNumber: 3,
-        preview
+        preview,
       });
       setShowPreview(false);
     } catch (error) {
@@ -68,11 +68,11 @@ export default function Round3GenerationSection({ tournamentId }: Round3Generati
     return <AlertCircle className="h-5 w-5 text-yellow-600" />;
   };
 
-  const getStatusVariant = (): "default" | "destructive" | "secondary" => {
-    if (!readiness) return "secondary";
-    if (readiness.isReady) return "default";
-    if (readiness.r3AlreadyGenerated) return "secondary";
-    return "destructive";
+  const getStatusVariant = (): 'default' | 'destructive' | 'secondary' => {
+    if (!readiness) return 'secondary';
+    if (readiness.isReady) return 'default';
+    if (readiness.r3AlreadyGenerated) return 'secondary';
+    return 'destructive';
   };
 
   return (
@@ -84,20 +84,17 @@ export default function Round3GenerationSection({ tournamentId }: Round3Generati
               {getStatusIcon()}
               Ronde 3 Genereren
             </CardTitle>
-            <CardDescription>
-              Genereer Ronde 3 schema op basis van prestaties in Ronde 1 en 2
-            </CardDescription>
+            <CardDescription>Genereer Ronde 3 schema op basis van prestaties in Ronde 1 en 2</CardDescription>
           </div>
-          
+
           {readiness && (
             <Badge variant={getStatusVariant()}>
-              {readiness.isReady ? 'Klaar voor generatie' : 
-               readiness.r3AlreadyGenerated ? 'Al gegenereerd' : 'Niet beschikbaar'}
+              {readiness.isReady ? 'Klaar voor generatie' : readiness.r3AlreadyGenerated ? 'Al gegenereerd' : 'Niet beschikbaar'}
             </Badge>
           )}
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {/* Status Overview */}
         <div className="grid grid-cols-2 gap-4">
@@ -132,7 +129,7 @@ export default function Round3GenerationSection({ tournamentId }: Round3Generati
 
         {/* Message Alert */}
         {readiness?.message && (
-          <Alert variant={readiness.isReady ? "default" : "destructive"}>
+          <Alert variant={readiness.isReady ? 'default' : 'destructive'}>
             <AlertDescription>{readiness.message}</AlertDescription>
           </Alert>
         )}
@@ -158,12 +155,7 @@ export default function Round3GenerationSection({ tournamentId }: Round3Generati
           </Button>
 
           {showPreview && preview && (
-            <Button
-              onClick={handleApproveSchedule}
-              disabled={scheduleGenerating}
-              variant="default"
-              className="flex-1"
-            >
+            <Button onClick={handleApproveSchedule} disabled={scheduleGenerating} variant="default" className="flex-1">
               {scheduleGenerating ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -182,12 +174,15 @@ export default function Round3GenerationSection({ tournamentId }: Round3Generati
         {/* Preview Info */}
         {showPreview && preview && (
           <Alert>
-            <AlertDescription>
-              Preview gegenereerd: {preview.matches.length} wedstrijden klaar voor goedkeuring
-            </AlertDescription>
+            <AlertDescription>Preview gegenereerd: {preview.matches.length} wedstrijden klaar voor goedkeuring</AlertDescription>
           </Alert>
         )}
       </CardContent>
     </Card>
   );
 }
+
+// Keep both export styles so other files can import either:
+// - import Round3GenerationSection from '...'
+// - import { Round3GenerationSection } from '...'
+export default Round3GenerationSection;
