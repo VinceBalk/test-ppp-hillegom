@@ -1,34 +1,62 @@
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Checks if all matches in a tournament are completed and automatically
+ * Checks if all matches in a tournament are completed WITH SCORES and automatically
  * updates the tournament status to "completed" if so.
+ * 
+ * REQUIREMENTS FOR COMPLETION:
+ * - ALL matches (R1 + R2 + R3) must have status "completed"
+ * - ALL matches must have score_team1 and score_team2 filled in (not null)
+ * - Specials are NOT required (can be 0 or empty)
  */
 export async function checkAndUpdateTournamentStatus(tournamentId: string): Promise<void> {
   try {
+    console.log('=== CHECKING TOURNAMENT STATUS ===');
+    console.log('Tournament ID:', tournamentId);
+    
     // Fetch all matches for this tournament
     const { data: allMatches, error: matchError } = await supabase
       .from("matches")
-      .select("id, status, round_number")
+      .select("id, status, round_number, score_team1, score_team2")
       .eq("tournament_id", tournamentId);
 
     if (matchError || !allMatches || allMatches.length === 0) {
+      console.log('No matches found or error:', matchError);
       return;
     }
 
-    // Check if all matches are completed
-    const allCompleted = allMatches.every(m => m.status === "completed");
+    console.log(`Found ${allMatches.length} total matches`);
+
+    // Check if ALL matches are completed AND have scores
+    const allCompleted = allMatches.every(m => 
+      m.status === "completed" && 
+      m.score_team1 !== null && 
+      m.score_team2 !== null
+    );
+    
+    const completedCount = allMatches.filter(m => m.status === "completed").length;
+    const withScoresCount = allMatches.filter(m => 
+      m.status === "completed" && 
+      m.score_team1 !== null && 
+      m.score_team2 !== null
+    ).length;
+    
+    console.log(`Completed matches: ${completedCount}/${allMatches.length}`);
+    console.log(`With scores: ${withScoresCount}/${allMatches.length}`);
     
     if (allCompleted) {
       // Find the highest round number
       const maxRound = Math.max(...allMatches.map(m => m.round_number));
+      
+      console.log(`✓ All matches completed with scores! Max round: ${maxRound}`);
       
       // Update tournament status to completed
       const { error: updateError } = await supabase
         .from("tournaments")
         .update({ 
           status: "completed",
-          current_round: maxRound
+          current_round: maxRound,
+          updated_at: new Date().toISOString()
         })
         .eq("id", tournamentId);
       
@@ -37,6 +65,8 @@ export async function checkAndUpdateTournamentStatus(tournamentId: string): Prom
       } else {
         console.error("Error updating tournament status:", updateError);
       }
+    } else {
+      console.log('Tournament not ready for completion yet');
     }
   } catch (error) {
     console.error("Error in checkAndUpdateTournamentStatus:", error);
