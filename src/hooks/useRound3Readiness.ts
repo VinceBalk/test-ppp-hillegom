@@ -17,18 +17,16 @@ interface Round3ReadinessCheck {
 }
 
 /**
- * Custom hook to check if Round 3 is ready to be generated
- * 
  * R3 CAN be generated when:
  * - Tournament status = "in_progress"
- * - ALL R1 matches are completed AND have scores
- * - ALL R2 matches are completed AND have scores  
- * - R3 has NOT been generated yet (no matches with round_number=3)
+ * - ALL R1 matches are completed AND have valid scores (team1_score + team2_score = 8)
+ * - ALL R2 matches are completed AND have valid scores (team1_score + team2_score = 8)
+ * - R3 has NOT been generated yet (no matches with round_number=3 OR tournament.round_3_schedule_generated)
  * - User has role "organisator" or "beheerder"
  */
 export const useRound3Readiness = (tournamentId?: string) => {
-  const { user, hasRole } = useAuth();
-  
+  const { hasRole } = useAuth();
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['round3-readiness', tournamentId],
     queryFn: async (): Promise<Round3ReadinessCheck> => {
@@ -44,16 +42,12 @@ export const useRound3Readiness = (tournamentId?: string) => {
           r3MatchesCount: 0,
           r1CompletedWithScores: 0,
           r2CompletedWithScores: 0,
-          message: 'Geen toernooi geselecteerd'
+          message: 'Geen toernooi geselecteerd',
         };
       }
 
-      console.log('=== CHECKING R3 READINESS ===');
-      console.log('Tournament ID:', tournamentId);
-
       // Check user permissions
       const hasPermission = hasRole('organisator') || hasRole('beheerder');
-      console.log('User has permission:', hasPermission);
 
       // Fetch tournament status
       const { data: tournament, error: tournamentError } = await supabase
@@ -63,7 +57,6 @@ export const useRound3Readiness = (tournamentId?: string) => {
         .single();
 
       if (tournamentError || !tournament) {
-        console.error('Tournament fetch error:', tournamentError);
         return {
           isReady: false,
           r1Complete: false,
@@ -75,21 +68,17 @@ export const useRound3Readiness = (tournamentId?: string) => {
           r3MatchesCount: 0,
           r1CompletedWithScores: 0,
           r2CompletedWithScores: 0,
-          message: 'Fout bij ophalen toernooi'
+          message: 'Fout bij ophalen toernooi',
         };
       }
-
-      console.log('Tournament status:', tournament.status);
-      console.log('R3 already generated:', tournament.round_3_schedule_generated);
 
       // Fetch all matches for this tournament
       const { data: matches, error: matchesError } = await supabase
         .from('matches')
-        .select('id, round_number, status, score_team1, score_team2')
+        .select('id, round_number, status, team1_score, team2_score')
         .eq('tournament_id', tournamentId);
 
       if (matchesError || !matches) {
-        console.error('Matches fetch error:', matchesError);
         return {
           isReady: false,
           r1Complete: false,
@@ -101,49 +90,39 @@ export const useRound3Readiness = (tournamentId?: string) => {
           r3MatchesCount: 0,
           r1CompletedWithScores: 0,
           r2CompletedWithScores: 0,
-          message: 'Fout bij ophalen wedstrijden'
+          message: 'Fout bij ophalen wedstrijden',
         };
       }
 
       // Separate matches by round
-      const r1Matches = matches.filter(m => m.round_number === 1);
-      const r2Matches = matches.filter(m => m.round_number === 2);
-      const r3Matches = matches.filter(m => m.round_number === 3);
+      const r1Matches = matches.filter((m) => m.round_number === 1);
+      const r2Matches = matches.filter((m) => m.round_number === 2);
+      const r3Matches = matches.filter((m) => m.round_number === 3);
 
-      console.log(`R1 matches: ${r1Matches.length}, R2 matches: ${r2Matches.length}, R3 matches: ${r3Matches.length}`);
+      // Your definition of "complete":
+      // status === 'completed' AND team1_score + team2_score === 8
+      const isComplete = (m: any) => {
+        const s1 = Number(m.team1_score ?? 0);
+        const s2 = Number(m.team2_score ?? 0);
+        return m.status === 'completed' && (s1 + s2) === 8;
+      };
 
-      // Check if R1 is complete (ALL matches completed with scores)
-      const r1CompletedWithScores = r1Matches.filter(m => 
-        m.status === 'completed' && 
-        m.score_team1 !== null && 
-        m.score_team2 !== null
-      ).length;
+      const r1CompletedWithScores = r1Matches.filter(isComplete).length;
       const r1Complete = r1Matches.length > 0 && r1CompletedWithScores === r1Matches.length;
 
-      console.log(`R1 completed with scores: ${r1CompletedWithScores}/${r1Matches.length}`);
-
-      // Check if R2 is complete (ALL matches completed with scores)
-      const r2CompletedWithScores = r2Matches.filter(m => 
-        m.status === 'completed' && 
-        m.score_team1 !== null && 
-        m.score_team2 !== null
-      ).length;
+      const r2CompletedWithScores = r2Matches.filter(isComplete).length;
       const r2Complete = r2Matches.length > 0 && r2CompletedWithScores === r2Matches.length;
 
-      console.log(`R2 completed with scores: ${r2CompletedWithScores}/${r2Matches.length}`);
-
       // Check if R3 already generated
-      const r3AlreadyGenerated = r3Matches.length > 0 || tournament.round_3_schedule_generated;
+      const r3AlreadyGenerated = r3Matches.length > 0 || !!tournament.round_3_schedule_generated;
 
       // Determine if R3 is ready to be generated
-      const isReady = 
+      const isReady =
         tournament.status === 'in_progress' &&
         r1Complete &&
         r2Complete &&
         !r3AlreadyGenerated &&
         hasPermission;
-
-      console.log('R3 ready status:', isReady);
 
       // Build status message
       let message = '';
@@ -154,9 +133,9 @@ export const useRound3Readiness = (tournamentId?: string) => {
       } else if (tournament.status !== 'in_progress') {
         message = `Toernooi status is "${tournament.status}", moet "in_progress" zijn`;
       } else if (!r1Complete) {
-        message = `Ronde 1 is nog niet compleet (${r1CompletedWithScores}/${r1Matches.length} met scores)`;
+        message = `Ronde 1 is nog niet compleet (${r1CompletedWithScores}/${r1Matches.length} met totaal=8)`;
       } else if (!r2Complete) {
-        message = `Ronde 2 is nog niet compleet (${r2CompletedWithScores}/${r2Matches.length} met scores)`;
+        message = `Ronde 2 is nog niet compleet (${r2CompletedWithScores}/${r2Matches.length} met totaal=8)`;
       } else {
         message = 'Ronde 3 kan nu gegenereerd worden!';
       }
@@ -172,16 +151,16 @@ export const useRound3Readiness = (tournamentId?: string) => {
         r3MatchesCount: r3Matches.length,
         r1CompletedWithScores,
         r2CompletedWithScores,
-        message
+        message,
       };
     },
     enabled: !!tournamentId,
-    refetchInterval: 10000, // Refetch every 10 seconds to stay up to date
+    refetchInterval: 10000,
   });
 
   return {
     readiness: data,
     isLoading,
-    error
+    error,
   };
 };
