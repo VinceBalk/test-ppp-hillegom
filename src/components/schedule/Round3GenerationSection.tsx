@@ -3,20 +3,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import {
-  AlertCircle,
-  CheckCircle2,
-  ChevronDown,
-  ChevronUp,
-  Eye,
-  Loader2,
-  Play,
-  Save,
-  XCircle,
-} from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, Play, Save, XCircle } from 'lucide-react';
+
 import { useRound3Readiness } from '@/hooks/useRound3Readiness';
 import { useSchedulePreview } from '@/hooks/useSchedulePreview';
 import { useScheduleGeneration } from '@/hooks/useScheduleGeneration';
+
+import MatchCard from '@/components/matches/MatchCard';
+import type { Match } from '@/hooks/useMatches';
 
 interface Round3GenerationSectionProps {
   tournamentId?: string;
@@ -24,73 +18,68 @@ interface Round3GenerationSectionProps {
 
 type Variant = 'default' | 'destructive' | 'secondary';
 
-function safeStr(v: unknown) {
-  if (v === null || v === undefined) return '';
-  if (typeof v === 'string') return v;
-  try {
-    return JSON.stringify(v);
-  } catch {
-    return String(v);
-  }
-}
-
 function asArray<T = any>(v: any): T[] {
   return Array.isArray(v) ? v : [];
 }
 
-// Probeert teams/players leesbaar te maken, maar valt altijd terug op JSON als we het niet snappen.
-function describeMatch(match: any) {
-  // Veelvoorkomende velden (gokjes met parachute)
-  const court = match?.court_number ?? match?.courtNumber ?? match?.court ?? match?.courtName;
-  const matchNo = match?.match_number ?? match?.matchNumber ?? match?.number;
-
-  // Teams kunnen op allerlei manieren zitten
-  const team1 =
-    match?.team1 ??
-    match?.team_1 ??
-    match?.teamOne ??
-    match?.home ??
-    { player1: match?.team1_player1, player2: match?.team1_player2 };
-
-  const team2 =
-    match?.team2 ??
-    match?.team_2 ??
-    match?.teamTwo ??
-    match?.away ??
-    { player1: match?.team2_player1, player2: match?.team2_player2 };
-
-  const teamToText = (t: any) => {
-    if (!t) return '';
-    // Als er al een string-naam is
-    if (typeof t === 'string') return t;
-    // Als het een array is van spelers/strings
-    if (Array.isArray(t)) return t.map((p) => p?.name ?? p?.full_name ?? p?.fullName ?? safeStr(p)).join(' + ');
-
-    // Als het een object is met players
-    const p1 = t?.player1 ?? t?.p1 ?? t?.player_1 ?? t?.playerOne;
-    const p2 = t?.player2 ?? t?.p2 ?? t?.player_2 ?? t?.playerTwo;
-
-    const pToName = (p: any) => p?.name ?? p?.full_name ?? p?.fullName ?? p?.email ?? p?.id ?? safeStr(p);
-
-    const n1 = p1 ? pToName(p1) : '';
-    const n2 = p2 ? pToName(p2) : '';
-
-    const both = [n1, n2].filter(Boolean).join(' + ');
-    if (both) return both;
-
-    // laatste redmiddel
-    return safeStr(t);
-  };
-
-  const t1 = teamToText(team1);
-  const t2 = teamToText(team2);
-
+function makePlayer(id?: string, name?: string) {
+  // MatchCard gebruikt vooral .name voor display
+  if (!id && !name) return null;
   return {
-    matchNo: matchNo ?? '',
-    court: court ?? '',
-    team1Text: t1,
-    team2Text: t2,
+    id: id ?? '',
+    name: name ?? '',
   };
+}
+
+/**
+ * Zet jouw preview-match om naar iets dat MatchCard snapt.
+ * Uit jouw preview dump zagen we velden als:
+ * - team1_player1_id / team1_player1_name
+ * - team1_player2_id / team1_player2_name
+ * - team2_player1_id / team2_player1_name
+ * - team2_player2_id / team2_player2_name
+ * - court_name / court_number
+ * - match_number
+ */
+function previewMatchToMatchCardMatch(previewMatch: any, tournamentId: string): Match {
+  const team1_player1 = makePlayer(previewMatch?.team1_player1_id, previewMatch?.team1_player1_name);
+  const team1_player2 = makePlayer(previewMatch?.team1_player2_id, previewMatch?.team1_player2_name);
+  const team2_player1 = makePlayer(previewMatch?.team2_player1_id, previewMatch?.team2_player1_name);
+  const team2_player2 = makePlayer(previewMatch?.team2_player2_id, previewMatch?.team2_player2_name);
+
+  const matchObj: any = {
+    id: previewMatch?.id ?? `preview-${previewMatch?.match_number ?? crypto.randomUUID?.() ?? Math.random()}`,
+    tournament_id: tournamentId,
+    round_number: 3,
+    status: 'scheduled', // preview is toekomstig
+    match_number: previewMatch?.match_number ?? null,
+
+    // Court info (MatchCard gebruikt match.court?.name of match.court_number)
+    court_number: previewMatch?.court_number ?? null,
+    court: previewMatch?.court_name ? { name: previewMatch.court_name } : null,
+
+    // Team players (MatchCard kijkt hiernaar)
+    team1_player1_id: previewMatch?.team1_player1_id ?? null,
+    team1_player2_id: previewMatch?.team1_player2_id ?? null,
+    team2_player1_id: previewMatch?.team2_player1_id ?? null,
+    team2_player2_id: previewMatch?.team2_player2_id ?? null,
+
+    team1_player1,
+    team1_player2,
+    team2_player1,
+    team2_player2,
+
+    // scores bestaan nog niet in preview
+    team1_score: null,
+    team2_score: null,
+
+    // Tournament kan leeg zijn; MatchCard pakt 'm uit props als je die meegeeft.
+    tournament: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  return matchObj as Match;
 }
 
 export function Round3GenerationSection({ tournamentId }: Round3GenerationSectionProps) {
@@ -99,11 +88,12 @@ export function Round3GenerationSection({ tournamentId }: Round3GenerationSectio
   const { generateSchedule, isGenerating: scheduleGenerating } = useScheduleGeneration();
 
   const [showPreview, setShowPreview] = useState(false);
-  const [expandedAll, setExpandedAll] = useState(false);
-  const [expandedMatchIdx, setExpandedMatchIdx] = useState<number | null>(null);
 
-  const matches = useMemo(() => asArray(preview?.matches), [preview]);
-  const previewCount = matches.length;
+  const previewMatchesRaw = useMemo(() => asArray(preview?.matches), [preview]);
+  const previewMatchesAsMatchCard = useMemo(() => {
+    if (!tournamentId) return [];
+    return previewMatchesRaw.map((pm) => previewMatchToMatchCardMatch(pm, tournamentId));
+  }, [previewMatchesRaw, tournamentId]);
 
   const handleGeneratePreview = async () => {
     if (!tournamentId) return;
@@ -111,8 +101,6 @@ export function Round3GenerationSection({ tournamentId }: Round3GenerationSectio
     try {
       await generatePreview(3);
       setShowPreview(true);
-      setExpandedAll(false);
-      setExpandedMatchIdx(null);
     } catch (error) {
       console.error('Error generating Round 3 preview:', error);
     }
@@ -128,8 +116,6 @@ export function Round3GenerationSection({ tournamentId }: Round3GenerationSectio
         preview,
       });
       setShowPreview(false);
-      setExpandedAll(false);
-      setExpandedMatchIdx(null);
     } catch (error) {
       console.error('Error approving Round 3 schedule:', error);
     }
@@ -217,14 +203,14 @@ export function Round3GenerationSection({ tournamentId }: Round3GenerationSectio
           </div>
         </div>
 
-        {/* Message Alert */}
+        {/* Message */}
         {readiness?.message && (
           <Alert variant={readiness.isReady ? 'default' : 'destructive'}>
             <AlertDescription>{readiness.message}</AlertDescription>
           </Alert>
         )}
 
-        {/* Action Buttons */}
+        {/* Actions */}
         <div className="flex gap-2">
           <Button
             onClick={handleGeneratePreview}
@@ -266,97 +252,30 @@ export function Round3GenerationSection({ tournamentId }: Round3GenerationSectio
           )}
         </div>
 
-        {/* Preview Info */}
+        {/* Preview status */}
         {showPreview && preview && (
           <Alert>
             <AlertDescription>
-              Preview gegenereerd: {previewCount} wedstrijden klaar voor goedkeuring
+              Preview gegenereerd: {previewMatchesAsMatchCard.length} wedstrijden klaar voor goedkeuring
             </AlertDescription>
           </Alert>
         )}
 
-        {/* Preview Render */}
+        {/* Preview cards: EXACT dezelfde UI als R1/R2 */}
         {showPreview && preview && (
-          <div className="space-y-3 rounded-md border p-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-sm font-medium">Preview (Ronde 3)</div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setExpandedAll((v) => !v)}
-                  disabled={previewCount === 0}
-                >
-                  {expandedAll ? (
-                    <>
-                      <ChevronUp className="h-4 w-4 mr-2" />
-                      Alles inklappen
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="h-4 w-4 mr-2" />
-                      Alles uitklappen
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            {previewCount === 0 ? (
-              <div className="text-sm text-muted-foreground">
-                Geen wedstrijden gevonden in de preview. (Dat is… onhandig. Dan faalt je generator stilletjes.)
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {matches.map((m: any, idx: number) => {
-                  const desc = describeMatch(m);
-                  const isExpanded = expandedAll || expandedMatchIdx === idx;
-
-                  return (
-                    <div key={m?.id ?? idx} className="rounded-md border">
-                      <div className="flex items-start justify-between gap-3 p-3">
-                        <div className="space-y-1">
-                          <div className="text-sm font-medium">
-                            Wedstrijd {idx + 1}
-                            {desc.matchNo ? <span className="text-muted-foreground"> • #{safeStr(desc.matchNo)}</span> : null}
-                            {desc.court ? <span className="text-muted-foreground"> • Baan {safeStr(desc.court)}</span> : null}
-                          </div>
-
-                          <div className="text-sm">
-                            <span className="font-medium">{desc.team1Text || 'Team 1'}</span>
-                            <span className="text-muted-foreground"> vs </span>
-                            <span className="font-medium">{desc.team2Text || 'Team 2'}</span>
-                          </div>
-                        </div>
-
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => setExpandedMatchIdx((cur) => (cur === idx ? null : idx))}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          {isExpanded ? 'Verberg details' : 'Toon details'}
-                        </Button>
-                      </div>
-
-                      {isExpanded && (
-                        <div className="border-t p-3">
-                          <div className="text-xs text-muted-foreground mb-2">
-                            Details (debug/controle). Dit is de ruwe match payload uit de preview.
-                          </div>
-                          <pre className="text-xs overflow-auto max-h-80 whitespace-pre-wrap">
-                            {JSON.stringify(m, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+          <div className="space-y-3">
+            {previewMatchesAsMatchCard.map((m) => (
+              <MatchCard
+                key={m.id}
+                match={m}
+                // Dit zorgt dat je geen rare simulator/score knoppen krijgt in preview
+                tournament={{
+                  id: tournamentId!,
+                  status: 'active',
+                  is_simulation: false,
+                }}
+              />
+            ))}
           </div>
         )}
       </CardContent>
@@ -364,5 +283,5 @@ export function Round3GenerationSection({ tournamentId }: Round3GenerationSectio
   );
 }
 
-// Zowel named als default export, zodat imports niet weer ruzie maken.
+// Named + default export, zodat je imports niet weer gaan janken.
 export default Round3GenerationSection;
