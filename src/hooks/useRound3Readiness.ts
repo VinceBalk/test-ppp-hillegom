@@ -21,8 +21,8 @@ interface Round3ReadinessCheck {
  * 
  * R3 CAN be generated when:
  * - Tournament status = "in_progress"
- * - All 12 R1 matches are completed AND have scores
- * - All 12 R2 matches are completed AND have scores  
+ * - ALL R1 matches are completed AND have scores
+ * - ALL R2 matches are completed AND have scores  
  * - R3 has NOT been generated yet (no matches with round_number=3)
  * - User has role "organisator" or "beheerder"
  */
@@ -112,25 +112,25 @@ export const useRound3Readiness = (tournamentId?: string) => {
 
       console.log(`R1 matches: ${r1Matches.length}, R2 matches: ${r2Matches.length}, R3 matches: ${r3Matches.length}`);
 
-      // Check if R1 is complete (all 12 matches completed with scores)
+      // Check if R1 is complete (ALL matches completed with scores)
       const r1CompletedWithScores = r1Matches.filter(m => 
         m.status === 'completed' && 
         m.score_team1 !== null && 
         m.score_team2 !== null
       ).length;
-      const r1Complete = r1Matches.length === 12 && r1CompletedWithScores === 12;
+      const r1Complete = r1Matches.length > 0 && r1CompletedWithScores === r1Matches.length;
 
-      console.log(`R1 completed with scores: ${r1CompletedWithScores}/12`);
+      console.log(`R1 completed with scores: ${r1CompletedWithScores}/${r1Matches.length}`);
 
-      // Check if R2 is complete (all 12 matches completed with scores)
+      // Check if R2 is complete (ALL matches completed with scores)
       const r2CompletedWithScores = r2Matches.filter(m => 
         m.status === 'completed' && 
         m.score_team1 !== null && 
         m.score_team2 !== null
       ).length;
-      const r2Complete = r2Matches.length === 12 && r2CompletedWithScores === 12;
+      const r2Complete = r2Matches.length > 0 && r2CompletedWithScores === r2Matches.length;
 
-      console.log(`R2 completed with scores: ${r2CompletedWithScores}/12`);
+      console.log(`R2 completed with scores: ${r2CompletedWithScores}/${r2Matches.length}`);
 
       // Check if R3 already generated
       const r3AlreadyGenerated = r3Matches.length > 0 || tournament.round_3_schedule_generated;
@@ -154,9 +154,9 @@ export const useRound3Readiness = (tournamentId?: string) => {
       } else if (tournament.status !== 'in_progress') {
         message = `Toernooi status is "${tournament.status}", moet "in_progress" zijn`;
       } else if (!r1Complete) {
-        message = `Ronde 1 is nog niet compleet (${r1CompletedWithScores}/12 met scores)`;
+        message = `Ronde 1 is nog niet compleet (${r1CompletedWithScores}/${r1Matches.length} met scores)`;
       } else if (!r2Complete) {
-        message = `Ronde 2 is nog niet compleet (${r2CompletedWithScores}/12 met scores)`;
+        message = `Ronde 2 is nog niet compleet (${r2CompletedWithScores}/${r2Matches.length} met scores)`;
       } else {
         message = 'Ronde 3 kan nu gegenereerd worden!';
       }
