@@ -191,4 +191,3 @@ export default function Round3GenerationSection({ tournamentId }: Round3Generati
     </Card>
   );
 }
-```
