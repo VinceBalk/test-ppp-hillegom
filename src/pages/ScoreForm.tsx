@@ -53,7 +53,7 @@ function formatDate(iso: string): string {
 
 const PRINT_CSS = `
 @media print {
-  @page { size: A4 landscape; margin: 8mm 10mm; }
+  @page { size: A4 landscape; margin: 6mm 8mm; }
   body * { visibility: hidden; }
   #scoreform-print, #scoreform-print * { visibility: visible; }
   #scoreform-print { position: absolute; inset: 0; }
@@ -62,7 +62,8 @@ const PRINT_CSS = `
     page-break-after: always;
     box-shadow: none !important;
     border-radius: 0 !important;
-    padding: 6px 10px !important;
+    padding: 4px 8px !important;
+    zoom: 0.9;
   }
   .sf-page:last-child { page-break-after: auto; }
   .sf-match { page-break-inside: avoid; }
