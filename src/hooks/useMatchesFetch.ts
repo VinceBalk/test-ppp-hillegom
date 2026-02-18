@@ -14,8 +14,6 @@ export const useMatchesFetch = (tournamentId?: string) => {
         .select(`
           *,
           tournament:tournaments(id, name, status, is_simulation, start_date),
-          player1:players!matches_player1_id_fkey(name),
-          player2:players!matches_player2_id_fkey(name),
           team1_player1:players!matches_team1_player1_id_fkey(name),
           team1_player2:players!matches_team1_player2_id_fkey(name),
           team2_player1:players!matches_team2_player1_id_fkey(name),
