@@ -24,6 +24,7 @@ import Settings from "./pages/Settings";
 import Users from "./pages/Users";
 import Profile from "./pages/Profile";
 import Courts from "./pages/Courts";
+import ScoreForm from "./pages/ScoreForm";
 import Layout from "./components/Layout";
 import { Footer } from './components/Footer';
 import NotFound from "./pages/NotFound";
@@ -79,6 +80,11 @@ const App = () => {
                 <Route path="settings" element={
                   <ProtectedRoute requiredRole="organisator">
                     <Settings />
+                  </ProtectedRoute>
+                } />
+                <Route path="scoreform" element={
+                  <ProtectedRoute requiredRole="organisator">
+                    <ScoreForm />
                   </ProtectedRoute>
                 } />
                 <Route path="profile" element={<Profile />} />
