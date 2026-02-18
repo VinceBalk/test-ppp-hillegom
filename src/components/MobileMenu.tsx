@@ -14,7 +14,8 @@ import {
   Shield,
   BarChart3,
   TrendingUp,
-  List
+  List,
+  FileText
 } from 'lucide-react';
 
 const navigationItems = [
@@ -28,6 +29,7 @@ const navigationItems = [
   { name: 'Scores', href: '/scores', icon: Hash, roles: ['speler', 'organisator', 'beheerder'] },
   { name: 'Specials', href: '/specials', icon: Hash, roles: ['organisator', 'beheerder'] },
   { name: 'Banen', href: '/courts', icon: Map, roles: ['organisator', 'beheerder'] },
+  { name: 'Scoreformulier', href: '/scoreform', icon: FileText, roles: ['organisator', 'beheerder'] },
   { name: 'Profiel', href: '/profile', icon: User, roles: ['speler', 'organisator', 'beheerder'] },
   { name: 'Instellingen', href: '/settings', icon: Sliders, roles: ['organisator', 'beheerder'] },
   { name: 'Gebruikers', href: '/users', icon: Shield, roles: ['beheerder'] },
@@ -85,7 +87,7 @@ export function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
         </nav>
         <div className="absolute bottom-0 left-0 right-0 border-t border-border p-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-content-center">
               <span className="text-sm font-medium text-primary">
                 {user?.email?.charAt(0).toUpperCase()}
               </span>
