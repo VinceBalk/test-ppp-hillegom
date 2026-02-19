@@ -15,6 +15,7 @@ import {
   FileText
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['speler', 'organisator', 'beheerder'] },
   { to: '/standings', label: 'Standen', icon: TrendingUp, roles: ['speler', 'organisator', 'beheerder'] },
@@ -22,7 +23,7 @@ const navItems = [
   { to: '/players', label: 'Spelers', icon: Users, roles: ['speler', 'organisator', 'beheerder'] },
   { to: '/tournaments', label: 'Toernooien', icon: Trophy, roles: ['speler', 'organisator', 'beheerder'] },
   { to: '/matches', label: 'Wedstrijden', icon: Calendar, roles: ['speler', 'organisator', 'beheerder'] },
-  { to: '/schedule', label: 'Schema', icon: List, roles: ['speler', 'organisator', 'beheerder'] },
+  { to: '/schedule', label: 'Schema', icon: List, roles: ['organisator', 'beheerder'] },
   { to: '/scores', label: 'Scores', icon: Hash, roles: ['speler', 'organisator', 'beheerder'] },
   { to: '/specials', label: 'Specials', icon: Hash, roles: ['organisator', 'beheerder'] },
   { to: '/courts', label: 'Banen', icon: Map, roles: ['organisator', 'beheerder'] },
@@ -31,20 +32,17 @@ const navItems = [
   { to: '/settings', label: 'Instellingen', icon: Sliders, roles: ['organisator', 'beheerder'] },
   { to: '/users', label: 'Gebruikers', icon: Shield, roles: ['beheerder'] }
 ];
+
 export function Sidebar() {
   const { user, profile, adminUser, loading, hasRole, isSuperAdmin } = useAuth();
-  // Filter menu items based on user role
+
   const getVisibleNavItems = () => {
-    // Super admin can see everything
     if (isSuperAdmin()) return navItems;
-    
-    // Filter based on user's role
-    return navItems.filter(item => 
-      item.roles.some(role => hasRole(role))
-    );
+    return navItems.filter(item => item.roles.some(role => hasRole(role)));
   };
+
   const visibleNavItems = getVisibleNavItems();
-  // Show loading state
+
   if (loading) {
     return (
       <aside className="w-64 min-h-screen bg-background border-r border-border flex flex-col justify-center">
@@ -55,19 +53,14 @@ export function Sidebar() {
       </aside>
     );
   }
+
   return (
     <aside className="w-64 min-h-screen bg-background border-r border-border flex flex-col justify-between">
-      {/* Logo - klikbaar naar dashboard */}
       <div className="h-16 flex items-center justify-center border-b border-border px-4">
         <Link to="/" className="cursor-pointer">
-          <img
-            src="/PPP_logo.svg"
-            alt="PPP Hillegom logo"
-            className="h-8 object-contain"
-          />
+          <img src="/PPP_logo.svg" alt="PPP Hillegom logo" className="h-8 object-contain" />
         </Link>
       </div>
-      {/* Navigatie */}
       <nav className="flex-1 overflow-y-auto py-4">
         <ul className="space-y-1 px-2">
           {visibleNavItems.map(({ to, label, icon: Icon }) => (
@@ -87,7 +80,6 @@ export function Sidebar() {
           ))}
         </ul>
       </nav>
-      {/* Footer met e-mailadres of user info */}
       <div className="border-t border-border p-4 text-muted-foreground">
         <div className="text-sm font-medium">{user?.email || 'Gebruiker'}</div>
         <div className="text-sm">
@@ -97,4 +89,5 @@ export function Sidebar() {
     </aside>
   );
 }
+
 export default Sidebar;
