@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shield, Activity, AlertTriangle, UserCheck, Clock, Loader2 } from 'lucide-react';
+import { Shield, Activity, AlertTriangle, UserCheck, Clock, Loader2, Link, Unlink } from 'lucide-react';
 import { useSecurityValidation } from '@/hooks/useSecurityValidation';
 import { UserMobileCard } from '@/components/users/UserMobileCard';
 import { SecurityLogMobileCard } from '@/components/users/SecurityLogMobileCard';
@@ -39,6 +38,12 @@ interface AuditLog {
   created_at: string;
 }
 
+interface Player {
+  id: string;
+  name: string;
+  user_id: string | null;
+}
+
 export default function Users() {
   const { isSuperAdmin, logSecurityEvent, hasRole, user } = useAuth();
   const { validateRoleChange } = useSecurityValidation();
@@ -46,7 +51,9 @@ export default function Users() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
+  const [linkingUserId, setLinkingUserId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'users' | 'security'>('users');
 
   const fetchUsers = async () => {
@@ -67,8 +74,7 @@ export default function Users() {
       }
 
       setUsers((data || []) as UserProfile[]);
-      
-      // Log user management access for security monitoring
+
       await logSecurityEvent('user_management_accessed', 'admin', null, {
         total_users: data?.length || 0
       });
@@ -82,9 +88,25 @@ export default function Users() {
     }
   };
 
+  const fetchPlayers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('players')
+        .select('id, name, user_id')
+        .order('name');
+
+      if (error) {
+        console.error('Error fetching players:', error);
+        return;
+      }
+      setPlayers((data || []) as Player[]);
+    } catch (error) {
+      console.error('Error fetching players:', error);
+    }
+  };
+
   const fetchAdminUsers = async () => {
     if (!isSuperAdmin()) return;
-    
     try {
       const { data, error } = await supabase
         .from('admin_users')
@@ -95,7 +117,6 @@ export default function Users() {
         console.error('Error fetching admin users:', error);
         return;
       }
-
       setAdminUsers(data || []);
     } catch (error) {
       console.error('Error fetching admin users:', error);
@@ -104,7 +125,6 @@ export default function Users() {
 
   const fetchAuditLogs = async () => {
     if (!isSuperAdmin()) return;
-    
     try {
       const { data, error } = await supabase
         .from('security_audit_log')
@@ -116,7 +136,6 @@ export default function Users() {
         console.error('Error fetching audit logs:', error);
         return;
       }
-
       setAuditLogs(data || []);
     } catch (error) {
       console.error('Error fetching audit logs:', error);
@@ -127,21 +146,12 @@ export default function Users() {
     try {
       const oldUser = users.find(u => u.id === userId);
       if (!oldUser) {
-        toast({
-          title: "Fout bij bijwerken rol",
-          description: "Gebruiker niet gevonden.",
-          variant: "destructive",
-        });
+        toast({ title: "Fout bij bijwerken rol", description: "Gebruiker niet gevonden.", variant: "destructive" });
         return;
       }
 
-      // Security validation before attempting role change
       if (!validateRoleChange(userId, oldUser.role, newRole)) {
-        toast({
-          title: "Niet geautoriseerd",
-          description: "Je hebt geen toestemming om deze rolwijziging uit te voeren.",
-          variant: "destructive",
-        });
+        toast({ title: "Niet geautoriseerd", description: "Je hebt geen toestemming om deze rolwijziging uit te voeren.", variant: "destructive" });
         return;
       }
 
@@ -152,87 +162,129 @@ export default function Users() {
 
       if (error) {
         console.error('Error updating user role:', error);
-        
-        // Enhanced error handling
         let errorMessage = error.message;
         if (error.message?.includes('row-level security')) {
           errorMessage = "Geen toestemming om deze gebruiker te wijzigen.";
         } else if (error.message?.includes('foreign key')) {
           errorMessage = "Ongeldige rolwijziging.";
         }
-        
-        toast({
-          title: "Fout bij bijwerken rol",
-          description: errorMessage,
-          variant: "destructive",
-        });
+        toast({ title: "Fout bij bijwerken rol", description: errorMessage, variant: "destructive" });
         return;
       }
 
-      // Log the role change with detailed information
-      await logSecurityEvent('user_role_updated', 'profile', userId, { 
+      await logSecurityEvent('user_role_updated', 'profile', userId, {
         old_role: oldUser?.role,
         new_role: newRole,
         target_user_email: oldUser?.email
       });
 
-      toast({
-        title: "Rol bijgewerkt",
-        description: `Gebruikersrol is succesvol bijgewerkt naar ${newRole}.`,
-      });
-
-      // Refresh the users list
+      toast({ title: "Rol bijgewerkt", description: `Gebruikersrol is succesvol bijgewerkt naar ${newRole}.` });
       fetchUsers();
     } catch (error) {
       console.error('Error updating user role:', error);
-      toast({
-        title: "Fout bij bijwerken rol",
-        description: "Er is een onverwachte fout opgetreden.",
-        variant: "destructive",
-      });
+      toast({ title: "Fout bij bijwerken rol", description: "Er is een onverwachte fout opgetreden.", variant: "destructive" });
+    }
+  };
+
+  /**
+   * Koppel een speler aan een user_id.
+   * - Eerst de eventuele vorige koppeling van deze user verwijderen (set null)
+   * - Dan de nieuwe koppeling leggen
+   */
+  const linkPlayerToUser = async (userId: string, playerId: string | null) => {
+    setLinkingUserId(userId);
+    try {
+      // Verwijder bestaande koppeling van deze user (mocht die ergens anders staan)
+      const { error: clearError } = await supabase
+        .from('players')
+        .update({ user_id: null })
+        .eq('user_id', userId);
+
+      if (clearError) {
+        console.error('Error clearing existing player link:', clearError);
+        // Niet fataal, doorgaan
+      }
+
+      if (playerId) {
+        // Nieuwe koppeling leggen
+        const { error: linkError } = await supabase
+          .from('players')
+          .update({ user_id: userId })
+          .eq('id', playerId);
+
+        if (linkError) {
+          console.error('Error linking player to user:', linkError);
+          toast({
+            title: "Fout bij koppelen",
+            description: linkError.message,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const playerName = players.find(p => p.id === playerId)?.name;
+        const userEmail = users.find(u => u.id === userId)?.email;
+        toast({
+          title: "Koppeling opgeslagen",
+          description: `${playerName} is gekoppeld aan ${userEmail}.`,
+        });
+      } else {
+        toast({
+          title: "Koppeling verwijderd",
+          description: "De spelerkoppeling is verwijderd.",
+        });
+      }
+
+      await fetchPlayers();
+    } catch (error) {
+      console.error('Error in linkPlayerToUser:', error);
+      toast({ title: "Fout bij koppelen", description: "Er is een onverwachte fout opgetreden.", variant: "destructive" });
+    } finally {
+      setLinkingUserId(null);
     }
   };
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await fetchUsers();
-      if (isSuperAdmin()) {
-        await fetchAdminUsers();
-        await fetchAuditLogs();
-      }
+      await Promise.all([
+        fetchUsers(),
+        fetchPlayers(),
+        isSuperAdmin() ? fetchAdminUsers() : Promise.resolve(),
+        isSuperAdmin() ? fetchAuditLogs() : Promise.resolve(),
+      ]);
       setLoading(false);
     };
-    
-    // Only load data if user is authenticated
+
     if (user) {
       loadData();
     }
-  }, [user, isSuperAdmin]);
+  }, [user]);
+
+  // Geeft de speler terug die gekoppeld is aan een bepaalde user_id
+  const getLinkedPlayer = (userId: string): Player | undefined => {
+    return players.find(p => p.user_id === userId);
+  };
+
+  // Spelers die nog niet gekoppeld zijn (beschikbaar voor dropdown), plus de huidige koppeling
+  const getAvailablePlayers = (userId: string): Player[] => {
+    const linked = getLinkedPlayer(userId);
+    return players.filter(p => p.user_id === null || p.id === linked?.id);
+  };
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
-      case 'beheerder':
-        return 'destructive';
-      case 'organisator':
-        return 'default';
-      case 'speler':
-        return 'secondary';
-      default:
-        return 'outline';
+      case 'beheerder': return 'destructive';
+      case 'organisator': return 'default';
+      case 'speler': return 'secondary';
+      default: return 'outline';
     }
   };
 
   const getActionBadgeVariant = (action: string) => {
-    if (action.includes('failed') || action.includes('error') || action.includes('suspicious')) {
-      return 'destructive';
-    }
-    if (action.includes('sign_in') || action.includes('sign_up') || action.includes('access')) {
-      return 'default';
-    }
-    if (action.includes('role_updated') || action.includes('admin')) {
-      return 'secondary';
-    }
+    if (action.includes('failed') || action.includes('error') || action.includes('suspicious')) return 'destructive';
+    if (action.includes('sign_in') || action.includes('sign_up') || action.includes('access')) return 'default';
+    if (action.includes('role_updated') || action.includes('admin')) return 'secondary';
     return 'outline';
   };
 
@@ -248,9 +300,7 @@ export default function Users() {
             <div className="text-center space-y-4">
               <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto" />
               <h3 className="text-lg font-semibold">Inloggen vereist</h3>
-              <p className="text-muted-foreground">
-                Je moet ingelogd zijn om gebruikersbeheer te bekijken.
-              </p>
+              <p className="text-muted-foreground">Je moet ingelogd zijn om gebruikersbeheer te bekijken.</p>
             </div>
           </CardContent>
         </Card>
@@ -266,9 +316,7 @@ export default function Users() {
             <div className="text-center space-y-4">
               <Shield className="h-12 w-12 text-muted-foreground mx-auto" />
               <h3 className="text-lg font-semibold">Toegang geweigerd</h3>
-              <p className="text-muted-foreground">
-                Je hebt geen toestemming om gebruikersbeheer te bekijken.
-              </p>
+              <p className="text-muted-foreground">Je hebt geen toestemming om gebruikersbeheer te bekijken.</p>
             </div>
           </CardContent>
         </Card>
@@ -281,17 +329,12 @@ export default function Users() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Gebruikersbeheer</h1>
-          <p className="text-muted-foreground">
-            Beheer systeem gebruikers en beveiligingsmonitoring
-          </p>
+          <p className="text-muted-foreground">Beheer systeem gebruikers en beveiligingsmonitoring</p>
         </div>
-        
         <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
           <div className="flex items-center space-x-2">
             <Loader2 className="h-4 w-4 animate-spin" />
-            <p className="text-muted-foreground">
-              Gegevens worden geladen...
-            </p>
+            <p className="text-muted-foreground">Gegevens worden geladen...</p>
           </div>
         </div>
       </div>
@@ -303,9 +346,7 @@ export default function Users() {
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Gebruikersbeheer</h1>
-          <p className="text-muted-foreground">
-            Beheer systeem gebruikers en beveiligingsmonitoring
-          </p>
+          <p className="text-muted-foreground">Beheer systeem gebruikers en beveiligingsmonitoring</p>
         </div>
         <div className="flex flex-col gap-2 md:flex-row w-full md:w-auto">
           {isSuperAdmin() && (
@@ -330,18 +371,23 @@ export default function Users() {
               </Button>
             </div>
           )}
-          <Button onClick={() => {
-            fetchUsers();
-            if (isSuperAdmin()) {
-              fetchAdminUsers();
-              fetchAuditLogs();
-            }
-          }} variant="outline" className="w-full md:w-auto">
+          <Button
+            onClick={() => {
+              fetchUsers();
+              fetchPlayers();
+              if (isSuperAdmin()) {
+                fetchAdminUsers();
+                fetchAuditLogs();
+              }
+            }}
+            variant="outline"
+            className="w-full md:w-auto"
+          >
             Vernieuwen
           </Button>
         </div>
       </div>
-      
+
       {activeTab === 'users' && (
         <>
           {/* Mobile Cards View */}
@@ -349,25 +395,74 @@ export default function Users() {
             {users.length === 0 ? (
               <Card>
                 <CardContent className="pt-6">
-                  <p className="text-muted-foreground text-center">
-                    Geen gebruikers gevonden.
-                  </p>
+                  <p className="text-muted-foreground text-center">Geen gebruikers gevonden.</p>
                 </CardContent>
               </Card>
             ) : (
-              users.map((user) => {
-                const isAdmin = adminUsers.find(admin => admin.email === user.email);
+              users.map((u) => {
+                const isAdmin = adminUsers.find(admin => admin.email === u.email);
                 const canModifyUser = hasRole('beheerder') && (!isAdmin?.is_super_admin || isSuperAdmin());
-                
+                const linkedPlayer = getLinkedPlayer(u.id);
+
                 return (
-                  <UserMobileCard
-                    key={user.id}
-                    user={user}
-                    isSuperAdmin={!!isAdmin?.is_super_admin}
-                    canModifyUser={canModifyUser}
-                    onRoleChange={updateUserRole}
-                    getRoleBadgeVariant={getRoleBadgeVariant}
-                  />
+                  <Card key={u.id} className="p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-medium text-sm">{u.email}</p>
+                        <p className="text-xs text-muted-foreground">{u.id.slice(0, 8)}…</p>
+                      </div>
+                      <div className="flex gap-1">
+                        <Badge variant={getRoleBadgeVariant(u.role) as any}>{u.role}</Badge>
+                        {isAdmin?.is_super_admin && <Badge variant="outline">Super Admin</Badge>}
+                      </div>
+                    </div>
+
+                    {/* Speler koppeling — mobiel */}
+                    {isSuperAdmin() && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                          <Link className="h-3 w-3" /> Gekoppelde speler
+                        </p>
+                        <Select
+                          value={linkedPlayer?.id || 'none'}
+                          onValueChange={(val) => linkPlayerToUser(u.id, val === 'none' ? null : val)}
+                          disabled={linkingUserId === u.id}
+                        >
+                          <SelectTrigger className="w-full h-8 text-sm">
+                            <SelectValue placeholder="Geen speler gekoppeld" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              <span className="text-muted-foreground italic">Geen koppeling</span>
+                            </SelectItem>
+                            {getAvailablePlayers(u.id).map(p => (
+                              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {canModifyUser && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">Rol wijzigen</p>
+                        <Select
+                          value={u.role}
+                          onValueChange={(newRole: 'speler' | 'organisator' | 'beheerder') => updateUserRole(u.id, newRole)}
+                          disabled={!canModifyUser}
+                        >
+                          <SelectTrigger className="w-full h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="speler">Speler</SelectItem>
+                            <SelectItem value="organisator">Organisator</SelectItem>
+                            <SelectItem value="beheerder">Beheerder</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </Card>
                 );
               })
             )}
@@ -382,77 +477,108 @@ export default function Users() {
                   Geregistreerde Gebruikers
                 </CardTitle>
                 <CardDescription>
-                  Overzicht van alle gebruikers en hun rollen in het systeem. Alleen beheerders kunnen gebruikersrollen wijzigen.
+                  Overzicht van alle gebruikers, hun rollen en gekoppelde spelerprofielen.
+                  {isSuperAdmin() && ' Als superadmin kun je spelers koppelen aan loginaccounts.'}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-0 md:p-6">
+              <CardContent>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="min-w-[200px]">Email</TableHead>
-                        <TableHead className="min-w-[100px]">Rol</TableHead>
-                        <TableHead className="min-w-[120px]">Aangemaakt</TableHead>
-                        <TableHead className="min-w-[120px]">Laatst bijgewerkt</TableHead>
-                        {hasRole('beheerder') && <TableHead className="min-w-[140px]">Acties</TableHead>}
+                        <TableHead>Email</TableHead>
+                        <TableHead>Rol</TableHead>
+                        {isSuperAdmin() && <TableHead>Gekoppelde speler</TableHead>}
+                        <TableHead>Aangemaakt</TableHead>
+                        <TableHead>Bijgewerkt</TableHead>
+                        {hasRole('beheerder') && <TableHead>Rol wijzigen</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {users.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={isSuperAdmin() ? 6 : 5} className="text-center text-muted-foreground py-8">
                             Geen gebruikers gevonden.
                           </TableCell>
                         </TableRow>
                       ) : (
-                        users.map((user) => {
-                          const isAdmin = adminUsers.find(admin => admin.email === user.email);
+                        users.map((u) => {
+                          const isAdmin = adminUsers.find(admin => admin.email === u.email);
                           const canModifyUser = hasRole('beheerder') && (!isAdmin?.is_super_admin || isSuperAdmin());
-                          
+                          const linkedPlayer = getLinkedPlayer(u.id);
+
                           return (
-                            <TableRow key={user.id}>
-                              <TableCell className="font-medium">
-                                <div className="flex items-center gap-2">
-                                  {user.email}
-                                  {isAdmin?.is_super_admin && (
-                                    <Badge variant="destructive" className="text-xs">
-                                      Super Admin
-                                    </Badge>
-                                  )}
+                            <TableRow key={u.id}>
+                              <TableCell>
+                                <div className="space-y-0.5">
+                                  <p className="font-medium text-sm">{u.email}</p>
+                                  <p className="text-xs text-muted-foreground font-mono">{u.id.slice(0, 8)}…</p>
                                 </div>
                               </TableCell>
+
                               <TableCell>
-                                <Badge variant={getRoleBadgeVariant(user.role)}>
-                                  {user.role}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Clock className="h-3 w-3 text-muted-foreground" />
-                                  {new Date(user.created_at).toLocaleDateString('nl-NL', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric'
-                                  })}
+                                <div className="flex gap-1 flex-wrap">
+                                  <Badge variant={getRoleBadgeVariant(u.role) as any}>{u.role}</Badge>
+                                  {isAdmin?.is_super_admin && <Badge variant="outline">Super Admin</Badge>}
                                 </div>
                               </TableCell>
+
+                              {/* Speler koppeling kolom — alleen superadmin */}
+                              {isSuperAdmin() && (
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    {linkedPlayer ? (
+                                      <Link className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                                    ) : (
+                                      <Unlink className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                    )}
+                                    <Select
+                                      value={linkedPlayer?.id || 'none'}
+                                      onValueChange={(val) => linkPlayerToUser(u.id, val === 'none' ? null : val)}
+                                      disabled={linkingUserId === u.id}
+                                    >
+                                      <SelectTrigger className="w-44 h-8 text-sm">
+                                        {linkingUserId === u.id ? (
+                                          <div className="flex items-center gap-1">
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                            <span>Opslaan…</span>
+                                          </div>
+                                        ) : (
+                                          <SelectValue placeholder="Geen koppeling" />
+                                        )}
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="none">
+                                          <span className="text-muted-foreground italic">Geen koppeling</span>
+                                        </SelectItem>
+                                        {getAvailablePlayers(u.id).map(p => (
+                                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </TableCell>
+                              )}
+
                               <TableCell>
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Clock className="h-3 w-3 text-muted-foreground" />
-                                  {new Date(user.updated_at).toLocaleDateString('nl-NL', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric'
-                                  })}
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                  <Clock className="h-3 w-3" />
+                                  {new Date(u.created_at).toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                 </div>
                               </TableCell>
+
+                              <TableCell>
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                  <Clock className="h-3 w-3" />
+                                  {new Date(u.updated_at).toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                </div>
+                              </TableCell>
+
                               {hasRole('beheerder') && (
                                 <TableCell>
                                   <Select
-                                    value={user.role}
-                                    onValueChange={(newRole: 'speler' | 'organisator' | 'beheerder') => 
-                                      updateUserRole(user.id, newRole)
-                                    }
+                                    value={u.role}
+                                    onValueChange={(newRole: 'speler' | 'organisator' | 'beheerder') => updateUserRole(u.id, newRole)}
                                     disabled={!canModifyUser}
                                   >
                                     <SelectTrigger className="w-32">
@@ -465,9 +591,7 @@ export default function Users() {
                                     </SelectContent>
                                   </Select>
                                   {!canModifyUser && (
-                                    <div className="text-xs text-muted-foreground mt-1">
-                                      Geen toestemming
-                                    </div>
+                                    <div className="text-xs text-muted-foreground mt-1">Geen toestemming</div>
                                   )}
                                 </TableCell>
                               )}
@@ -491,9 +615,7 @@ export default function Users() {
             {auditLogs.length === 0 ? (
               <Card>
                 <CardContent className="pt-6">
-                  <p className="text-muted-foreground text-center">
-                    Geen beveiligingslogboeken gevonden.
-                  </p>
+                  <p className="text-muted-foreground text-center">Geen beveiligingslogboek gevonden.</p>
                 </CardContent>
               </Card>
             ) : (
@@ -513,83 +635,47 @@ export default function Users() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5" />
+                  <Activity className="h-5 w-5" />
                   Beveiligingslogboek
                 </CardTitle>
                 <CardDescription>
-                  Recente beveiligingsgebeurtenissen en gebruikersactiviteiten. Alleen super admins kunnen deze informatie bekijken.
+                  Laatste 100 beveiligingsgebeurtenissen in het systeem.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-0 md:p-6">
+              <CardContent>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="min-w-[160px]">Tijdstip</TableHead>
-                        <TableHead className="min-w-[140px]">Actie</TableHead>
-                        <TableHead className="min-w-[120px]">Gebruiker</TableHead>
-                        <TableHead className="min-w-[100px]">Resource</TableHead>
-                        <TableHead className="min-w-[140px]">Details</TableHead>
+                        <TableHead>Actie</TableHead>
+                        <TableHead>Resource</TableHead>
+                        <TableHead>Gebruiker</TableHead>
+                        <TableHead>Tijdstip</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {auditLogs.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                            Geen beveiligingslogboeken gevonden.
+                          <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                            Geen logboek gevonden.
                           </TableCell>
                         </TableRow>
                       ) : (
                         auditLogs.map((log) => (
                           <TableRow key={log.id}>
-                            <TableCell className="text-sm">
-                              <div className="flex items-center gap-2">
-                                <Clock className="h-3 w-3 text-muted-foreground" />
-                                {new Date(log.created_at).toLocaleString('nl-NL', {
-                                  day: '2-digit',
-                                  month: '2-digit',
-                                  year: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </div>
-                            </TableCell>
                             <TableCell>
-                              <Badge variant={getActionBadgeVariant(log.action)}>
+                              <Badge variant={getActionBadgeVariant(log.action) as any}>
                                 {formatActionName(log.action)}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-sm">
-                              {log.user_id ? (
-                                <code className="bg-muted px-1 py-0.5 rounded text-xs">
-                                  {log.user_id.substring(0, 8)}...
-                                </code>
-                              ) : (
-                                <span className="text-muted-foreground">Systeem</span>
-                              )}
+                            <TableCell className="text-sm text-muted-foreground">
+                              {log.resource_type || '—'}
                             </TableCell>
-                            <TableCell className="text-sm">
-                              {log.resource_type ? (
-                                <Badge variant="outline" className="text-xs">
-                                  {log.resource_type}
-                                </Badge>
-                              ) : (
-                                <span className="text-muted-foreground">-</span>
-                              )}
+                            <TableCell className="font-mono text-xs text-muted-foreground">
+                              {log.user_id ? `${log.user_id.slice(0, 8)}…` : '—'}
                             </TableCell>
-                            <TableCell className="text-sm max-w-xs">
-                              {log.details ? (
-                                <details className="cursor-pointer">
-                                  <summary className="text-blue-600 hover:text-blue-800">
-                                    Details bekijken
-                                  </summary>
-                                  <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto">
-                                    {JSON.stringify(log.details, null, 2)}
-                                  </pre>
-                                </details>
-                              ) : (
-                                <span className="text-muted-foreground">-</span>
-                              )}
+                            <TableCell className="text-sm text-muted-foreground">
+                              {new Date(log.created_at).toLocaleString('nl-NL')}
                             </TableCell>
                           </TableRow>
                         ))
