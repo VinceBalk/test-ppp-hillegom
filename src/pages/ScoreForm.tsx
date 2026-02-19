@@ -40,24 +40,18 @@ interface MatchRow {
 
 const SPECIALS_COLUMN = [{ id: "specials", name: "Specials" }];
 
-const PAGE_WIDTH_MM = 273;
-const PAGE_HEIGHT_MM = 190;
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("nl-NL", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
+    day: "numeric", month: "long", year: "numeric",
   });
 }
 
 function formatDateRange(start: string, end: string): string {
-  const s = new Date(start).toDateString();
-  const e = new Date(end).toDateString();
-  if (s === e) return formatDate(start);
-  return `${formatDate(start)} – ${formatDate(end)}`;
+  return new Date(start).toDateString() === new Date(end).toDateString()
+    ? formatDate(start)
+    : `${formatDate(start)} – ${formatDate(end)}`;
 }
 
 function rowSideLabel(side: string): { label: string; color: string } {
@@ -66,353 +60,203 @@ function rowSideLabel(side: string): { label: string; color: string } {
   return { label: "", color: "#6b7280" };
 }
 
-function sortCourtNames(
-  courtNames: string[],
-  matchesByCourt: Record<string, MatchRow[]>
-): string[] {
-  const left  = courtNames
-    .filter(n => matchesByCourt[n][0]?.court_row_side === "left")
-    .sort((a, b) => (matchesByCourt[a][0]?.court_menu_order ?? 999) - (matchesByCourt[b][0]?.court_menu_order ?? 999));
-  const right = courtNames
-    .filter(n => matchesByCourt[n][0]?.court_row_side === "right")
+function sortCourtNames(courtNames: string[], matchesByCourt: Record<string, MatchRow[]>): string[] {
+  const by = (side: string) => courtNames
+    .filter(n => matchesByCourt[n][0]?.court_row_side === side)
     .sort((a, b) => (matchesByCourt[a][0]?.court_menu_order ?? 999) - (matchesByCourt[b][0]?.court_menu_order ?? 999));
   const other = courtNames
     .filter(n => !["left", "right"].includes(matchesByCourt[n][0]?.court_row_side ?? ""))
     .sort((a, b) => (matchesByCourt[a][0]?.court_menu_order ?? 999) - (matchesByCourt[b][0]?.court_menu_order ?? 999));
-  return [...left, ...right, ...other];
+  return [...by("left"), ...by("right"), ...other];
 }
 
 function sortCourts(courts: Court[]): Court[] {
-  const left  = courts.filter(c => c.row_side === "left") .sort((a, b) => (a.menu_order ?? 999) - (b.menu_order ?? 999));
-  const right = courts.filter(c => c.row_side === "right").sort((a, b) => (a.menu_order ?? 999) - (b.menu_order ?? 999));
-  const other = courts.filter(c => !["left", "right"].includes(c.row_side ?? "")).sort((a, b) => (a.menu_order ?? 999) - (b.menu_order ?? 999));
-  return [...left, ...right, ...other];
+  const by = (side: string) => courts
+    .filter(c => c.row_side === side)
+    .sort((a, b) => (a.menu_order ?? 999) - (b.menu_order ?? 999));
+  const other = courts
+    .filter(c => !["left", "right"].includes(c.row_side ?? ""))
+    .sort((a, b) => (a.menu_order ?? 999) - (b.menu_order ?? 999));
+  return [...by("left"), ...by("right"), ...other];
 }
 
-// ─── Print CSS ────────────────────────────────────────────────────────────────
+// ─── HTML generator voor printvenster ────────────────────────────────────────
+// Bouwt één zelfstandige HTML-string op — geen React, geen app-chrome.
+// Elk .sf-page krijgt page-break-before:always → gegarandeerd één pagina per baan.
 
-const PRINT_CSS = `
-@media print {
-  @page {
-    size: A4 landscape;
-    margin: 10mm 12mm;
+function buildPrintHtml(
+  tournament: Tournament,
+  pages: { courtName: string; rowSide: string; roundLabel: string; matches: { courtIndex: number; dbNum: number; p1: string; p2: string; p3: string; p4: string }[] }[],
+  logoSrc: string,
+): string {
+  const dateStr = formatDateRange(tournament.start_date, tournament.end_date);
+
+  const css = `
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+    @page { size: A4 landscape; margin: 10mm 12mm; }
+    body { background: white; }
+
+    .page {
+      width: 100%;
+      page-break-before: always;
+      break-before: page;
+      padding: 0;
+    }
+    .page:first-child {
+      page-break-before: avoid;
+      break-before: avoid;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 3px solid #f28b00;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .header-logo { height: 40px; width: auto; }
+    .header-title { font-size: 14px; font-weight: 800; color: #111; line-height: 1.2; }
+    .header-date { font-size: 10px; color: #6b7280; margin-top: 2px; }
+    .header-right { text-align: right; }
+    .header-court { font-size: 20px; font-weight: 900; color: #f28b00; line-height: 1; }
+    .header-meta { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 4px; }
+    .header-round { font-size: 12px; font-weight: 700; color: #111; }
+    .header-badge { font-size: 10px; font-weight: 700; color: #fff; border-radius: 4px; padding: 2px 8px; letter-spacing: .03em; }
+
+    /* Match block */
+    .match { border: 1px solid #d1d5db; border-radius: 5px; overflow: hidden; margin-bottom: 10px; page-break-inside: avoid; break-inside: avoid; }
+    .match-header { background: #f9fafb; border-bottom: 1px solid #e5e7eb; padding: 5px 10px; display: flex; align-items: center; gap: 10px; }
+    .match-header.blank { background: #f3f4f6; }
+    .match-label { color: white; font-size: 10px; font-weight: 800; border-radius: 4px; padding: 2px 9px; letter-spacing: .04em; }
+    .match-label.live { background: #f28b00; }
+    .match-label.blank { background: #9ca3af; }
+    .match-dbnum { font-size: 9px; color: #9ca3af; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #f3f4f6; font-size: 9px; font-weight: 800; color: #374151; text-transform: uppercase; letter-spacing: .05em; padding: 4px 10px; border-bottom: 1px solid #e5e7eb; text-align: center; }
+    th.left { text-align: left; }
+    td { padding: 7px 10px; font-size: 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+    td.no-border { border-bottom: none; }
+    td.team { width: 54px; text-align: center; font-size: 9px; font-weight: 800; letter-spacing: .04em; border-right: 1px solid #e5e7eb; }
+    td.team1 { background: #eff6ff; color: #1d4ed8; }
+    td.team2 { background: #f0fdf4; color: #15803d; }
+    td.score { width: 70px; text-align: center; background: #fffbeb; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; }
+    td.special { width: 70px; text-align: center; background: #fafafa; vertical-align: bottom; padding-bottom: 6px; }
+    td.divider { height: 3px; background: #f9fafb; border-top: 1px dashed #e5e7eb; border-bottom: 1px dashed #e5e7eb; padding: 0; }
+    .score-box { display: inline-block; width: 44px; height: 26px; border: 1.5px solid #374151; border-radius: 3px; }
+    .special-line { display: inline-block; width: 36px; height: 20px; border-bottom: 1.5px solid #9ca3af; }
+    .blank-name { color: #e5e7eb; }
+
+    /* Footer */
+    .footer { margin-top: 10px; padding-top: 6px; border-top: 1px solid #f0f0f0; font-size: 8px; color: #c0c0c0; text-align: center; }
+  `;
+
+  function renderMatch(m: { courtIndex: number; dbNum: number; p1: string; p2: string; p3: string; p4: string } | null, idx: number, blank = false): string {
+    const label = blank ? `WEDSTRIJD ${idx + 1}` : `WEDSTRIJD ${m!.courtIndex}`;
+    const dbNum = blank ? "" : `<span class="match-dbnum">#${m!.dbNum}</span>`;
+    const p1 = blank ? `<span class="blank-name">________________________</span>` : m!.p1;
+    const p2 = blank ? `<span class="blank-name">________________________</span>` : m!.p2;
+    const p3 = blank ? `<span class="blank-name">________________________</span>` : m!.p3;
+    const p4 = blank ? `<span class="blank-name">________________________</span>` : m!.p4;
+    return `
+      <div class="match">
+        <div class="match-header ${blank ? "blank" : ""}">
+          <span class="match-label ${blank ? "blank" : "live"}">${label}</span>
+          ${dbNum}
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:54px">Team</th>
+              <th class="left">Speler</th>
+              <th style="width:70px">Score</th>
+              <th style="width:70px">Specials</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="team team1" rowspan="2">TEAM 1</td>
+              <td>${p1}</td>
+              <td class="score" rowspan="2"><div class="score-box"></div></td>
+              <td class="special"><div class="special-line"></div></td>
+            </tr>
+            <tr>
+              <td>${p2}</td>
+              <td class="special"><div class="special-line"></div></td>
+            </tr>
+            <tr>
+              <td colspan="4" class="divider"></td>
+            </tr>
+            <tr>
+              <td class="team team2" rowspan="2">TEAM 2</td>
+              <td>${p3}</td>
+              <td class="score" rowspan="2"><div class="score-box"></div></td>
+              <td class="special"><div class="special-line"></div></td>
+            </tr>
+            <tr>
+              <td class="no-border">${p4}</td>
+              <td class="special no-border"><div class="special-line"></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>`;
   }
 
-  body * {
-    visibility: hidden !important;
-  }
+  const pagesHtml = pages.map((page, pageIdx) => {
+    const { label, color } = rowSideLabel(page.rowSide);
+    const badgeHtml = label
+      ? `<span class="header-badge" style="background:${color}">${label}</span>`
+      : "";
 
-  #scoreform-print,
-  #scoreform-print * {
-    visibility: visible !important;
-  }
+    const matchesHtml = page.matches.length === 0
+      ? [0, 1, 2].map((i) => renderMatch(null, i, true)).join("")
+      : page.matches.map((m, i) => renderMatch(m, i, false)).join("");
 
-  #scoreform-print {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 9999;
-  }
-
-  .sf-no-print { display: none !important; }
-
-  #sf-scale-wrapper {
-    transform-origin: top left;
-  }
-
-  .sf-page {
-    width: ${PAGE_WIDTH_MM}mm;
-    min-height: ${PAGE_HEIGHT_MM}mm;
-    max-height: ${PAGE_HEIGHT_MM}mm;
-    overflow: hidden;
-    page-break-before: always;
-    break-before: page;
-    page-break-inside: avoid;
-    break-inside: avoid;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    background: white !important;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-  }
-
-  .sf-page:first-child {
-    page-break-before: auto;
-    break-before: auto;
-  }
-
-  .sf-match {
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
-}
-`;
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function PageHeader({
-  tournament,
-  roundLabel,
-  courtName,
-  rowSide,
-}: {
-  tournament: Tournament;
-  roundLabel: string;
-  courtName: string;
-  rowSide: string;
-}) {
-  const { label, color } = rowSideLabel(rowSide);
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        borderBottom: "3px solid #f28b00",
-        paddingBottom: 8,
-        marginBottom: 12,
-        flexShrink: 0,
-      }}
-    >
-      {/* Links: logo + toernooiinfo */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <img
-          src="/PPP_logo.webp"
-          alt="PPP"
-          style={{ height: 40, width: "auto", display: "block" }}
-          onError={(e) => {
-            (e.currentTarget as HTMLImageElement).style.display = "none";
-          }}
-        />
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.2, color: "#111" }}>
-            {tournament.name}
+    return `
+      <div class="page">
+        <div class="header">
+          <div class="header-left">
+            <img class="header-logo" src="${logoSrc}" onerror="this.style.display='none'" />
+            <div>
+              <div class="header-title">${tournament.name}</div>
+              <div class="header-date">${dateStr}</div>
+            </div>
           </div>
-          <div style={{ fontSize: 10, color: "#6b7280", marginTop: 2 }}>
-            {formatDateRange(tournament.start_date, tournament.end_date)}
+          <div class="header-right">
+            <div class="header-court">${page.courtName}</div>
+            <div class="header-meta">
+              <span class="header-round">${page.roundLabel}</span>
+              ${badgeHtml}
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Rechts: baannaam groot, daaronder ronde + rijtje op één regel */}
-      <div style={{ textAlign: "right" }}>
-        <div style={{ fontSize: 20, fontWeight: 900, color: "#f28b00", lineHeight: 1 }}>
-          {courtName}
+        ${matchesHtml}
+        <div class="footer">
+          ${tournament.name} · ${page.courtName} · ${page.roundLabel} · Scores verwerken via de app — dit formulier is alleen voor papieren invoer op locatie
         </div>
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "flex-end",
-          gap: 6,
-          marginTop: 4,
-        }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>
-            {roundLabel}
-          </span>
-          {label && (
-            <span style={{
-              fontSize: 10,
-              fontWeight: 700,
-              color: "#fff",
-              background: color,
-              borderRadius: 4,
-              padding: "2px 8px",
-              letterSpacing: ".03em",
-            }}>
-              {label}
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+      </div>`;
+  }).join("\n");
 
-function MatchBlock({
-  courtIndex,
-  dbMatchNumber,
-  team1p1,
-  team1p2,
-  team2p1,
-  team2p2,
-  specials,
-  blank = false,
-}: {
-  courtIndex: number;
-  dbMatchNumber: number;
-  team1p1: string;
-  team1p2: string;
-  team2p1: string;
-  team2p2: string;
-  specials: { id: string; name: string }[];
-  blank?: boolean;
-}) {
-  const tdBase: React.CSSProperties = {
-    padding: "7px 10px",
-    fontSize: 12,
-    borderBottom: "1px solid #f0f0f0",
-    verticalAlign: "middle",
-  };
-
-  const teamBadge = (color: string, bg: string): React.CSSProperties => ({
-    ...tdBase,
-    width: 54,
-    textAlign: "center",
-    fontSize: 9,
-    fontWeight: 800,
-    letterSpacing: ".04em",
-    background: bg,
-    color,
-    borderRight: "1px solid #e5e7eb",
-  });
-
-  const scoreCell: React.CSSProperties = {
-    ...tdBase,
-    width: 70,
-    textAlign: "center",
-    background: "#fffbeb",
-    borderLeft: "1px solid #e5e7eb",
-    borderRight: "1px solid #e5e7eb",
-  };
-
-  const specialCell: React.CSSProperties = {
-    ...tdBase,
-    width: 70,
-    textAlign: "center",
-    background: "#fafafa",
-    verticalAlign: "bottom",
-    paddingBottom: 6,
-  };
-
-  const blankName = (
-    <span style={{ color: "#e5e7eb" }}>________________________</span>
-  );
-
-  const specialCols = specials.map((sp) => (
-    <td key={sp.id} style={specialCell}>
-      <div style={{ display: "inline-block", width: 36, borderBottom: "1.5px solid #9ca3af", height: 20 }} />
-    </td>
-  ));
-
-  const scoreBox = (
-    <div style={{ display: "inline-block", width: 44, height: 26, border: "1.5px solid #374151", borderRadius: 3 }} />
-  );
-
-  const dividerStyle: React.CSSProperties = {
-    height: 3,
-    background: "#f9fafb",
-    borderTop: "1px dashed #e5e7eb",
-    borderBottom: "1px dashed #e5e7eb",
-    padding: 0,
-  };
-
-  const thStyle: React.CSSProperties = {
-    background: "#f3f4f6",
-    fontSize: 9,
-    fontWeight: 800,
-    color: "#374151",
-    textTransform: "uppercase",
-    letterSpacing: ".05em",
-    padding: "4px 10px",
-    borderBottom: "1px solid #e5e7eb",
-    textAlign: "center",
-  };
-
-  return (
-    <div
-      className="sf-match"
-      style={{ border: "1px solid #d1d5db", borderRadius: 5, overflow: "hidden", marginBottom: 10 }}
-    >
-      <div style={{
-        background: blank ? "#f3f4f6" : "#f9fafb",
-        borderBottom: "1px solid #e5e7eb",
-        padding: "5px 10px",
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-      }}>
-        <span style={{
-          background: blank ? "#9ca3af" : "#f28b00",
-          color: "white",
-          fontSize: 10,
-          fontWeight: 800,
-          borderRadius: 4,
-          padding: "2px 9px",
-          display: "inline-block",
-          letterSpacing: ".04em",
-        }}>
-          WEDSTRIJD {courtIndex}
-        </span>
-        {!blank && (
-          <span style={{ fontSize: 9, color: "#9ca3af", letterSpacing: ".03em" }}>
-            #{dbMatchNumber}
-          </span>
-        )}
-      </div>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th style={{ ...thStyle, width: 54 }}>Team</th>
-            <th style={{ ...thStyle, textAlign: "left" }}>Speler</th>
-            <th style={{ ...thStyle, width: 70 }}>Score</th>
-            {specials.map((sp) => (
-              <th key={sp.id} style={{ ...thStyle, width: 70 }}>{sp.name}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style={teamBadge("#1d4ed8", "#eff6ff")} rowSpan={2}>TEAM 1</td>
-            <td style={tdBase}>{blank ? blankName : team1p1}</td>
-            <td style={scoreCell} rowSpan={2}>{scoreBox}</td>
-            {specialCols}
-          </tr>
-          <tr>
-            <td style={{ ...tdBase, borderBottom: "none" }}>{blank ? blankName : team1p2}</td>
-            {specialCols}
-          </tr>
-          <tr>
-            <td colSpan={3 + specials.length} style={dividerStyle} />
-          </tr>
-          <tr>
-            <td style={teamBadge("#15803d", "#f0fdf4")} rowSpan={2}>TEAM 2</td>
-            <td style={tdBase}>{blank ? blankName : team2p1}</td>
-            <td style={scoreCell} rowSpan={2}>{scoreBox}</td>
-            {specialCols}
-          </tr>
-          <tr>
-            <td style={{ ...tdBase, borderBottom: "none" }}>{blank ? blankName : team2p2}</td>
-            {specialCols}
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function PageFooter({ tournament, courtName, roundLabel }: {
-  tournament: Tournament;
-  courtName: string;
-  roundLabel: string;
-}) {
-  return (
-    <div style={{
-      marginTop: "auto",
-      paddingTop: 6,
-      borderTop: "1px solid #f0f0f0",
-      fontSize: 8,
-      color: "#c0c0c0",
-      textAlign: "center",
-      flexShrink: 0,
-    }}>
-      {tournament.name} · {courtName} · {roundLabel} · Scores verwerken via de app — dit formulier is alleen voor papieren invoer op locatie
-    </div>
-  );
+  return `<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Scoreformulier – ${tournament.name}</title>
+  <style>${css}</style>
+</head>
+<body>
+  ${pagesHtml}
+  <script>
+    window.onload = function() {
+      window.print();
+      window.onafterprint = function() { window.close(); };
+    };
+  <\/script>
+</body>
+</html>`;
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -420,64 +264,18 @@ function PageFooter({ tournament, courtName, roundLabel }: {
 export default function ScoreForm() {
   const { hasRole } = useAuth();
 
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [courts, setCourts] = useState<Court[]>([]);
-  const [matches, setMatches] = useState<MatchRow[]>([]);
+  const [tournaments, setTournaments]           = useState<Tournament[]>([]);
+  const [courts, setCourts]                     = useState<Court[]>([]);
+  const [matches, setMatches]                   = useState<MatchRow[]>([]);
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>("");
-  const [selectedRound, setSelectedRound] = useState<string>("1");
-  const [loading, setLoading] = useState(false);
+  const [selectedRound, setSelectedRound]       = useState<string>("1");
+  const [loading, setLoading]                   = useState(false);
 
-  // ── Print scaling ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    const applyScale = () => {
-      const wrapper = document.getElementById("sf-scale-wrapper");
-      if (!wrapper) return;
-      const testEl = document.createElement("div");
-      testEl.style.cssText = "width:10mm;height:0;position:absolute;visibility:hidden";
-      document.body.appendChild(testEl);
-      const pxPerMm = testEl.getBoundingClientRect().width / 10;
-      document.body.removeChild(testEl);
-      const targetPx = PAGE_WIDTH_MM * pxPerMm;
-      const actualPx = wrapper.scrollWidth;
-      const scale = actualPx > 0 ? Math.min(1, targetPx / actualPx) : 1;
-      wrapper.style.transform = scale < 1 ? `scale(${scale})` : "";
-      wrapper.style.transformOrigin = "top left";
-      wrapper.style.height = scale < 1 ? `${wrapper.scrollHeight * scale}px` : "";
-    };
-
-    const resetScale = () => {
-      const wrapper = document.getElementById("sf-scale-wrapper");
-      if (!wrapper) return;
-      wrapper.style.transform = "";
-      wrapper.style.height = "";
-    };
-
-    window.addEventListener("beforeprint", applyScale);
-    window.addEventListener("afterprint", resetScale);
-    const mq = window.matchMedia("print");
-    const mqHandler = (e: MediaQueryListEvent) => {
-      if (e.matches) applyScale();
-      else resetScale();
-    };
-    mq.addEventListener("change", mqHandler);
-    return () => {
-      window.removeEventListener("beforeprint", applyScale);
-      window.removeEventListener("afterprint", resetScale);
-      mq.removeEventListener("change", mqHandler);
-    };
-  }, []);
+  useEffect(() => { loadTournaments(); loadCourts(); }, []);
 
   useEffect(() => {
-    loadTournaments();
-    loadCourts();
-  }, []);
-
-  useEffect(() => {
-    if (selectedTournamentId && selectedRound !== "3") {
-      loadMatches();
-    } else {
-      setMatches([]);
-    }
+    if (selectedTournamentId && selectedRound !== "3") loadMatches();
+    else setMatches([]);
   }, [selectedTournamentId, selectedRound]);
 
   async function loadTournaments() {
@@ -502,10 +300,7 @@ export default function ScoreForm() {
     const { data, error } = await supabase
       .from("matches")
       .select(`
-        id,
-        match_number,
-        round_number,
-        court_id,
+        id, match_number, round_number, court_id,
         court:courts(name, menu_order, row_side),
         team1_player1:players!matches_team1_player1_id_fkey(name),
         team1_player2:players!matches_team1_player2_id_fkey(name),
@@ -517,7 +312,7 @@ export default function ScoreForm() {
       .order("match_number", { ascending: true });
 
     if (!error && data) {
-      const mapped: MatchRow[] = (data as any[]).map((m) => ({
+      setMatches((data as any[]).map((m) => ({
         id: m.id,
         match_number: m.match_number,
         round_number: m.round_number,
@@ -529,8 +324,7 @@ export default function ScoreForm() {
         team1_player2: m.team1_player2?.name ?? "–",
         team2_player1: m.team2_player1?.name ?? "–",
         team2_player2: m.team2_player2?.name ?? "–",
-      }));
-      setMatches(mapped);
+      })));
     }
     setLoading(false);
   }
@@ -543,11 +337,55 @@ export default function ScoreForm() {
     matchesByCourt[m.court_name].push(m);
   }
   const sortedCourtNames = sortCourtNames(Object.keys(matchesByCourt), matchesByCourt);
-  const sortedCourts = sortCourts(courts);
+  const sortedCourts     = sortCourts(courts);
+  const roundLabel       = `RONDE ${selectedRound}`;
+  const canPrint         = selectedTournament && (selectedRound === "3" ? courts.length > 0 : matches.length > 0);
 
-  const roundLabel = `RONDE ${selectedRound}`;
-  const canPrint = selectedTournament && (selectedRound === "3" ? courts.length > 0 : matches.length > 0);
+  // ── Print: open nieuw venster met zelfstandige HTML ───────────────────────
+  function handlePrint() {
+    if (!selectedTournament) return;
 
+    const logoSrc = `${window.location.origin}/PPP_logo.webp`;
+
+    let pages: Parameters<typeof buildPrintHtml>[1];
+
+    if (selectedRound === "3") {
+      pages = sortedCourts.map((court) => ({
+        courtName: court.name,
+        rowSide: court.row_side,
+        roundLabel: "RONDE 3",
+        matches: [], // leeg = blanco
+      }));
+    } else {
+      pages = sortedCourtNames.map((courtName) => {
+        const courtMatches = [...matchesByCourt[courtName]].sort((a, b) => a.match_number - b.match_number);
+        return {
+          courtName,
+          rowSide: courtMatches[0]?.court_row_side ?? "",
+          roundLabel,
+          matches: courtMatches.map((m, idx) => ({
+            courtIndex: idx + 1,
+            dbNum: m.match_number,
+            p1: m.team1_player1,
+            p2: m.team1_player2,
+            p3: m.team2_player1,
+            p4: m.team2_player2,
+          })),
+        };
+      });
+    }
+
+    const html = buildPrintHtml(selectedTournament, pages, logoSrc);
+    const win  = window.open("", "_blank");
+    if (!win) {
+      alert("Popup geblokkeerd. Sta popups toe voor deze site om het formulier af te drukken.");
+      return;
+    }
+    win.document.write(html);
+    win.document.close();
+  }
+
+  // ── Access guard ──────────────────────────────────────────────────────────
   if (!hasRole("organisator")) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -564,12 +402,10 @@ export default function ScoreForm() {
     );
   }
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div id="scoreform-root">
-      <style>{PRINT_CSS}</style>
-
-      {/* Controls — niet printen */}
-      <div className="sf-no-print space-y-4 mb-6">
+    <div>
+      <div className="space-y-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Scoreformulier</h1>
           <p className="text-muted-foreground">
@@ -581,9 +417,7 @@ export default function ScoreForm() {
           <div className="space-y-1 w-full sm:w-72">
             <label className="text-sm font-medium">Toernooi</label>
             <Select value={selectedTournamentId} onValueChange={setSelectedTournamentId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecteer toernooi" />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Selecteer toernooi" /></SelectTrigger>
               <SelectContent>
                 {tournaments.map((t) => (
                   <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
@@ -595,9 +429,7 @@ export default function ScoreForm() {
           <div className="space-y-1 w-full sm:w-48">
             <label className="text-sm font-medium">Ronde</label>
             <Select value={selectedRound} onValueChange={setSelectedRound}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="1">Ronde 1</SelectItem>
                 <SelectItem value="2">Ronde 2</SelectItem>
@@ -607,7 +439,7 @@ export default function ScoreForm() {
           </div>
 
           {canPrint && (
-            <Button onClick={() => window.print()} className="flex items-center gap-2">
+            <Button onClick={handlePrint} className="flex items-center gap-2">
               <Printer className="h-4 w-4" />
               Afdrukken / PDF
             </Button>
@@ -628,106 +460,6 @@ export default function ScoreForm() {
           </p>
         )}
       </div>
-
-      {/* Printgebied */}
-      {selectedTournament && (
-        <div id="scoreform-print">
-          <div id="sf-scale-wrapper">
-
-            {selectedRound !== "3" &&
-              sortedCourtNames.map((courtName) => {
-                const courtMatches = [...matchesByCourt[courtName]].sort(
-                  (a, b) => a.match_number - b.match_number
-                );
-                const rowSide = courtMatches[0]?.court_row_side ?? "";
-                return (
-                  <div
-                    key={courtName}
-                    className="sf-page"
-                    style={{
-                      background: "white",
-                      borderRadius: 8,
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.10)",
-                      padding: "16px 20px",
-                      marginBottom: 16,
-                      maxWidth: 1060,
-                    }}
-                  >
-                    <div>
-                      <PageHeader
-                        tournament={selectedTournament}
-                        roundLabel={roundLabel}
-                        courtName={courtName}
-                        rowSide={rowSide}
-                      />
-                      {courtMatches.map((m, idx) => (
-                        <MatchBlock
-                          key={m.id}
-                          courtIndex={idx + 1}
-                          dbMatchNumber={m.match_number}
-                          team1p1={m.team1_player1}
-                          team1p2={m.team1_player2}
-                          team2p1={m.team2_player1}
-                          team2p2={m.team2_player2}
-                          specials={SPECIALS_COLUMN}
-                        />
-                      ))}
-                    </div>
-                    <PageFooter
-                      tournament={selectedTournament}
-                      courtName={courtName}
-                      roundLabel={roundLabel}
-                    />
-                  </div>
-                );
-              })}
-
-            {selectedRound === "3" &&
-              sortedCourts.map((court) => (
-                <div
-                  key={court.id}
-                  className="sf-page"
-                  style={{
-                    background: "white",
-                    borderRadius: 8,
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.10)",
-                    padding: "16px 20px",
-                    marginBottom: 16,
-                    maxWidth: 1060,
-                  }}
-                >
-                  <div>
-                    <PageHeader
-                      tournament={selectedTournament}
-                      roundLabel="RONDE 3"
-                      courtName={court.name}
-                      rowSide={court.row_side}
-                    />
-                    {[1, 2, 3].map((n) => (
-                      <MatchBlock
-                        key={n}
-                        courtIndex={n}
-                        dbMatchNumber={n}
-                        team1p1=""
-                        team1p2=""
-                        team2p1=""
-                        team2p2=""
-                        specials={SPECIALS_COLUMN}
-                        blank
-                      />
-                    ))}
-                  </div>
-                  <PageFooter
-                    tournament={selectedTournament}
-                    courtName={court.name}
-                    roundLabel="RONDE 3"
-                  />
-                </div>
-              ))}
-
-          </div>
-        </div>
-      )}
     </div>
   );
 }
