@@ -22,13 +22,15 @@ interface ScheduleContentProps {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-/** Bepaal toernooironde uit match-id: links-r1-… → 1, links-r2-… → 2 */
-function getTournamentRound(matchId: string): number {
-  if (matchId.includes('-r2-')) return 2;
+/** Bepaal toernooironde: gebruik tournament_round property (gezet door useSchedulePreview), fallback naar ID */
+function getTournamentRound(match: ScheduleMatch): number {
+  const tr = (match as any).tournament_round;
+  if (tr === 1 || tr === 2) return tr;
+  if (match.id.includes('-r2-')) return 2;
   return 1;
 }
 
-/** Kleur + label op basis van court_name of group prefix in id */
+/** Kleur + label op basis van match-id prefix */
 function courtSideStyle(matchId: string): { bg: string; border: string; badge: string; label: string } {
   const isRight = matchId.startsWith('rechts-');
   return isRight
@@ -49,11 +51,11 @@ interface CourtBlock {
 
 function PlayerName({ name, rank }: { name: string; rank: number | undefined }) {
   return (
-    <span className="inline-flex items-center gap-1">
-      <span className="text-xs font-bold text-muted-foreground w-5 text-right shrink-0">
-        {rank !== undefined ? `#${rank}` : ''}
-      </span>
-      <span className="font-medium text-sm">{name}</span>
+    <span className="text-sm leading-5">
+      {name}
+      {rank !== undefined && (
+        <span className="ml-1 text-[11px] font-bold text-muted-foreground">#{rank}</span>
+      )}
     </span>
   );
 }
@@ -68,25 +70,24 @@ function MatchRow({
   rankMap: Map<string, number>;
 }) {
   return (
-    <div className="grid grid-cols-[40px_1fr_20px_1fr] items-center gap-x-2 gap-y-0.5 py-1.5 border-b last:border-0">
-      {/* Potje-label */}
-      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide row-span-2">
-        Potje {potje}
-      </span>
-
-      {/* Team 1 */}
-      <div className="flex flex-col gap-0.5">
-        <PlayerName name={match.team1_player1_name} rank={rankMap.get(match.team1_player1_id)} />
-        <PlayerName name={match.team1_player2_name} rank={rankMap.get(match.team1_player2_id)} />
-      </div>
-
-      {/* vs */}
-      <span className="text-xs text-muted-foreground font-bold row-span-2 text-center">vs</span>
-
-      {/* Team 2 */}
-      <div className="flex flex-col gap-0.5">
-        <PlayerName name={match.team2_player1_name} rank={rankMap.get(match.team2_player1_id)} />
-        <PlayerName name={match.team2_player2_name} rank={rankMap.get(match.team2_player2_id)} />
+    <div className="py-2 border-b last:border-0">
+      <div className="flex items-start gap-2">
+        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide shrink-0 w-12 pt-0.5">
+          Potje {potje}
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col gap-0.5">
+            <PlayerName name={match.team1_player1_name} rank={rankMap.get(match.team1_player1_id)} />
+            <PlayerName name={match.team1_player2_name} rank={rankMap.get(match.team1_player2_id)} />
+          </div>
+        </div>
+        <span className="text-xs font-bold text-muted-foreground shrink-0 pt-1">vs</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col gap-0.5">
+            <PlayerName name={match.team2_player1_name} rank={rankMap.get(match.team2_player1_id)} />
+            <PlayerName name={match.team2_player2_name} rank={rankMap.get(match.team2_player2_id)} />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -158,7 +159,6 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
 
   // ── Preview: groepeer per court_name, dan per toernooironde ───────────────
   function buildCourtBlocks(allMatches: ScheduleMatch[]): CourtBlock[] {
-    // Collect unique court names in volgorde van match_number
     const courtOrder: string[] = [];
     const courtMap = new Map<string, Map<number, ScheduleMatch[]>>();
 
@@ -168,14 +168,12 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
         courtMap.set(cn, new Map());
         courtOrder.push(cn);
       }
-      const tr = getTournamentRound(m.id);
+      const tr = getTournamentRound(m);  // ← gebruik match object
       const rounds = courtMap.get(cn)!;
       if (!rounds.has(tr)) rounds.set(tr, []);
-      // Sorteer op round_within_group (potje 1, 2, 3)
       rounds.get(tr)!.push(m);
     }
 
-    // Sorteer matches binnen elke ronde op round_within_group
     const blocks: CourtBlock[] = [];
     for (const cn of courtOrder) {
       const rounds = courtMap.get(cn)!;
@@ -186,7 +184,6 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
           matches: [...ms].sort((a, b) => a.round_within_group - b.round_within_group),
         }));
 
-      // Side bepalen vanuit eerste match id
       const firstId = roundEntries[0]?.matches[0]?.id || '';
       blocks.push({
         courtName: cn,
