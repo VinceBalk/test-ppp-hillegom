@@ -15,7 +15,7 @@ import Players from "./pages/Players";
 import PlayerDetail from "./pages/PlayerDetail";
 import Tournaments from "./pages/Tournaments";
 import TournamentStandings from "./pages/TournamentStandings";
-import TournamentMatches from "./pages/TournamentMatches";
+import TournamentMatches from "./components/tournaments/TournamentMatches";
 import AssignPlayers from "./pages/AssignPlayers";
 import Matches from "./pages/Matches";
 import Schedule from "./pages/Schedule";
