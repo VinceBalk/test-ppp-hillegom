@@ -68,7 +68,7 @@ export default function Dashboard() {
           <CardContent>
             {currentTournament ? (
               <>
-                <div className="text-xl font-bold mb-1">{currentTournament.name}</div>
+                <div className="text-3xl font-bold mb-1">{currentTournament.name}</div>
                 <p className="text-sm text-muted-foreground">
                   {new Date(currentTournament.start_date).toLocaleDateString('nl-NL', { 
                     day: 'numeric', 
