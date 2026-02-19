@@ -1,3 +1,4 @@
+// src/components/schedule/ScheduleContent.tsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTournaments } from '@/hooks/useTournaments';
@@ -11,12 +12,121 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Calendar, CheckCircle2, Clock, Loader2, Plus, Trophy, Users } from 'lucide-react';
+import { Calendar, CheckCircle2, Loader2, Plus, Trophy, Users } from 'lucide-react';
 import { Round3GenerationSection } from '@/components/schedule/Round3GenerationSection';
+import { ScheduleMatch } from '@/types/schedule';
 
 interface ScheduleContentProps {
   urlTournamentId?: string;
 }
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+/** Bepaal toernooironde uit match-id: links-r1-… → 1, links-r2-… → 2 */
+function getTournamentRound(matchId: string): number {
+  if (matchId.includes('-r2-')) return 2;
+  return 1;
+}
+
+/** Kleur + label op basis van court_name of group prefix in id */
+function courtSideStyle(matchId: string): { bg: string; border: string; badge: string; label: string } {
+  const isRight = matchId.startsWith('rechts-');
+  return isRight
+    ? { bg: 'bg-blue-50', border: 'border-blue-200', badge: 'bg-blue-700 text-white', label: 'Rechts' }
+    : { bg: 'bg-green-50', border: 'border-green-200', badge: 'bg-green-700 text-white', label: 'Links' };
+}
+
+// ─── PreviewCourtBlock ────────────────────────────────────────────────────────
+
+interface CourtBlock {
+  courtName: string;
+  side: ReturnType<typeof courtSideStyle>;
+  rounds: {
+    roundNumber: number;
+    matches: ScheduleMatch[];
+  }[];
+}
+
+function PlayerName({ name, rank }: { name: string; rank: number | undefined }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span className="text-xs font-bold text-muted-foreground w-5 text-right shrink-0">
+        {rank !== undefined ? `#${rank}` : ''}
+      </span>
+      <span className="font-medium text-sm">{name}</span>
+    </span>
+  );
+}
+
+function MatchRow({
+  match,
+  potje,
+  rankMap,
+}: {
+  match: ScheduleMatch;
+  potje: number;
+  rankMap: Map<string, number>;
+}) {
+  return (
+    <div className="grid grid-cols-[40px_1fr_20px_1fr] items-center gap-x-2 gap-y-0.5 py-1.5 border-b last:border-0">
+      {/* Potje-label */}
+      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide row-span-2">
+        Potje {potje}
+      </span>
+
+      {/* Team 1 */}
+      <div className="flex flex-col gap-0.5">
+        <PlayerName name={match.team1_player1_name} rank={rankMap.get(match.team1_player1_id)} />
+        <PlayerName name={match.team1_player2_name} rank={rankMap.get(match.team1_player2_id)} />
+      </div>
+
+      {/* vs */}
+      <span className="text-xs text-muted-foreground font-bold row-span-2 text-center">vs</span>
+
+      {/* Team 2 */}
+      <div className="flex flex-col gap-0.5">
+        <PlayerName name={match.team2_player1_name} rank={rankMap.get(match.team2_player1_id)} />
+        <PlayerName name={match.team2_player2_name} rank={rankMap.get(match.team2_player2_id)} />
+      </div>
+    </div>
+  );
+}
+
+function CourtPreviewCard({
+  block,
+  rankMap,
+}: {
+  block: CourtBlock;
+  rankMap: Map<string, number>;
+}) {
+  const { bg, border, badge, label } = block.side;
+
+  return (
+    <div className={`rounded-lg border-2 ${border} ${bg} overflow-hidden`}>
+      {/* Header */}
+      <div className={`flex items-center justify-between px-4 py-2 border-b ${border}`}>
+        <span className="font-bold text-sm">{block.courtName}</span>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${badge}`}>{label}</span>
+      </div>
+
+      {/* Rounds */}
+      <div className="divide-y divide-gray-200">
+        {block.rounds.map(({ roundNumber, matches }) => (
+          <div key={roundNumber} className="px-4 py-2">
+            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
+              Ronde {roundNumber}
+            </p>
+            {matches.map((m, idx) => (
+              <MatchRow key={m.id} match={m} potje={idx + 1} rankMap={rankMap} />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ScheduleContent({ urlTournamentId }: ScheduleContentProps) {
   const navigate = useNavigate();
@@ -29,16 +139,64 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
   const { preview, generatePreview, isGenerating, clearPreview } = useSchedulePreview(selectedTournamentId);
   const { generateSchedule, isGenerating: isSaving } = useScheduleGeneration();
 
-  const activeTournaments = tournaments?.filter(t => 
-    t.status === 'open' || t.status === 'in_progress'
+  const activeTournaments = tournaments?.filter(
+    (t) => t.status === 'open' || t.status === 'in_progress'
   ) || [];
 
-  const selectedTournament = tournaments?.find(t => t.id === selectedTournamentId);
+  const selectedTournament = tournaments?.find((t) => t.id === selectedTournamentId);
 
-  // Separate matches by round
-  const round1Matches = matches?.filter(m => m.round_number === 1) || [];
-  const round2Matches = matches?.filter(m => m.round_number === 2) || [];
-  const round3Matches = matches?.filter(m => m.round_number === 3) || [];
+  const round1Matches = matches?.filter((m) => m.round_number === 1) || [];
+  const round2Matches = matches?.filter((m) => m.round_number === 2) || [];
+  const round3Matches = matches?.filter((m) => m.round_number === 3) || [];
+
+  // ── Ranking map: player_id → rank binnen eigen groep (1 = best) ────────────
+  const rankMap = new Map<string, number>();
+  (['left', 'right'] as const).forEach((group) => {
+    const gp = tournamentPlayers?.filter((p) => p.group === group) || [];
+    gp.forEach((p, idx) => rankMap.set(p.player_id, idx + 1));
+  });
+
+  // ── Preview: groepeer per court_name, dan per toernooironde ───────────────
+  function buildCourtBlocks(allMatches: ScheduleMatch[]): CourtBlock[] {
+    // Collect unique court names in volgorde van match_number
+    const courtOrder: string[] = [];
+    const courtMap = new Map<string, Map<number, ScheduleMatch[]>>();
+
+    for (const m of allMatches) {
+      const cn = m.court_name || 'Onbekende baan';
+      if (!courtMap.has(cn)) {
+        courtMap.set(cn, new Map());
+        courtOrder.push(cn);
+      }
+      const tr = getTournamentRound(m.id);
+      const rounds = courtMap.get(cn)!;
+      if (!rounds.has(tr)) rounds.set(tr, []);
+      // Sorteer op round_within_group (potje 1, 2, 3)
+      rounds.get(tr)!.push(m);
+    }
+
+    // Sorteer matches binnen elke ronde op round_within_group
+    const blocks: CourtBlock[] = [];
+    for (const cn of courtOrder) {
+      const rounds = courtMap.get(cn)!;
+      const roundEntries = Array.from(rounds.entries())
+        .sort(([a], [b]) => a - b)
+        .map(([roundNumber, ms]) => ({
+          roundNumber,
+          matches: [...ms].sort((a, b) => a.round_within_group - b.round_within_group),
+        }));
+
+      // Side bepalen vanuit eerste match id
+      const firstId = roundEntries[0]?.matches[0]?.id || '';
+      blocks.push({
+        courtName: cn,
+        side: courtSideStyle(firstId),
+        rounds: roundEntries,
+      });
+    }
+
+    return blocks;
+  }
 
   const handleTournamentChange = (tournamentId: string) => {
     setSelectedTournamentId(tournamentId);
@@ -47,9 +205,7 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
 
   const handleGeneratePreview = async () => {
     if (!selectedTournamentId) return;
-    
     try {
-      // Round 1 generates both R1 and R2 together
       await generatePreview(1);
     } catch (error) {
       console.error('Error generating preview:', error);
@@ -58,15 +214,8 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
 
   const handleApproveSchedule = async () => {
     if (!preview || !selectedTournamentId) return;
-    
     try {
-      await generateSchedule({
-        tournamentId: selectedTournamentId,
-        roundNumber: 1, // This saves both R1 and R2
-        preview
-      });
-      
-      // Clear preview after successful save
+      await generateSchedule({ tournamentId: selectedTournamentId, roundNumber: 1, preview });
       await clearPreview(1);
     } catch (error) {
       console.error('Error saving schedule:', error);
@@ -98,7 +247,7 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
 
   return (
     <div className="space-y-6">
-      {/* Tournament Selection */}
+      {/* Tournament Selection ───────────────────────────────────────────────── */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -121,10 +270,12 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
                       {tournament.name}
                       {tournament.start_date && (
                         <span className="text-muted-foreground ml-2">
-                          ({new Date(tournament.start_date).toLocaleDateString('nl-NL', { 
-                            day: 'numeric', 
-                            month: 'short' 
-                          })})
+                          (
+                          {new Date(tournament.start_date).toLocaleDateString('nl-NL', {
+                            day: 'numeric',
+                            month: 'short',
+                          })}
+                          )
                         </span>
                       )}
                     </SelectItem>
@@ -150,12 +301,20 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={
-                    selectedTournament.status === 'completed' ? 'default' :
-                    selectedTournament.status === 'in_progress' ? 'secondary' : 'outline'
-                  }>
-                    {selectedTournament.status === 'open' ? 'Open' :
-                     selectedTournament.status === 'in_progress' ? 'Bezig' : 'Voltooid'}
+                  <Badge
+                    variant={
+                      selectedTournament.status === 'completed'
+                        ? 'default'
+                        : selectedTournament.status === 'in_progress'
+                        ? 'secondary'
+                        : 'outline'
+                    }
+                  >
+                    {selectedTournament.status === 'open'
+                      ? 'Open'
+                      : selectedTournament.status === 'in_progress'
+                      ? 'Bezig'
+                      : 'Voltooid'}
                   </Badge>
                 </div>
               </div>
@@ -164,40 +323,35 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
         </CardContent>
       </Card>
 
-      {/* Tabs for Rounds */}
+      {/* Tabs ────────────────────────────────────────────────────────────────── */}
       {selectedTournamentId && (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="ronde-1" className="flex items-center gap-2">
+            <TabsTrigger value="ronde-1">
               Ronde 1
               {round1Matches.length > 0 && (
-                <Badge variant="secondary" className="ml-1">
-                  {round1Matches.length}
-                </Badge>
+                <Badge variant="secondary" className="ml-1">{round1Matches.length}</Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="ronde-2" className="flex items-center gap-2">
+            <TabsTrigger value="ronde-2">
               Ronde 2
               {round2Matches.length > 0 && (
-                <Badge variant="secondary" className="ml-1">
-                  {round2Matches.length}
-                </Badge>
+                <Badge variant="secondary" className="ml-1">{round2Matches.length}</Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="ronde-3" className="flex items-center gap-2">
+            <TabsTrigger value="ronde-3">
               Ronde 3
               {round3Matches.length > 0 && (
-                <Badge variant="secondary" className="ml-1">
-                  {round3Matches.length}
-                </Badge>
+                <Badge variant="secondary" className="ml-1">{round3Matches.length}</Badge>
               )}
             </TabsTrigger>
           </TabsList>
 
-          {/* Ronde 1 & 2 Combined Generation */}
+          {/* ─── Ronde 1 ──────────────────────────────────────────────────── */}
           <TabsContent value="ronde-1">
             <div className="space-y-4">
-              {/* Show preview or generation button */}
+
+              {/* Generate knop (geen preview, geen wedstrijden) */}
               {!preview && round1Matches.length === 0 && (
                 <Card>
                   <CardContent className="pt-6">
@@ -217,12 +371,13 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
                             Preview Genereren...
                           </>
                         ) : (
-                          <>Preview Genereren</>
+                          'Preview Genereren'
                         )}
                       </Button>
                       {(tournamentPlayers?.length || 0) < 16 && (
                         <p className="text-sm text-red-600">
-                          Minimaal 16 spelers nodig (8 per groep). Momenteel: {tournamentPlayers?.length || 0}
+                          Minimaal 16 spelers nodig (8 per groep). Momenteel:{' '}
+                          {tournamentPlayers?.length || 0}
                         </p>
                       )}
                     </div>
@@ -230,67 +385,45 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
                 </Card>
               )}
 
-              {/* Show preview if generated */}
+              {/* ── Preview: per baan, per ronde, met rankings ─────────────── */}
               {preview && preview.matches.length > 0 && (
                 <div className="space-y-4">
                   <Alert className="bg-green-50 border-green-200">
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
                     <AlertDescription className="text-green-800">
-                      Preview gegenereerd! {preview.totalMatches} wedstrijden (12 Ronde 1 + 12 Ronde 2) klaar om op te slaan.
+                      Preview gegenereerd! {preview.totalMatches} wedstrijden (12 Ronde 1 + 12 Ronde
+                      2) klaar om op te slaan.
                     </AlertDescription>
                   </Alert>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-base">Links Groep</CardTitle>
-                        <CardDescription>{preview.leftGroupMatches.length} wedstrijden</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2 text-sm">
-                          {preview.leftGroupMatches.slice(0, 5).map((match) => (
-                            <div key={match.id} className="p-2 bg-muted rounded">
-                              <div className="font-medium">Wedstrijd #{match.match_number}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {match.team1_player1_name} & {match.team1_player2_name} vs{' '}
-                                {match.team2_player1_name} & {match.team2_player2_name}
-                              </div>
-                            </div>
-                          ))}
-                          {preview.leftGroupMatches.length > 5 && (
-                            <div className="text-center text-xs text-muted-foreground">
-                              + {preview.leftGroupMatches.length - 5} meer...
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
+                  {/* Baan-kaarten */}
+                  {(() => {
+                    const blocks = buildCourtBlocks(preview.matches);
+                    // Verdeel links en rechts
+                    const left  = blocks.filter((b) => b.side.label === 'Links');
+                    const right = blocks.filter((b) => b.side.label === 'Rechts');
 
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-base">Rechts Groep</CardTitle>
-                        <CardDescription>{preview.rightGroupMatches.length} wedstrijden</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2 text-sm">
-                          {preview.rightGroupMatches.slice(0, 5).map((match) => (
-                            <div key={match.id} className="p-2 bg-muted rounded">
-                              <div className="font-medium">Wedstrijd #{match.match_number}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {match.team1_player1_name} & {match.team1_player2_name} vs{' '}
-                                {match.team2_player1_name} & {match.team2_player2_name}
-                              </div>
-                            </div>
+                    return (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="space-y-4">
+                          <h3 className="text-sm font-bold text-green-700 uppercase tracking-wide">
+                            Links Groep
+                          </h3>
+                          {left.map((block) => (
+                            <CourtPreviewCard key={block.courtName} block={block} rankMap={rankMap} />
                           ))}
-                          {preview.rightGroupMatches.length > 5 && (
-                            <div className="text-center text-xs text-muted-foreground">
-                              + {preview.rightGroupMatches.length - 5} meer...
-                            </div>
-                          )}
                         </div>
-                      </CardContent>
-                    </Card>
-                  </div>
+                        <div className="space-y-4">
+                          <h3 className="text-sm font-bold text-blue-700 uppercase tracking-wide">
+                            Rechts Groep
+                          </h3>
+                          {right.map((block) => (
+                            <CourtPreviewCard key={block.courtName} block={block} rankMap={rankMap} />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   <div className="flex gap-3">
                     <Button
@@ -304,28 +437,22 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
                           Opslaan...
                         </>
                       ) : (
-                        <>✓ Wedstrijden Toevoegen</>
+                        '✓ Wedstrijden Toevoegen'
                       )}
                     </Button>
-                    <Button
-                      onClick={() => clearPreview(1)}
-                      variant="outline"
-                      disabled={isSaving}
-                    >
+                    <Button onClick={() => clearPreview(1)} variant="outline" disabled={isSaving}>
                       Annuleren
                     </Button>
                   </div>
                 </div>
               )}
 
-              {/* Show existing R1 matches */}
+              {/* Bestaande R1 wedstrijden */}
               {round1Matches.length > 0 && (
                 <Card>
                   <CardHeader>
                     <CardTitle>Ronde 1 Wedstrijden</CardTitle>
-                    <CardDescription>
-                      {round1Matches.length} wedstrijden gegenereerd
-                    </CardDescription>
+                    <CardDescription>{round1Matches.length} wedstrijden gegenereerd</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
@@ -337,12 +464,20 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
                               {match.court?.name || `Baan ${match.court_number || '?'}`}
                             </div>
                           </div>
-                          <Badge variant={
-                            match.status === 'completed' ? 'default' :
-                            match.status === 'in_progress' ? 'secondary' : 'outline'
-                          }>
-                            {match.status === 'scheduled' ? 'Gepland' :
-                             match.status === 'in_progress' ? 'Bezig' : 'Afgerond'}
+                          <Badge
+                            variant={
+                              match.status === 'completed'
+                                ? 'default'
+                                : match.status === 'in_progress'
+                                ? 'secondary'
+                                : 'outline'
+                            }
+                          >
+                            {match.status === 'scheduled'
+                              ? 'Gepland'
+                              : match.status === 'in_progress'
+                              ? 'Bezig'
+                              : 'Afgerond'}
                           </Badge>
                         </div>
                       ))}
@@ -353,16 +488,14 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
             </div>
           </TabsContent>
 
-          {/* Ronde 2 Tab */}
+          {/* ─── Ronde 2 ──────────────────────────────────────────────────── */}
           <TabsContent value="ronde-2">
             <div className="space-y-4">
               {round2Matches.length > 0 ? (
                 <Card>
                   <CardHeader>
                     <CardTitle>Ronde 2 Wedstrijden</CardTitle>
-                    <CardDescription>
-                      {round2Matches.length} wedstrijden gegenereerd
-                    </CardDescription>
+                    <CardDescription>{round2Matches.length} wedstrijden gegenereerd</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
@@ -374,12 +507,20 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
                               {match.court?.name || `Baan ${match.court_number || '?'}`}
                             </div>
                           </div>
-                          <Badge variant={
-                            match.status === 'completed' ? 'default' :
-                            match.status === 'in_progress' ? 'secondary' : 'outline'
-                          }>
-                            {match.status === 'scheduled' ? 'Gepland' :
-                             match.status === 'in_progress' ? 'Bezig' : 'Afgerond'}
+                          <Badge
+                            variant={
+                              match.status === 'completed'
+                                ? 'default'
+                                : match.status === 'in_progress'
+                                ? 'secondary'
+                                : 'outline'
+                            }
+                          >
+                            {match.status === 'scheduled'
+                              ? 'Gepland'
+                              : match.status === 'in_progress'
+                              ? 'Bezig'
+                              : 'Afgerond'}
                           </Badge>
                         </div>
                       ))}
@@ -389,27 +530,24 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
               ) : (
                 <Alert>
                   <AlertDescription>
-                    Ronde 2 wordt automatisch gegenereerd samen met Ronde 1. Ga naar Ronde 1 tab om het schema te maken.
+                    Ronde 2 wordt automatisch gegenereerd samen met Ronde 1. Ga naar Ronde 1 tab om
+                    het schema te maken.
                   </AlertDescription>
                 </Alert>
               )}
             </div>
           </TabsContent>
 
-          {/* Ronde 3 Tab - WITH NEW R3 GENERATION SECTION */}
+          {/* ─── Ronde 3 ──────────────────────────────────────────────────── */}
           <TabsContent value="ronde-3">
             <div className="space-y-6">
-              {/* NIEUW: R3 Generation Section */}
               <Round3GenerationSection tournamentId={selectedTournamentId} />
 
-              {/* Existing R3 matches display */}
               {round3Matches.length > 0 && (
                 <Card>
                   <CardHeader>
                     <CardTitle>Ronde 3 Wedstrijden</CardTitle>
-                    <CardDescription>
-                      {round3Matches.length} finalegroep wedstrijden
-                    </CardDescription>
+                    <CardDescription>{round3Matches.length} finalegroep wedstrijden</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
@@ -421,12 +559,20 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
                               {match.court?.name || `Baan ${match.court_number || '?'}`}
                             </div>
                           </div>
-                          <Badge variant={
-                            match.status === 'completed' ? 'default' :
-                            match.status === 'in_progress' ? 'secondary' : 'outline'
-                          }>
-                            {match.status === 'scheduled' ? 'Gepland' :
-                             match.status === 'in_progress' ? 'Bezig' : 'Afgerond'}
+                          <Badge
+                            variant={
+                              match.status === 'completed'
+                                ? 'default'
+                                : match.status === 'in_progress'
+                                ? 'secondary'
+                                : 'outline'
+                            }
+                          >
+                            {match.status === 'scheduled'
+                              ? 'Gepland'
+                              : match.status === 'in_progress'
+                              ? 'Bezig'
+                              : 'Afgerond'}
                           </Badge>
                         </div>
                       ))}
@@ -435,7 +581,6 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
                 </Card>
               )}
 
-              {/* Manual match addition section (if you have it) */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Handmatig 2v2 Wedstrijd Toevoegen – Ronde 3</CardTitle>
@@ -444,14 +589,7 @@ export default function ScheduleContent({ urlTournamentId }: ScheduleContentProp
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      // Navigate to manual match creation if you have that feature
-                      // navigate(`/matches/create?tournament=${selectedTournamentId}&round=3`);
-                    }}
-                  >
+                  <Button variant="outline" className="w-full" onClick={() => {}}>
                     <Plus className="mr-2 h-4 w-4" />
                     Voeg 2v2 Wedstrijd Toe
                   </Button>
