@@ -98,7 +98,6 @@ const PRINT_CSS = `
     margin: 10mm 12mm;
   }
 
-  /* visibility-aanpak: werkt altijd, ook als scoreform-root diep genest zit */
   body * {
     visibility: hidden !important;
   }
@@ -175,52 +174,60 @@ function PageHeader({
         alignItems: "center",
         justifyContent: "space-between",
         borderBottom: "3px solid #f28b00",
-        paddingBottom: 10,
-        marginBottom: 14,
+        paddingBottom: 8,
+        marginBottom: 12,
         flexShrink: 0,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      {/* Links: logo + toernooiinfo */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <img
           src="/PPP_logo.webp"
           alt="PPP"
-          style={{ height: 48, width: "auto", display: "block" }}
+          style={{ height: 40, width: "auto", display: "block" }}
           onError={(e) => {
             (e.currentTarget as HTMLImageElement).style.display = "none";
           }}
         />
         <div>
-          <div style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.2, color: "#111" }}>
+          <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.2, color: "#111" }}>
             {tournament.name}
           </div>
-          <div style={{ fontSize: 11, color: "#6b7280", marginTop: 3 }}>
+          <div style={{ fontSize: 10, color: "#6b7280", marginTop: 2 }}>
             {formatDateRange(tournament.start_date, tournament.end_date)}
           </div>
         </div>
       </div>
 
+      {/* Rechts: baannaam groot, daaronder ronde + rijtje op één regel */}
       <div style={{ textAlign: "right" }}>
-        <div style={{ fontSize: 22, fontWeight: 900, color: "#f28b00", lineHeight: 1 }}>
+        <div style={{ fontSize: 20, fontWeight: 900, color: "#f28b00", lineHeight: 1 }}>
           {courtName}
         </div>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "#111", marginTop: 3 }}>
-          {roundLabel}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          gap: 6,
+          marginTop: 4,
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>
+            {roundLabel}
+          </span>
+          {label && (
+            <span style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: "#fff",
+              background: color,
+              borderRadius: 4,
+              padding: "2px 8px",
+              letterSpacing: ".03em",
+            }}>
+              {label}
+            </span>
+          )}
         </div>
-        {label && (
-          <div style={{
-            display: "inline-block",
-            marginTop: 4,
-            fontSize: 10,
-            fontWeight: 700,
-            color: "#fff",
-            background: color,
-            borderRadius: 4,
-            padding: "2px 8px",
-            letterSpacing: ".03em",
-          }}>
-            {label}
-          </div>
-        )}
       </div>
     </div>
   );
