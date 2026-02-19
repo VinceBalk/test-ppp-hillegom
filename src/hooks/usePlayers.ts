@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -17,9 +16,11 @@ export interface Player {
   row_side?: 'left' | 'right';
   position?: number;
   rank_change?: number;
+  total_specials?: number;
   created_at?: string;
   updated_at?: string;
   created_by?: string;
+  user_id?: string | null;
 }
 
 export const usePlayers = () => {
@@ -104,41 +105,11 @@ export const usePlayers = () => {
     },
   });
 
-  const deletePlayer = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('players')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['players'] });
-      toast({
-        title: "Speler verwijderd",
-        description: "De speler is succesvol verwijderd.",
-      });
-    },
-    onError: (error) => {
-      console.error('Error deleting player:', error);
-      toast({
-        title: "Fout",
-        description: "Er is een fout opgetreden bij het verwijderen van de speler.",
-        variant: "destructive",
-      });
-    },
-  });
-
   return {
     players,
     isLoading,
     error,
     createPlayer: createPlayer.mutate,
     updatePlayer: updatePlayer.mutate,
-    deletePlayer: deletePlayer.mutate,
-    isCreating: createPlayer.isPending,
-    isUpdating: updatePlayer.isPending,
-    isDeleting: deletePlayer.isPending,
   };
 };
