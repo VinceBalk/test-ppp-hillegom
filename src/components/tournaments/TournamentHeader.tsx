@@ -1,4 +1,3 @@
-
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Plus } from 'lucide-react';
@@ -11,14 +10,16 @@ interface TournamentHeaderProps {
   setShowForm: (show: boolean) => void;
   onCreateTournament: (tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => void;
   isCreating: boolean;
+  canManage: boolean;
 }
 
-export function TournamentHeader({ 
-  tournamentCount, 
-  showForm, 
-  setShowForm, 
-  onCreateTournament, 
-  isCreating 
+export function TournamentHeader({
+  tournamentCount,
+  showForm,
+  setShowForm,
+  onCreateTournament,
+  isCreating,
+  canManage,
 }: TournamentHeaderProps) {
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -28,21 +29,23 @@ export function TournamentHeader({
           Beheer alle toernooien en competities ({tournamentCount} toernooien)
         </p>
       </div>
-      <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogTrigger asChild>
-          <Button className="w-full md:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            Nieuw Toernooi
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="max-w-2xl">
-          <TournamentForm
-            onSubmit={onCreateTournament}
-            onCancel={() => setShowForm(false)}
-            isSubmitting={isCreating}
-          />
-        </DialogContent>
-      </Dialog>
+      {canManage && (
+        <Dialog open={showForm} onOpenChange={setShowForm}>
+          <DialogTrigger asChild>
+            <Button className="w-full md:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              Nieuw Toernooi
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <TournamentForm
+              onSubmit={onCreateTournament}
+              onCancel={() => setShowForm(false)}
+              isSubmitting={isCreating}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
