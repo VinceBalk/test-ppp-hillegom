@@ -1,13 +1,19 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   ArrowLeft,
   TrendingUp,
@@ -16,32 +22,41 @@ import {
   Trophy,
   Target,
   Award,
+  Pencil,
 } from 'lucide-react';
 import { usePlayers } from '@/hooks/usePlayers';
 import { usePlayerRankings } from '@/hooks/usePlayerRankings';
+import { useAuth } from '@/contexts/AuthContext';
+import { PlayerForm } from '@/components/PlayerForm';
 import PlayerMatches from '@/components/player/PlayerMatches';
 
 export default function PlayerDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { players, isLoading } = usePlayers();
+  const { players, isLoading, updatePlayer } = usePlayers();
   const { data: rankings } = usePlayerRankings();
+  const { user, isSuperAdmin } = useAuth();
+
+  const [editOpen, setEditOpen] = useState(false);
 
   const player = players.find((p) => p.id === id);
   const playerRanking = rankings?.find((r) => r.player_id === id);
   const globalPosition = rankings?.findIndex((r) => r.player_id === id);
 
+  // Bewerkrecht: superadmin OF eigen spelerrecord
+  const isOwnPlayer = user?.id && player?.user_id && user.id === player.user_id;
+  const canEdit = isSuperAdmin() || isOwnPlayer;
+
+  const handleUpdate = (playerData: any) => {
+    if (player) {
+      updatePlayer({ ...playerData, id: player.id });
+      setEditOpen(false);
+    }
+  };
+
   const getRowSideBadge = (side?: string) => {
-    const variants = {
-      left: 'default',
-      right: 'secondary',
-    } as const;
-
-    const labels = {
-      left: 'Links',
-      right: 'Rechts',
-    };
-
+    const variants = { left: 'default', right: 'secondary' } as const;
+    const labels = { left: 'Links', right: 'Rechts' };
     return (
       <Badge variant={variants[side as keyof typeof variants] || 'default'}>
         {labels[side as keyof typeof labels] || side}
@@ -104,18 +119,49 @@ export default function PlayerDetail() {
 
   return (
     <div className="section stack-l">
-      <div className="stack-s">
-        <Button variant="outline" onClick={() => navigate(-1)}>
-          <ArrowLeft className="icon-s mr-2" />
-          Terug
-        </Button>
-        <div>
-          <h1 className="h1">{player.name}</h1>
-          <p className="text-m text-muted-foreground">Speler Details</p>
+      {/* Header met terugknop en optionele bewerkknop */}
+      <div className="flex items-start justify-between">
+        <div className="stack-s">
+          <Button variant="outline" onClick={() => navigate(-1)}>
+            <ArrowLeft className="icon-s mr-2" />
+            Terug
+          </Button>
+          <div>
+            <h1 className="h1">{player.name}</h1>
+            <p className="text-m text-muted-foreground">Speler Details</p>
+          </div>
         </div>
+
+        {canEdit && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setEditOpen(true)}
+            className="mt-1"
+          >
+            <Pencil className="h-4 w-4 mr-2" />
+            Bewerken
+          </Button>
+        )}
       </div>
 
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Speler bewerken</DialogTitle>
+          </DialogHeader>
+          <PlayerForm
+            player={player}
+            onSubmit={handleUpdate}
+            onCancel={() => setEditOpen(false)}
+            isSuperAdmin={isSuperAdmin()}
+          />
+        </DialogContent>
+      </Dialog>
+
       <div className="grid-2">
+        {/* Algemene informatie — email/telefoon alleen voor canEdit of eigen profiel */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -124,14 +170,18 @@ export default function PlayerDetail() {
             </CardTitle>
           </CardHeader>
           <CardContent className="stack-s">
-            <div className="flex justify-between">
-              <span className="font-medium">Email:</span>
-              <span>{player.email || 'Niet opgegeven'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="font-medium">Telefoon:</span>
-              <span>{player.phone || 'Niet opgegeven'}</span>
-            </div>
+            {canEdit && (
+              <>
+                <div className="flex justify-between">
+                  <span className="font-medium">Email:</span>
+                  <span>{player.email || 'Niet opgegeven'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Telefoon:</span>
+                  <span>{player.phone || 'Niet opgegeven'}</span>
+                </div>
+              </>
+            )}
             <div className="flex justify-between">
               <span className="font-medium">Rij:</span>
               {getRowSideBadge(player.row_side)}
@@ -143,6 +193,7 @@ export default function PlayerDetail() {
           </CardContent>
         </Card>
 
+        {/* Ranking */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -166,66 +217,71 @@ export default function PlayerDetail() {
               <span>{playerRanking?.total_points || 0}</span>
             </div>
             <div className="flex justify-between">
-              <span className="font-medium">Gem. Positie:</span>
-              <span className="font-semibold">{playerRanking?.avg_position || '-'}</span>
+              <span className="font-medium">Gem. Games/Toernooi:</span>
+              <span>
+                {player.avg_games_per_tournament
+                  ? Number(player.avg_games_per_tournament).toFixed(1)
+                  : '0.0'}
+              </span>
             </div>
-            <div className="flex justify-between">
-              <span className="font-medium">Trend:</span>
-              <div className="flex items-center gap-2">
+            <div className="flex justify-between items-center">
+              <span className="font-medium">Ranking Trend:</span>
+              <div className="flex items-center gap-1">
                 {getRankChangeIcon(player.rank_change)}
-                <span>{Math.abs(player.rank_change || 0)}</span>
+                <span>{player.rank_change || 0}</span>
               </div>
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="icon-s" />
-            Prestaties
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="space-y-1">
-            <span className="text-sm font-medium text-muted-foreground">Ranking Score</span>
-            <p className="text-2xl font-bold">{player.ranking_score || 0}</p>
-          </div>
-          <div className="space-y-1">
-            <span className="text-sm font-medium text-muted-foreground">Totaal Gewonnen</span>
-            <p className="text-2xl font-bold text-green-600">{player.total_games_won || 0}</p>
-          </div>
-          <div className="space-y-1">
-            <span className="text-sm font-medium text-muted-foreground">Totaal Specials</span>
-            <p className="text-2xl font-bold text-orange-600">{playerRanking?.total_specials || 0}</p>
-          </div>
-          <div className="space-y-1">
-            <span className="text-sm font-medium text-muted-foreground">Gem. per Toernooi</span>
-            <p className="text-2xl font-bold">{player.avg_games_per_tournament?.toFixed(1) || '0.0'}</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {formatSpecials(player.specials).length > 0 && (
+        {/* Statistieken */}
         <Card>
           <CardHeader>
-            <CardTitle>Specials</CardTitle>
-            <CardDescription>Behaalde speciale prestaties</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="icon-s" />
+              Statistieken
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {formatSpecials(player.specials).map((special, index) => (
-                <Badge key={index} variant="outline">
-                  {special}
-                </Badge>
-              ))}
+          <CardContent className="stack-s">
+            <div className="flex justify-between">
+              <span className="font-medium">Totaal Games Gewonnen:</span>
+              <span>{player.total_games_won || 0}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-medium">Totaal Specials:</span>
+              <span>{player.total_specials || 0}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-medium">Toernooien:</span>
+              <span>{player.total_tournaments || 0}</span>
             </div>
           </CardContent>
         </Card>
-      )}
 
-      <PlayerMatches playerId={player.id} playerName={player.name} />
+        {/* Specials */}
+        {formatSpecials(player.specials).length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Award className="icon-s" />
+                Behaalde Specials
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {formatSpecials(player.specials).map((special) => (
+                  <Badge key={special} variant="secondary">
+                    {special}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Wedstrijden */}
+      <PlayerMatches playerId={id || ''} />
     </div>
   );
 }
