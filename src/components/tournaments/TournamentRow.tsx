@@ -1,11 +1,8 @@
-
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Edit, MoreHorizontal, Trash2, Users, Calendar, TrendingUp, PlayCircle, CheckCircle } from 'lucide-react';
+import { Edit, MoreHorizontal, Trash2, Users, Calendar, TrendingUp, PlayCircle, CheckCircle, Swords } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -23,10 +20,12 @@ interface TournamentRowProps {
   setEditingTournament: (tournament: Tournament | null) => void;
   onAssignPlayers: (tournamentId: string) => void;
   onViewStandings: (tournamentId: string) => void;
+  onViewMatches: (tournamentId: string) => void;
   onUpdateTournament: (tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => void;
   onDeleteTournament: (id: string) => void;
   isUpdating: boolean;
   isDeleting: boolean;
+  canManage: boolean;
 }
 
 export function TournamentRow({
@@ -35,10 +34,12 @@ export function TournamentRow({
   setEditingTournament,
   onAssignPlayers,
   onViewStandings,
+  onViewMatches,
   onUpdateTournament,
   onDeleteTournament,
   isUpdating,
-  isDeleting
+  isDeleting,
+  canManage,
 }: TournamentRowProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -50,12 +51,12 @@ export function TournamentRow({
   };
 
   const handleRowClick = () => {
-    setEditingTournament(tournament);
+    if (canManage) setEditingTournament(tournament);
   };
 
   const handleToggleStatus = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (!isSuperAdmin()) {
       toast({
         title: 'Geen toegang',
@@ -81,7 +82,6 @@ export function TournamentRow({
         description: `Toernooi status is gewijzigd naar ${newStatus === 'completed' ? 'Voltooid' : 'Bezig'}`,
       });
 
-      // Reload to refresh data
       window.location.reload();
     } catch (error) {
       toast({
@@ -96,8 +96,8 @@ export function TournamentRow({
 
   return (
     <>
-      <TableRow 
-        className="cursor-pointer hover:bg-muted/50"
+      <TableRow
+        className={canManage ? 'cursor-pointer hover:bg-muted/50' : ''}
         onClick={handleRowClick}
       >
         <TableCell>
@@ -112,7 +112,7 @@ export function TournamentRow({
         </TableCell>
         <TableCell>
           <div className="text-sm">
-            {format(new Date(tournament.start_date), 'd MMM yyyy', { locale: nl })} - 
+            {format(new Date(tournament.start_date), 'd MMM yyyy', { locale: nl })} -
             {format(new Date(tournament.end_date), 'd MMM yyyy', { locale: nl })}
           </div>
         </TableCell>
@@ -132,78 +132,97 @@ export function TournamentRow({
               <TrendingUp className="h-4 w-4 mr-1" />
               Stand
             </Button>
-            
+
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onAssignPlayers(tournament.id)}
+              onClick={() => onViewMatches(tournament.id)}
+              title="Bekijk wedstrijden"
             >
-              <Users className="h-4 w-4 mr-1" />
-              Spelers
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCreateSchedule}
-            >
-              <Calendar className="h-4 w-4 mr-1" />
-              Schema
+              <Swords className="h-4 w-4 mr-1" />
+              Wedstrijden
             </Button>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {(tournament.status === 'completed' || tournament.status === 'in_progress') && (
-                  <>
-                    <DropdownMenuItem onClick={handleToggleStatus} disabled={isTogglingStatus}>
-                      {tournament.status === 'completed' ? (
-                        <>
-                          <PlayCircle className="h-4 w-4 mr-2" />
-                          Zet op Bezig
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Zet op Voltooid
-                        </>
-                      )}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-                <DropdownMenuItem onClick={() => setEditingTournament(tournament)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Bewerken
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="text-destructive" 
-                  onClick={() => onDeleteTournament(tournament.id)}
-                  disabled={isDeleting}
+            {canManage && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onAssignPlayers(tournament.id)}
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Verwijderen
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <Users className="h-4 w-4 mr-1" />
+                  Spelers
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCreateSchedule}
+                >
+                  <Calendar className="h-4 w-4 mr-1" />
+                  Schema
+                </Button>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {(tournament.status === 'completed' || tournament.status === 'in_progress') && (
+                      <>
+                        <DropdownMenuItem onClick={handleToggleStatus} disabled={isTogglingStatus}>
+                          {tournament.status === 'completed' ? (
+                            <>
+                              <PlayCircle className="h-4 w-4 mr-2" />
+                              Zet op Bezig
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Zet op Voltooid
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
+                    <DropdownMenuItem onClick={() => setEditingTournament(tournament)}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Bewerken
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => onDeleteTournament(tournament.id)}
+                      disabled={isDeleting}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Verwijderen
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            )}
           </div>
         </TableCell>
       </TableRow>
 
-      <Dialog open={editingTournament?.id === tournament.id} onOpenChange={(open) => !open && setEditingTournament(null)}>
-        <DialogContent className="max-w-2xl">
-          <TournamentForm
-            tournament={editingTournament || undefined}
-            onSubmit={onUpdateTournament}
-            onCancel={() => setEditingTournament(null)}
-            isSubmitting={isUpdating}
-          />
-        </DialogContent>
-      </Dialog>
+      {canManage && (
+        <Dialog
+          open={editingTournament?.id === tournament.id}
+          onOpenChange={(open) => !open && setEditingTournament(null)}
+        >
+          <DialogContent className="max-w-2xl">
+            <TournamentForm
+              tournament={editingTournament || undefined}
+              onSubmit={onUpdateTournament}
+              onCancel={() => setEditingTournament(null)}
+              isSubmitting={isUpdating}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }
