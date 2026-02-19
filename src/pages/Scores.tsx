@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Eye, MapPin, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MatchDetail {
   id: string;
@@ -39,6 +40,9 @@ interface MatchDetail {
 export default function Scores() {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
+  const { hasRole, isSuperAdmin } = useAuth();
+  const canManage = hasRole('organisator') || isSuperAdmin();
+
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [matches, setMatches] = useState<MatchDetail[]>([]);
   const [filteredMatches, setFilteredMatches] = useState<MatchDetail[]>([]);
@@ -55,7 +59,6 @@ export default function Scores() {
   }, [matchId]);
 
   useEffect(() => {
-    // Filter matches op geselecteerde ronde
     if (selectedRound === "all") {
       setFilteredMatches(matches);
     } else {
@@ -65,12 +68,9 @@ export default function Scores() {
 
   const fetchMatchDetail = async (id: string) => {
     setLoading(true);
-    console.log("Fetching match detail for:", id);
-    
     const { data, error } = await supabase
       .from("matches")
-      .select(
-        `
+      .select(`
         id,
         round_number,
         match_number,
@@ -96,8 +96,7 @@ export default function Scores() {
           player:players(name),
           special_type:special_types(name)
         )
-      `
-      )
+      `)
       .eq("id", id)
       .single();
 
@@ -105,7 +104,6 @@ export default function Scores() {
       console.error("Fout bij ophalen wedstrijd:", error);
       setMatch(null);
     } else {
-      console.log("Match detail data:", data);
       setMatch(data);
     }
     setLoading(false);
@@ -113,12 +111,9 @@ export default function Scores() {
 
   const fetchMatchesWithScores = async () => {
     setLoading(true);
-    console.log("Fetching matches with scores...");
-    
     const { data, error } = await supabase
       .from("matches")
-      .select(
-        `
+      .select(`
         id,
         round_number,
         match_number,
@@ -144,8 +139,7 @@ export default function Scores() {
           player:players(name),
           special_type:special_types(name)
         )
-      `
-      )
+      `)
       .eq('status', 'completed')
       .not('team1_score', 'is', null)
       .not('team2_score', 'is', null);
@@ -154,42 +148,23 @@ export default function Scores() {
       console.error("Fout bij ophalen completed wedstrijden:", error);
       setMatches([]);
     } else {
-      console.log("Completed wedstrijden opgehaald:", data?.length, "matches");
-      
-      // Filter op wedstrijden die daadwerkelijk scores hebben
-      const matchesWithScores = (data || []).filter(match => 
-        match.team1_score !== null && 
+      const matchesWithScores = (data || []).filter(match =>
+        match.team1_score !== null &&
         match.team2_score !== null
       );
 
-      // Sorteer op: Ronde -> Baan -> Wedstrijd
       matchesWithScores.sort((a, b) => {
-        // Eerst op ronde
-        if (a.round_number !== b.round_number) {
-          return a.round_number - b.round_number;
-        }
-        
-        // Dan op baan (court_number of court name)
+        if (a.round_number !== b.round_number) return a.round_number - b.round_number;
         const aCourtNum = parseInt(a.court_number || '0') || 0;
         const bCourtNum = parseInt(b.court_number || '0') || 0;
-        if (aCourtNum !== bCourtNum) {
-          return aCourtNum - bCourtNum;
-        }
-        
-        // Dan op wedstrijd nummer
-        const aMatchNum = a.match_number || 0;
-        const bMatchNum = b.match_number || 0;
-        return aMatchNum - bMatchNum;
+        if (aCourtNum !== bCourtNum) return aCourtNum - bCourtNum;
+        return (a.match_number || 0) - (b.match_number || 0);
       });
-      
-      console.log("Matches met echte scores (gesorteerd):", matchesWithScores.length);
+
       setMatches(matchesWithScores);
-      
-      // Verkrijg beschikbare rondes voor filter
       const rounds = [...new Set(matchesWithScores.map(m => m.round_number))].sort((a, b) => a - b);
       setAvailableRounds(rounds);
     }
-    
     setLoading(false);
   };
 
@@ -208,7 +183,6 @@ export default function Scores() {
       .reduce((total, special) => total + special.count, 0);
   };
 
-  // Loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -255,7 +229,6 @@ export default function Scores() {
           <p className="text-sm text-muted-foreground">Uitslag en statistieken</p>
         </div>
 
-        {/* Match Info Card */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex justify-between items-start text-sm">
@@ -267,16 +240,12 @@ export default function Scores() {
                   {getCourtInfo(match)}
                 </div>
               </div>
-              <div className="text-xs text-muted-foreground">
-                {match.status}
-              </div>
+              <div className="text-xs text-muted-foreground">{match.status}</div>
             </div>
           </CardHeader>
-          
+
           <CardContent className="pt-0">
-            {/* Mobiele score layout - gestackt */}
             <div className="space-y-3">
-              {/* Team 1 */}
               <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
                 <div>
                   <p className="text-xs text-blue-600 font-medium mb-0.5">Team 1</p>
@@ -285,17 +254,13 @@ export default function Scores() {
                     <p className="font-semibold text-sm">{getPlayerName(match.team1_player2)}</p>
                   )}
                 </div>
-                <div className="text-3xl font-bold text-blue-600">
-                  {match.team1_score ?? 0}
-                </div>
+                <div className="text-3xl font-bold text-blue-600">{match.team1_score ?? 0}</div>
               </div>
-              
-              {/* VS divider */}
+
               <div className="text-center">
                 <span className="text-sm font-medium text-muted-foreground bg-muted px-3 py-1 rounded-full">VS</span>
               </div>
-              
-              {/* Team 2 */}
+
               <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                 <div>
                   <p className="text-xs text-red-600 font-medium mb-0.5">Team 2</p>
@@ -304,15 +269,12 @@ export default function Scores() {
                     <p className="font-semibold text-sm">{getPlayerName(match.team2_player2)}</p>
                   )}
                 </div>
-                <div className="text-3xl font-bold text-red-600">
-                  {match.team2_score ?? 0}
-                </div>
+                <div className="text-3xl font-bold text-red-600">{match.team2_score ?? 0}</div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Speler Statistieken - Mobile optimized */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Specials</CardTitle>
@@ -349,10 +311,9 @@ export default function Scores() {
                   { id: 'team2_player1', name: getPlayerName(match.team2_player1) },
                   match.team2_player2 && { id: 'team2_player2', name: getPlayerName(match.team2_player2) }
                 ].filter(Boolean).map((player, index) => {
-                  const specials = match.match_specials?.filter((s) => 
+                  const specials = match.match_specials?.filter((s) =>
                     s.player?.name === player?.name
                   ) || [];
-                  
                   return (
                     <div key={player?.id || index} className="border border-muted rounded-lg p-3">
                       <p className="font-medium text-sm mb-2">{player?.name}</p>
@@ -373,13 +334,9 @@ export default function Scores() {
                 })}
               </div>
             )}
-            
-            {/* Fallback bericht als er helemaal geen specials zijn */}
             {(!match.match_specials || match.match_specials.length === 0) && (
               <div className="text-center py-6">
-                <p className="text-sm text-muted-foreground">
-                  Er zijn geen specials voor deze wedstrijd
-                </p>
+                <p className="text-sm text-muted-foreground">Er zijn geen specials voor deze wedstrijd</p>
               </div>
             )}
           </CardContent>
@@ -388,10 +345,9 @@ export default function Scores() {
     );
   }
 
-  // Conditionele logica voor filters
+  // Overzichtspagina
   const isFilteredByRound = selectedRound !== "all";
-  
-  // Overzichtspagina - Match Cards
+
   return (
     <div className="space-y-6 p-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -403,8 +359,7 @@ export default function Scores() {
             {filteredMatches.length} {filteredMatches.length === 1 ? 'wedstrijd' : 'wedstrijden'}
           </p>
         </div>
-        
-        {/* Ronde Filter */}
+
         {availableRounds.length > 1 && (
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
@@ -424,13 +379,13 @@ export default function Scores() {
           </div>
         )}
       </div>
-      
+
       {filteredMatches.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">
-                {selectedRound === "all" 
+                {selectedRound === "all"
                   ? "Er zijn nog geen completed wedstrijden met scores."
                   : `Geen wedstrijden gevonden voor ronde ${selectedRound}.`
                 }
@@ -448,7 +403,7 @@ export default function Scores() {
             const team1Player2Specials = match.team1_player2 ? getPlayerSpecialsCount(match, getPlayerName(match.team1_player2)) : 0;
             const team2Player1Specials = getPlayerSpecialsCount(match, getPlayerName(match.team2_player1));
             const team2Player2Specials = match.team2_player2 ? getPlayerSpecialsCount(match, getPlayerName(match.team2_player2)) : 0;
-            
+
             return (
               <Card key={match.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3 pt-5">
@@ -461,14 +416,11 @@ export default function Scores() {
                     </div>
                   </div>
                 </CardHeader>
-                
+
                 <CardContent className="pb-4 pt-0">
                   <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-                    {/* Team 1 kolom - rechts uitgelijnd */}
                     <div className="text-right space-y-2">
                       <p className="text-xs font-semibold text-blue-600">Team 1</p>
-                      
-                      {/* Speler 1 met specials badge ACHTER naam */}
                       <div className="flex items-center justify-end gap-2">
                         <span className="text-sm text-muted-foreground truncate max-w-[140px] sm:max-w-[200px]">
                           {getPlayerName(match.team1_player1)}
@@ -479,8 +431,6 @@ export default function Scores() {
                           </span>
                         )}
                       </div>
-                      
-                      {/* Speler 2 als aanwezig */}
                       {match.team1_player2 && (
                         <div className="flex items-center justify-end gap-2">
                           <span className="text-sm text-muted-foreground truncate max-w-[140px] sm:max-w-[200px]">
@@ -495,18 +445,14 @@ export default function Scores() {
                       )}
                     </div>
 
-                    {/* Score centrum */}
                     <div className="text-center px-3">
                       <p className="text-2xl font-bold tabular-nums whitespace-nowrap">
                         {match.team1_score ?? 0} - {match.team2_score ?? 0}
                       </p>
                     </div>
 
-                    {/* Team 2 kolom - links uitgelijnd */}
                     <div className="text-left space-y-2">
                       <p className="text-xs font-semibold text-red-600">Team 2</p>
-                      
-                      {/* Speler 1 met specials badge VOOR naam */}
                       <div className="flex items-center gap-2">
                         {team2Player1Specials > 0 && (
                           <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-500 text-black text-xs font-bold flex-shrink-0">
@@ -517,8 +463,6 @@ export default function Scores() {
                           {getPlayerName(match.team2_player1)}
                         </span>
                       </div>
-                      
-                      {/* Speler 2 als aanwezig */}
                       {match.team2_player2 && (
                         <div className="flex items-center gap-2">
                           {team2Player2Specials > 0 && (
@@ -534,7 +478,6 @@ export default function Scores() {
                     </div>
                   </div>
 
-                  {/* Footer - zelfde als MatchCard */}
                   <div className="flex items-center justify-between mt-4 pt-4 border-t">
                     <div className="text-xs text-muted-foreground">
                       {match.tournament?.name || "Onbekend toernooi"}
@@ -552,29 +495,29 @@ export default function Scores() {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          try {
-                            const { error } = await supabase
-                              .from("matches")
-                              .update({ status: "in_progress" })
-                              .eq("id", match.id);
-                            
-                            if (error) throw error;
-                            
-                            window.location.reload();
-                          } catch (error: any) {
-                            console.error("Fout bij heropenen:", error);
-                          }
-                        }}
-                        className="h-8 px-2 text-xs text-orange-600 border-orange-600 hover:bg-orange-50"
-                        title="Wedstrijd heropenen voor correcties"
-                      >
-                        Heropenen
-                      </Button>
+                      {canManage && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              const { error } = await supabase
+                                .from("matches")
+                                .update({ status: "in_progress" })
+                                .eq("id", match.id);
+                              if (error) throw error;
+                              window.location.reload();
+                            } catch (error: any) {
+                              console.error("Fout bij heropenen:", error);
+                            }
+                          }}
+                          className="h-8 px-2 text-xs text-orange-600 border-orange-600 hover:bg-orange-50"
+                          title="Wedstrijd heropenen voor correcties"
+                        >
+                          Heropenen
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
