@@ -1,4 +1,3 @@
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tournament } from '@/hooks/useTournaments';
@@ -13,10 +12,12 @@ interface TournamentTableProps {
   setEditingTournament: (tournament: Tournament | null) => void;
   onAssignPlayers: (tournamentId: string) => void;
   onViewStandings: (tournamentId: string) => void;
+  onViewMatches: (tournamentId: string) => void;
   onUpdateTournament: (tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => void;
   onDeleteTournament: (id: string) => void;
   isUpdating: boolean;
   isDeleting: boolean;
+  canManage: boolean;
 }
 
 export function TournamentTable({
@@ -27,10 +28,12 @@ export function TournamentTable({
   setEditingTournament,
   onAssignPlayers,
   onViewStandings,
+  onViewMatches,
   onUpdateTournament,
   onDeleteTournament,
   isUpdating,
-  isDeleting
+  isDeleting,
+  canManage,
 }: TournamentTableProps) {
   const filteredTournaments = tournaments.filter(tournament =>
     tournament.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -74,10 +77,12 @@ export function TournamentTable({
                     setEditingTournament={setEditingTournament}
                     onAssignPlayers={onAssignPlayers}
                     onViewStandings={onViewStandings}
+                    onViewMatches={onViewMatches}
                     onUpdateTournament={onUpdateTournament}
                     onDeleteTournament={onDeleteTournament}
                     isUpdating={isUpdating}
                     isDeleting={isDeleting}
+                    canManage={canManage}
                   />
                 ))
               )}
