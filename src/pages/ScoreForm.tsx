@@ -13,6 +13,7 @@ interface Tournament {
   id: string;
   name: string;
   start_date: string;
+  end_date: string;
 }
 
 interface Court {
@@ -30,14 +31,18 @@ interface MatchRow {
   court_id: string | null;
   court_name: string;
   court_menu_order: number;
+  court_row_side: string;
   team1_player1: string;
   team1_player2: string;
   team2_player1: string;
   team2_player2: string;
 }
 
-// Single static special column — totaal aantal specials per speler
 const SPECIALS_COLUMN = [{ id: "specials", name: "Specials" }];
+
+// A4 landscape beschikbaar na marges
+const PAGE_WIDTH_MM = 273;
+const PAGE_HEIGHT_MM = 190;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -49,24 +54,86 @@ function formatDate(iso: string): string {
   });
 }
 
+function formatDateRange(start: string, end: string): string {
+  const s = new Date(start).toDateString();
+  const e = new Date(end).toDateString();
+  if (s === e) return formatDate(start);
+  return `${formatDate(start)} – ${formatDate(end)}`;
+}
+
+// Links = groen, Rechts = blauw — conform de rest van de app
+function rowSideLabel(side: string): { label: string; color: string } {
+  if (side === "left")  return { label: "Rijtje Links",  color: "#15803d" }; // green-700
+  if (side === "right") return { label: "Rijtje Rechts", color: "#1d4ed8" }; // blue-700
+  return { label: "", color: "#6b7280" };
+}
+
+// Sorteer banen: eerst alle left op menu_order, dan alle right op menu_order
+function sortCourtNames(courtNames: string[], matchesByCourt: Record<string, MatchRow[]>): string[] {
+  const left  = courtNames.filter(n => matchesByCourt[n][0]?.court_row_side === "left")
+                          .sort((a, b) => (matchesByCourt[a][0]?.court_menu_order ?? 999) - (matchesByCourt[b][0]?.court_menu_order ?? 999));
+  const right = courtNames.filter(n => matchesByCourt[n][0]?.court_row_side === "right")
+                          .sort((a, b) => (matchesByCourt[a][0]?.court_menu_order ?? 999) - (matchesByCourt[b][0]?.court_menu_order ?? 999));
+  const other = courtNames.filter(n => !["left","right"].includes(matchesByCourt[n][0]?.court_row_side ?? ""))
+                          .sort((a, b) => (matchesByCourt[a][0]?.court_menu_order ?? 999) - (matchesByCourt[b][0]?.court_menu_order ?? 999));
+  return [...left, ...right, ...other];
+}
+
+// Sorteer Court-objecten: eerst left op menu_order, dan right op menu_order (voor R3)
+function sortCourts(courts: Court[]): Court[] {
+  const left  = courts.filter(c => c.row_side === "left") .sort((a, b) => (a.menu_order ?? 999) - (b.menu_order ?? 999));
+  const right = courts.filter(c => c.row_side === "right").sort((a, b) => (a.menu_order ?? 999) - (b.menu_order ?? 999));
+  const other = courts.filter(c => !["left","right"].includes(c.row_side ?? "")).sort((a, b) => (a.menu_order ?? 999) - (b.menu_order ?? 999));
+  return [...left, ...right, ...other];
+}
+
 // ─── Print CSS ────────────────────────────────────────────────────────────────
 
 const PRINT_CSS = `
 @media print {
-  @page { size: A4 landscape; margin: 5mm 25mm; }
-  body * { visibility: hidden; }
-  #scoreform-print, #scoreform-print * { visibility: visible; }
-  #scoreform-print { position: absolute; inset: 0; }
+  @page {
+    size: A4 landscape;
+    margin: 10mm 12mm;
+  }
+
+  body > * { display: none !important; }
+  #scoreform-root { display: block !important; }
+  #scoreform-root * { visibility: visible; }
+
   .sf-no-print { display: none !important; }
+
+  #sf-scale-wrapper {
+    transform-origin: top left;
+  }
+
   .sf-page {
-    page-break-after: always;
+    width: ${PAGE_WIDTH_MM}mm;
+    min-height: ${PAGE_HEIGHT_MM}mm;
+    max-height: ${PAGE_HEIGHT_MM}mm;
+    overflow: hidden;
+    page-break-before: always;
+    break-before: page;
+    page-break-inside: avoid;
+    break-inside: avoid;
     box-shadow: none !important;
     border-radius: 0 !important;
-    padding: 4px 8px !important;
-    zoom: 0.88;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
   }
-  .sf-page:last-child { page-break-after: auto; }
-  .sf-match { page-break-inside: avoid; }
+
+  .sf-page:first-child {
+    page-break-before: auto;
+    break-before: auto;
+  }
+
+  .sf-match {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
 }
 `;
 
@@ -76,11 +143,15 @@ function PageHeader({
   tournament,
   roundLabel,
   courtName,
+  rowSide,
 }: {
   tournament: Tournament;
   roundLabel: string;
   courtName: string;
+  rowSide: string;
 }) {
+  const { label, color } = rowSideLabel(rowSide);
+
   return (
     <div
       style={{
@@ -90,58 +161,60 @@ function PageHeader({
         borderBottom: "3px solid #f28b00",
         paddingBottom: 10,
         marginBottom: 14,
+        flexShrink: 0,
       }}
     >
+      {/* Links: logo + toernooiinfo */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <img
           src="/PPP_logo.webp"
-          alt="PPP Hillegom"
-          style={{ height: 54, width: "auto", display: "block" }}
+          alt="PPP"
+          style={{ height: 48, width: "auto", display: "block" }}
           onError={(e) => {
-            const el = e.currentTarget as HTMLImageElement;
-            el.style.display = "none";
-            const fb = el.nextElementSibling as HTMLElement;
-            if (fb) fb.style.display = "flex";
+            (e.currentTarget as HTMLImageElement).style.display = "none";
           }}
         />
-        <div
-          style={{
-            display: "none",
-            width: 54,
-            height: 54,
-            background: "linear-gradient(135deg,#f28b00,#fbbf24)",
-            borderRadius: 10,
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 26,
-            color: "white",
-          }}
-        >
-          🎾
-        </div>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.2 }}>
-            PPP Hillegom
+          <div style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.2, color: "#111" }}>
+            {tournament.name}
           </div>
           <div style={{ fontSize: 11, color: "#6b7280", marginTop: 3 }}>
-            {tournament.name} · {formatDate(tournament.start_date)}
+            {formatDateRange(tournament.start_date, tournament.end_date)}
           </div>
         </div>
       </div>
+
+      {/* Rechts: baannaam + ronde + rijtje-badge */}
       <div style={{ textAlign: "right" }}>
         <div style={{ fontSize: 22, fontWeight: 900, color: "#f28b00", lineHeight: 1 }}>
-          {roundLabel}
-        </div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: "#111", marginTop: 4 }}>
           {courtName}
         </div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "#111", marginTop: 3 }}>
+          {roundLabel}
+        </div>
+        {label && (
+          <div style={{
+            display: "inline-block",
+            marginTop: 4,
+            fontSize: 10,
+            fontWeight: 700,
+            color: "#fff",
+            background: color,
+            borderRadius: 4,
+            padding: "2px 8px",
+            letterSpacing: ".03em",
+          }}>
+            {label}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 function MatchBlock({
-  matchNumber,
+  courtIndex,
+  dbMatchNumber,
   team1p1,
   team1p2,
   team2p1,
@@ -149,7 +222,8 @@ function MatchBlock({
   specials,
   blank = false,
 }: {
-  matchNumber: number;
+  courtIndex: number;
+  dbMatchNumber: number;
   team1p1: string;
   team1p2: string;
   team2p1: string;
@@ -233,14 +307,31 @@ function MatchBlock({
       className="sf-match"
       style={{ border: "1px solid #d1d5db", borderRadius: 5, overflow: "hidden", marginBottom: 10 }}
     >
-      <div style={{ background: blank ? "#f3f4f6" : "#f9fafb", borderBottom: "1px solid #e5e7eb", padding: "5px 10px" }}>
+      <div style={{
+        background: blank ? "#f3f4f6" : "#f9fafb",
+        borderBottom: "1px solid #e5e7eb",
+        padding: "5px 10px",
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+      }}>
         <span style={{
           background: blank ? "#9ca3af" : "#f28b00",
-          color: "white", fontSize: 10, fontWeight: 800,
-          borderRadius: 4, padding: "2px 9px", display: "inline-block", letterSpacing: ".04em",
+          color: "white",
+          fontSize: 10,
+          fontWeight: 800,
+          borderRadius: 4,
+          padding: "2px 9px",
+          display: "inline-block",
+          letterSpacing: ".04em",
         }}>
-          WEDSTRIJD {matchNumber}
+          WEDSTRIJD {courtIndex}
         </span>
+        {!blank && (
+          <span style={{ fontSize: 9, color: "#9ca3af", letterSpacing: ".03em" }}>
+            #{dbMatchNumber}
+          </span>
+        )}
       </div>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
@@ -283,21 +374,31 @@ function MatchBlock({
   );
 }
 
-function PageFooter({ tournament, courtName, roundLabel }: { tournament: Tournament; courtName: string; roundLabel: string }) {
+function PageFooter({ tournament, courtName, roundLabel }: {
+  tournament: Tournament;
+  courtName: string;
+  roundLabel: string;
+}) {
   return (
-    <div style={{ marginTop: 10, paddingTop: 6, borderTop: "1px solid #f0f0f0", fontSize: 8, color: "#c0c0c0", textAlign: "center" }}>
-      PPP Hillegom · {tournament.name} · {courtName} · {roundLabel} · Scores verwerken via de app — dit formulier is alleen voor papieren invoer op locatie
+    <div style={{
+      marginTop: "auto",
+      paddingTop: 6,
+      borderTop: "1px solid #f0f0f0",
+      fontSize: 8,
+      color: "#c0c0c0",
+      textAlign: "center",
+      flexShrink: 0,
+    }}>
+      {tournament.name} · {courtName} · {roundLabel} · Scores verwerken via de app — dit formulier is alleen voor papieren invoer op locatie
     </div>
   );
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-// BELANGRIJK: ALLE hooks staan vóór enige conditional return — React rules of hooks
 
 export default function ScoreForm() {
   const { hasRole } = useAuth();
 
-  // ── State (altijd, onvoorwaardelijk) ──────────────────────────────────────
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [courts, setCourts] = useState<Court[]>([]);
   const [matches, setMatches] = useState<MatchRow[]>([]);
@@ -305,7 +406,46 @@ export default function ScoreForm() {
   const [selectedRound, setSelectedRound] = useState<string>("1");
   const [loading, setLoading] = useState(false);
 
-  // ── Effects (altijd, onvoorwaardelijk) ───────────────────────────────────
+  // ── Print scaling ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    const applyScale = () => {
+      const wrapper = document.getElementById("sf-scale-wrapper");
+      if (!wrapper) return;
+      const testEl = document.createElement("div");
+      testEl.style.cssText = "width:10mm;height:0;position:absolute;visibility:hidden";
+      document.body.appendChild(testEl);
+      const pxPerMm = testEl.getBoundingClientRect().width / 10;
+      document.body.removeChild(testEl);
+      const targetPx = PAGE_WIDTH_MM * pxPerMm;
+      const actualPx = wrapper.scrollWidth;
+      const scale = actualPx > 0 ? Math.min(1, targetPx / actualPx) : 1;
+      wrapper.style.transform = scale < 1 ? `scale(${scale})` : "";
+      wrapper.style.transformOrigin = "top left";
+      wrapper.style.height = scale < 1 ? `${wrapper.scrollHeight * scale}px` : "";
+    };
+
+    const resetScale = () => {
+      const wrapper = document.getElementById("sf-scale-wrapper");
+      if (!wrapper) return;
+      wrapper.style.transform = "";
+      wrapper.style.height = "";
+    };
+
+    window.addEventListener("beforeprint", applyScale);
+    window.addEventListener("afterprint", resetScale);
+    const mq = window.matchMedia("print");
+    const mqHandler = (e: MediaQueryListEvent) => {
+      if (e.matches) applyScale();
+      else resetScale();
+    };
+    mq.addEventListener("change", mqHandler);
+    return () => {
+      window.removeEventListener("beforeprint", applyScale);
+      window.removeEventListener("afterprint", resetScale);
+      mq.removeEventListener("change", mqHandler);
+    };
+  }, []);
+
   useEffect(() => {
     loadTournaments();
     loadCourts();
@@ -319,11 +459,10 @@ export default function ScoreForm() {
     }
   }, [selectedTournamentId, selectedRound]);
 
-  // ── Data fetchers ─────────────────────────────────────────────────────────
   async function loadTournaments() {
     const { data } = await supabase
       .from("tournaments")
-      .select("id, name, start_date")
+      .select("id, name, start_date, end_date")
       .order("start_date", { ascending: false });
     setTournaments((data as Tournament[]) || []);
   }
@@ -346,7 +485,7 @@ export default function ScoreForm() {
         match_number,
         round_number,
         court_id,
-        court:courts(name, menu_order),
+        court:courts(name, menu_order, row_side),
         team1_player1:players!matches_team1_player1_id_fkey(name),
         team1_player2:players!matches_team1_player2_id_fkey(name),
         team2_player1:players!matches_team2_player1_id_fkey(name),
@@ -364,6 +503,7 @@ export default function ScoreForm() {
         court_id: m.court_id,
         court_name: m.court?.name ?? `Baan ${m.court_number ?? "?"}`,
         court_menu_order: m.court?.menu_order ?? 999,
+        court_row_side: m.court?.row_side ?? "",
         team1_player1: m.team1_player1?.name ?? "–",
         team1_player2: m.team1_player2?.name ?? "–",
         team2_player1: m.team2_player1?.name ?? "–",
@@ -374,24 +514,22 @@ export default function ScoreForm() {
     setLoading(false);
   }
 
-  // ── Derived data ──────────────────────────────────────────────────────────
   const selectedTournament = tournaments.find((t) => t.id === selectedTournamentId);
 
+  // Groepeer per baan
   const matchesByCourt: Record<string, MatchRow[]> = {};
   for (const m of matches) {
     if (!matchesByCourt[m.court_name]) matchesByCourt[m.court_name] = [];
     matchesByCourt[m.court_name].push(m);
   }
-  const sortedCourtNames = Object.keys(matchesByCourt).sort((a, b) => {
-    const ao = matchesByCourt[a][0]?.court_menu_order ?? 999;
-    const bo = matchesByCourt[b][0]?.court_menu_order ?? 999;
-    return ao - bo;
-  });
+  // Links eerst (op menu_order), dan Rechts (op menu_order)
+  const sortedCourtNames = sortCourtNames(Object.keys(matchesByCourt), matchesByCourt);
+  // R3: idem voor Court-objecten
+  const sortedCourts = sortCourts(courts);
 
-  const roundLabel = selectedRound === "3" ? "RONDE 3" : `RONDE ${selectedRound}`;
+  const roundLabel = `RONDE ${selectedRound}`;
   const canPrint = selectedTournament && (selectedRound === "3" ? courts.length > 0 : matches.length > 0);
 
-  // ── Access guard — NA alle hooks, IN de render ────────────────────────────
   if (!hasRole("organisator")) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -408,12 +546,11 @@ export default function ScoreForm() {
     );
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <>
+    <div id="scoreform-root">
       <style>{PRINT_CSS}</style>
 
-      {/* Controls (niet printen) */}
+      {/* Controls — niet printen */}
       <div className="sf-no-print space-y-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Scoreformulier</h1>
@@ -477,52 +614,105 @@ export default function ScoreForm() {
       {/* Printgebied */}
       {selectedTournament && (
         <div id="scoreform-print">
+          <div id="sf-scale-wrapper">
 
-          {/* R1 / R2 — per baan */}
-          {selectedRound !== "3" &&
-            sortedCourtNames.map((courtName) => {
-              const courtMatches = matchesByCourt[courtName].sort((a, b) => a.match_number - b.match_number);
-              return (
-                <div
-                  key={courtName}
-                  className="sf-page"
-                  style={{ background: "white", borderRadius: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.10)", padding: "16px 20px", marginBottom: 16, maxWidth: 1060 }}
-                >
-                  <PageHeader tournament={selectedTournament} roundLabel={roundLabel} courtName={courtName} />
-                  {courtMatches.map((m) => (
-                    <MatchBlock
-                      key={m.id}
-                      matchNumber={m.match_number}
-                      team1p1={m.team1_player1}
-                      team1p2={m.team1_player2}
-                      team2p1={m.team2_player1}
-                      team2p2={m.team2_player2}
-                      specials={SPECIALS_COLUMN}
+            {/* R1 / R2 — links eerst, dan rechts, beide op menu_order */}
+            {selectedRound !== "3" &&
+              sortedCourtNames.map((courtName) => {
+                const courtMatches = [...matchesByCourt[courtName]].sort(
+                  (a, b) => a.match_number - b.match_number
+                );
+                const rowSide = courtMatches[0]?.court_row_side ?? "";
+
+                return (
+                  <div
+                    key={courtName}
+                    className="sf-page"
+                    style={{
+                      background: "white",
+                      borderRadius: 8,
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.10)",
+                      padding: "16px 20px",
+                      marginBottom: 16,
+                      maxWidth: 1060,
+                    }}
+                  >
+                    <div>
+                      <PageHeader
+                        tournament={selectedTournament}
+                        roundLabel={roundLabel}
+                        courtName={courtName}
+                        rowSide={rowSide}
+                      />
+                      {courtMatches.map((m, idx) => (
+                        <MatchBlock
+                          key={m.id}
+                          courtIndex={idx + 1}
+                          dbMatchNumber={m.match_number}
+                          team1p1={m.team1_player1}
+                          team1p2={m.team1_player2}
+                          team2p1={m.team2_player1}
+                          team2p2={m.team2_player2}
+                          specials={SPECIALS_COLUMN}
+                        />
+                      ))}
+                    </div>
+                    <PageFooter
+                      tournament={selectedTournament}
+                      courtName={courtName}
+                      roundLabel={roundLabel}
                     />
-                  ))}
-                  <PageFooter tournament={selectedTournament} courtName={courtName} roundLabel={roundLabel} />
+                  </div>
+                );
+              })}
+
+            {/* R3 — blanco, links eerst dan rechts */}
+            {selectedRound === "3" &&
+              sortedCourts.map((court) => (
+                <div
+                  key={court.id}
+                  className="sf-page"
+                  style={{
+                    background: "white",
+                    borderRadius: 8,
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.10)",
+                    padding: "16px 20px",
+                    marginBottom: 16,
+                    maxWidth: 1060,
+                  }}
+                >
+                  <div>
+                    <PageHeader
+                      tournament={selectedTournament}
+                      roundLabel="RONDE 3"
+                      courtName={court.name}
+                      rowSide={court.row_side}
+                    />
+                    {[1, 2, 3].map((n) => (
+                      <MatchBlock
+                        key={n}
+                        courtIndex={n}
+                        dbMatchNumber={n}
+                        team1p1=""
+                        team1p2=""
+                        team2p1=""
+                        team2p2=""
+                        specials={SPECIALS_COLUMN}
+                        blank
+                      />
+                    ))}
+                  </div>
+                  <PageFooter
+                    tournament={selectedTournament}
+                    courtName={court.name}
+                    roundLabel="RONDE 3"
+                  />
                 </div>
-              );
-            })}
+              ))}
 
-          {/* R3 — blanco per baan */}
-          {selectedRound === "3" &&
-            courts.map((court) => (
-              <div
-                key={court.id}
-                className="sf-page"
-                style={{ background: "white", borderRadius: 8, boxShadow: "0 1px 4px rgba(0,0,0,0.10)", padding: "16px 20px", marginBottom: 16, maxWidth: 1060 }}
-              >
-                <PageHeader tournament={selectedTournament} roundLabel="RONDE 3" courtName={court.name} />
-                {[1, 2, 3].map((n) => (
-                  <MatchBlock key={n} matchNumber={n} team1p1="" team1p2="" team2p1="" team2p2="" specials={SPECIALS_COLUMN} blank />
-                ))}
-                <PageFooter tournament={selectedTournament} courtName={court.name} roundLabel="RONDE 3" />
-              </div>
-            ))}
-
+          </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
