@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTournaments, Tournament } from '@/hooks/useTournaments';
@@ -7,13 +6,17 @@ import { TournamentTable } from '@/components/tournaments/TournamentTable';
 import { TournamentMobileCard } from '@/components/tournaments/TournamentMobileCard';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Tournaments() {
   const navigate = useNavigate();
+  const { hasRole, isSuperAdmin } = useAuth();
   const { tournaments, isLoading, error, createTournament, updateTournament, deleteTournament, isCreating, isUpdating, isDeleting } = useTournaments();
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
   const [showForm, setShowForm] = useState(false);
+
+  const canManage = hasRole('organisator') || isSuperAdmin();
 
   const handleCreateTournament = (tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => {
     createTournament(tournamentData);
@@ -37,6 +40,10 @@ export default function Tournaments() {
 
   const handleViewStandings = (tournamentId: string) => {
     navigate(`/tournaments/${tournamentId}/standings`);
+  };
+
+  const handleViewMatches = (tournamentId: string) => {
+    navigate(`/tournaments/${tournamentId}/matches`);
   };
 
   if (isLoading) {
@@ -79,6 +86,7 @@ export default function Tournaments() {
           setShowForm={setShowForm}
           onCreateTournament={handleCreateTournament}
           isCreating={isCreating}
+          canManage={canManage}
         />
         <Alert>
           <AlertCircle className="h-4 w-4" />
@@ -103,6 +111,7 @@ export default function Tournaments() {
         setShowForm={setShowForm}
         onCreateTournament={handleCreateTournament}
         isCreating={isCreating}
+        canManage={canManage}
       />
 
       {/* Mobile Cards View */}
@@ -115,7 +124,9 @@ export default function Tournaments() {
             onDelete={handleDeleteTournament}
             onAssignPlayers={handleAssignPlayers}
             onViewStandings={handleViewStandings}
+            onViewMatches={handleViewMatches}
             isDeleting={isDeleting}
+            canManage={canManage}
           />
         ))}
       </div>
@@ -130,10 +141,12 @@ export default function Tournaments() {
           setEditingTournament={setEditingTournament}
           onAssignPlayers={handleAssignPlayers}
           onViewStandings={handleViewStandings}
+          onViewMatches={handleViewMatches}
           onUpdateTournament={handleUpdateTournament}
           onDeleteTournament={handleDeleteTournament}
           isUpdating={isUpdating}
           isDeleting={isDeleting}
+          canManage={canManage}
         />
       </div>
     </div>
