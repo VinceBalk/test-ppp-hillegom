@@ -1,9 +1,8 @@
 import { format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tournament } from '@/hooks/useTournaments';
-import { Pencil, Trash2, Users, TrendingUp, PlayCircle, CheckCircle } from 'lucide-react';
+import { Pencil, Trash2, Users, TrendingUp, PlayCircle, CheckCircle, Swords } from 'lucide-react';
 import { TournamentStatusBadge } from './TournamentStatusBadge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,7 +15,9 @@ interface TournamentMobileCardProps {
   onDelete: (id: string) => void;
   onAssignPlayers: (id: string) => void;
   onViewStandings: (id: string) => void;
+  onViewMatches: (id: string) => void;
   isDeleting: boolean;
+  canManage: boolean;
 }
 
 export function TournamentMobileCard({
@@ -25,7 +26,9 @@ export function TournamentMobileCard({
   onDelete,
   onAssignPlayers,
   onViewStandings,
-  isDeleting
+  onViewMatches,
+  isDeleting,
+  canManage,
 }: TournamentMobileCardProps) {
   const { toast } = useToast();
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
@@ -57,7 +60,6 @@ export function TournamentMobileCard({
         description: `Toernooi status is gewijzigd naar ${newStatus === 'completed' ? 'Voltooid' : 'Bezig'}`,
       });
 
-      // Reload to refresh data
       window.location.reload();
     } catch (error) {
       toast({
@@ -102,66 +104,82 @@ export function TournamentMobileCard({
         </div>
 
         <div className="flex flex-col gap-2 pt-3 border-t">
+          {/* Knoppen voor iedereen */}
           <div className="grid grid-cols-2 gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => onViewStandings(tournament.id)}
             >
               <TrendingUp className="h-4 w-4 mr-2" />
               Stand
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => onAssignPlayers(tournament.id)}
-            >
-              <Users className="h-4 w-4 mr-2" />
-              Spelers
-            </Button>
-          </div>
-          
-          {(tournament.status === 'completed' || tournament.status === 'in_progress') && (
             <Button
-              variant="secondary"
+              variant="outline"
               size="sm"
-              onClick={handleToggleStatus}
-              disabled={isTogglingStatus}
-              className="w-full"
+              onClick={() => onViewMatches(tournament.id)}
             >
-              {tournament.status === 'completed' ? (
-                <>
-                  <PlayCircle className="h-4 w-4 mr-2" />
-                  Zet op Bezig (om scores in te voeren)
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Zet op Voltooid
-                </>
-              )}
-            </Button>
-          )}
-
-          <div className="grid grid-cols-2 gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => onEdit(tournament)}
-            >
-              <Pencil className="h-4 w-4 mr-2" />
-              Bewerken
-            </Button>
-            <Button 
-              variant="destructive" 
-              size="sm"
-              onClick={() => onDelete(tournament.id)}
-              disabled={isDeleting}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Verwijderen
+              <Swords className="h-4 w-4 mr-2" />
+              Wedstrijden
             </Button>
           </div>
+
+          {/* Knoppen alleen voor organisator/beheerder */}
+          {canManage && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onAssignPlayers(tournament.id)}
+                className="w-full"
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Spelers
+              </Button>
+
+              {(tournament.status === 'completed' || tournament.status === 'in_progress') && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleToggleStatus}
+                  disabled={isTogglingStatus}
+                  className="w-full"
+                >
+                  {tournament.status === 'completed' ? (
+                    <>
+                      <PlayCircle className="h-4 w-4 mr-2" />
+                      Zet op Bezig (om scores in te voeren)
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Zet op Voltooid
+                    </>
+                  )}
+                </Button>
+              )}
+
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onEdit(tournament)}
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Bewerken
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => onDelete(tournament.id)}
+                  disabled={isDeleting}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Verwijderen
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </CardContent>
     </Card>
