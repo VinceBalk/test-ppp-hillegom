@@ -2,13 +2,13 @@ import { NavLink, Link } from 'react-router-dom';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Trophy, 
-  Calendar, 
-  Hash, 
-  Map, 
+import {
+  LayoutDashboard,
+  Users,
+  Trophy,
+  Calendar,
+  Hash,
+  Map,
   User,
   Sliders,
   Shield,
@@ -25,7 +25,7 @@ const navigationItems = [
   { name: 'Spelers', href: '/players', icon: Users, roles: ['speler', 'organisator', 'beheerder'] },
   { name: 'Toernooien', href: '/tournaments', icon: Trophy, roles: ['speler', 'organisator', 'beheerder'] },
   { name: 'Wedstrijden', href: '/matches', icon: Calendar, roles: ['speler', 'organisator', 'beheerder'] },
-  { name: 'Schema', href: '/schedule', icon: List, roles: ['speler', 'organisator', 'beheerder'] },
+  { name: 'Schema', href: '/schedule', icon: List, roles: ['organisator', 'beheerder'] },
   { name: 'Scores', href: '/scores', icon: Hash, roles: ['speler', 'organisator', 'beheerder'] },
   { name: 'Specials', href: '/specials', icon: Hash, roles: ['organisator', 'beheerder'] },
   { name: 'Banen', href: '/courts', icon: Map, roles: ['organisator', 'beheerder'] },
@@ -42,8 +42,8 @@ interface MobileMenuProps {
 
 export function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
   const { user, profile, adminUser, hasRole, isSuperAdmin } = useAuth();
-  
-  const filteredItems = navigationItems.filter(item => 
+
+  const filteredItems = navigationItems.filter(item =>
     isSuperAdmin() || item.roles.some(role => hasRole(role))
   );
 
@@ -52,16 +52,8 @@ export function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
       <SheetContent side="left" className="w-72 p-0">
         <SheetHeader className="p-6 border-b border-border">
           <SheetTitle className="flex items-center justify-center">
-            <Link 
-              to="/" 
-              onClick={() => onOpenChange(false)}
-              className="cursor-pointer"
-            >
-              <img
-                src="/PPP_logo.svg"
-                alt="PPP Hillegom logo"
-                className="h-10 w-auto object-contain max-w-[160px]"
-              />
+            <Link to="/" onClick={() => onOpenChange(false)} className="cursor-pointer">
+              <img src="/PPP_logo.svg" alt="PPP Hillegom logo" className="h-10 w-auto object-contain max-w-[160px]" />
             </Link>
           </SheetTitle>
         </SheetHeader>
@@ -74,9 +66,7 @@ export function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 mobile-menu-item',
-                  isActive
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-foreground'
+                  isActive ? 'bg-primary text-primary-foreground shadow-sm' : 'text-foreground'
                 )
               }
             >
@@ -93,9 +83,7 @@ export function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">
-                {user?.email}
-              </p>
+              <p className="text-sm font-medium text-foreground truncate">{user?.email}</p>
               <p className="text-xs text-muted-foreground capitalize">
                 {adminUser?.is_super_admin ? 'Super Admin' : (profile?.role || 'Speler')}
               </p>
