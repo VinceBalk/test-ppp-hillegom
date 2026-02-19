@@ -40,7 +40,6 @@ interface MatchRow {
 
 const SPECIALS_COLUMN = [{ id: "specials", name: "Specials" }];
 
-// A4 landscape beschikbaar na marges
 const PAGE_WIDTH_MM = 273;
 const PAGE_HEIGHT_MM = 190;
 
@@ -61,29 +60,32 @@ function formatDateRange(start: string, end: string): string {
   return `${formatDate(start)} – ${formatDate(end)}`;
 }
 
-// Links = groen, Rechts = blauw — conform de rest van de app
 function rowSideLabel(side: string): { label: string; color: string } {
-  if (side === "left")  return { label: "Rijtje Links",  color: "#15803d" }; // green-700
-  if (side === "right") return { label: "Rijtje Rechts", color: "#1d4ed8" }; // blue-700
+  if (side === "left")  return { label: "Rijtje Links",  color: "#15803d" };
+  if (side === "right") return { label: "Rijtje Rechts", color: "#1d4ed8" };
   return { label: "", color: "#6b7280" };
 }
 
-// Sorteer banen: eerst alle left op menu_order, dan alle right op menu_order
-function sortCourtNames(courtNames: string[], matchesByCourt: Record<string, MatchRow[]>): string[] {
-  const left  = courtNames.filter(n => matchesByCourt[n][0]?.court_row_side === "left")
-                          .sort((a, b) => (matchesByCourt[a][0]?.court_menu_order ?? 999) - (matchesByCourt[b][0]?.court_menu_order ?? 999));
-  const right = courtNames.filter(n => matchesByCourt[n][0]?.court_row_side === "right")
-                          .sort((a, b) => (matchesByCourt[a][0]?.court_menu_order ?? 999) - (matchesByCourt[b][0]?.court_menu_order ?? 999));
-  const other = courtNames.filter(n => !["left","right"].includes(matchesByCourt[n][0]?.court_row_side ?? ""))
-                          .sort((a, b) => (matchesByCourt[a][0]?.court_menu_order ?? 999) - (matchesByCourt[b][0]?.court_menu_order ?? 999));
+function sortCourtNames(
+  courtNames: string[],
+  matchesByCourt: Record<string, MatchRow[]>
+): string[] {
+  const left  = courtNames
+    .filter(n => matchesByCourt[n][0]?.court_row_side === "left")
+    .sort((a, b) => (matchesByCourt[a][0]?.court_menu_order ?? 999) - (matchesByCourt[b][0]?.court_menu_order ?? 999));
+  const right = courtNames
+    .filter(n => matchesByCourt[n][0]?.court_row_side === "right")
+    .sort((a, b) => (matchesByCourt[a][0]?.court_menu_order ?? 999) - (matchesByCourt[b][0]?.court_menu_order ?? 999));
+  const other = courtNames
+    .filter(n => !["left", "right"].includes(matchesByCourt[n][0]?.court_row_side ?? ""))
+    .sort((a, b) => (matchesByCourt[a][0]?.court_menu_order ?? 999) - (matchesByCourt[b][0]?.court_menu_order ?? 999));
   return [...left, ...right, ...other];
 }
 
-// Sorteer Court-objecten: eerst left op menu_order, dan right op menu_order (voor R3)
 function sortCourts(courts: Court[]): Court[] {
   const left  = courts.filter(c => c.row_side === "left") .sort((a, b) => (a.menu_order ?? 999) - (b.menu_order ?? 999));
   const right = courts.filter(c => c.row_side === "right").sort((a, b) => (a.menu_order ?? 999) - (b.menu_order ?? 999));
-  const other = courts.filter(c => !["left","right"].includes(c.row_side ?? "")).sort((a, b) => (a.menu_order ?? 999) - (b.menu_order ?? 999));
+  const other = courts.filter(c => !["left", "right"].includes(c.row_side ?? "")).sort((a, b) => (a.menu_order ?? 999) - (b.menu_order ?? 999));
   return [...left, ...right, ...other];
 }
 
@@ -96,9 +98,23 @@ const PRINT_CSS = `
     margin: 10mm 12mm;
   }
 
-  body > * { display: none !important; }
-  #scoreform-root { display: block !important; }
-  #scoreform-root * { visibility: visible; }
+  /* visibility-aanpak: werkt altijd, ook als scoreform-root diep genest zit */
+  body * {
+    visibility: hidden !important;
+  }
+
+  #scoreform-print,
+  #scoreform-print * {
+    visibility: visible !important;
+  }
+
+  #scoreform-print {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 9999;
+  }
 
   .sf-no-print { display: none !important; }
 
@@ -164,7 +180,6 @@ function PageHeader({
         flexShrink: 0,
       }}
     >
-      {/* Links: logo + toernooiinfo */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <img
           src="/PPP_logo.webp"
@@ -184,7 +199,6 @@ function PageHeader({
         </div>
       </div>
 
-      {/* Rechts: baannaam + ronde + rijtje-badge */}
       <div style={{ textAlign: "right" }}>
         <div style={{ fontSize: 22, fontWeight: 900, color: "#f28b00", lineHeight: 1 }}>
           {courtName}
@@ -516,15 +530,12 @@ export default function ScoreForm() {
 
   const selectedTournament = tournaments.find((t) => t.id === selectedTournamentId);
 
-  // Groepeer per baan
   const matchesByCourt: Record<string, MatchRow[]> = {};
   for (const m of matches) {
     if (!matchesByCourt[m.court_name]) matchesByCourt[m.court_name] = [];
     matchesByCourt[m.court_name].push(m);
   }
-  // Links eerst (op menu_order), dan Rechts (op menu_order)
   const sortedCourtNames = sortCourtNames(Object.keys(matchesByCourt), matchesByCourt);
-  // R3: idem voor Court-objecten
   const sortedCourts = sortCourts(courts);
 
   const roundLabel = `RONDE ${selectedRound}`;
@@ -616,14 +627,12 @@ export default function ScoreForm() {
         <div id="scoreform-print">
           <div id="sf-scale-wrapper">
 
-            {/* R1 / R2 — links eerst, dan rechts, beide op menu_order */}
             {selectedRound !== "3" &&
               sortedCourtNames.map((courtName) => {
                 const courtMatches = [...matchesByCourt[courtName]].sort(
                   (a, b) => a.match_number - b.match_number
                 );
                 const rowSide = courtMatches[0]?.court_row_side ?? "";
-
                 return (
                   <div
                     key={courtName}
@@ -666,7 +675,6 @@ export default function ScoreForm() {
                 );
               })}
 
-            {/* R3 — blanco, links eerst dan rechts */}
             {selectedRound === "3" &&
               sortedCourts.map((court) => (
                 <div
