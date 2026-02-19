@@ -42,18 +42,6 @@ const SPECIALS_COLUMN = [{ id: "specials", name: "Specials" }];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("nl-NL", {
-    day: "numeric", month: "long", year: "numeric",
-  });
-}
-
-function formatDateRange(start: string, end: string): string {
-  return new Date(start).toDateString() === new Date(end).toDateString()
-    ? formatDate(start)
-    : `${formatDate(start)} – ${formatDate(end)}`;
-}
-
 function rowSideLabel(side: string): { label: string; color: string } {
   if (side === "left")  return { label: "Rijtje Links",  color: "#15803d" };
   if (side === "right") return { label: "Rijtje Rechts", color: "#1d4ed8" };
@@ -81,15 +69,17 @@ function sortCourts(courts: Court[]): Court[] {
 }
 
 // ─── HTML generator voor printvenster ────────────────────────────────────────
-// Bouwt één zelfstandige HTML-string op — geen React, geen app-chrome.
-// Elk .sf-page krijgt page-break-before:always → gegarandeerd één pagina per baan.
 
 function buildPrintHtml(
   tournament: Tournament,
-  pages: { courtName: string; rowSide: string; roundLabel: string; matches: { courtIndex: number; dbNum: number; p1: string; p2: string; p3: string; p4: string }[] }[],
+  pages: {
+    courtName: string;
+    rowSide: string;
+    roundLabel: string;
+    matches: { courtIndex: number; dbNum: number; p1: string; p2: string; p3: string; p4: string }[];
+  }[],
   logoSrc: string,
 ): string {
-  const dateStr = formatDateRange(tournament.start_date, tournament.end_date);
 
   const css = `
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
@@ -119,7 +109,6 @@ function buildPrintHtml(
     .header-left { display: flex; align-items: center; gap: 10px; }
     .header-logo { height: 40px; width: auto; }
     .header-title { font-size: 14px; font-weight: 800; color: #111; line-height: 1.2; }
-    .header-date { font-size: 10px; color: #6b7280; margin-top: 2px; }
     .header-right { text-align: right; }
     .header-court { font-size: 20px; font-weight: 900; color: #f28b00; line-height: 1; }
     .header-meta { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 4px; }
@@ -154,9 +143,13 @@ function buildPrintHtml(
     .footer { margin-top: 10px; padding-top: 6px; border-top: 1px solid #f0f0f0; font-size: 8px; color: #c0c0c0; text-align: center; }
   `;
 
-  function renderMatch(m: { courtIndex: number; dbNum: number; p1: string; p2: string; p3: string; p4: string } | null, idx: number, blank = false): string {
-    const label = blank ? `WEDSTRIJD ${idx + 1}` : `WEDSTRIJD ${m!.courtIndex}`;
-    const dbNum = blank ? "" : `<span class="match-dbnum">#${m!.dbNum}</span>`;
+  function renderMatch(
+    m: { courtIndex: number; dbNum: number; p1: string; p2: string; p3: string; p4: string } | null,
+    idx: number,
+    blank = false,
+  ): string {
+    const label  = blank ? `WEDSTRIJD ${idx + 1}` : `WEDSTRIJD ${m!.courtIndex}`;
+    const dbNum  = blank ? "" : `<span class="match-dbnum">#${m!.dbNum}</span>`;
     const p1 = blank ? `<span class="blank-name">________________________</span>` : m!.p1;
     const p2 = blank ? `<span class="blank-name">________________________</span>` : m!.p2;
     const p3 = blank ? `<span class="blank-name">________________________</span>` : m!.p3;
@@ -187,9 +180,7 @@ function buildPrintHtml(
               <td>${p2}</td>
               <td class="special"><div class="special-line"></div></td>
             </tr>
-            <tr>
-              <td colspan="4" class="divider"></td>
-            </tr>
+            <tr><td colspan="4" class="divider"></td></tr>
             <tr>
               <td class="team team2" rowspan="2">TEAM 2</td>
               <td>${p3}</td>
@@ -205,7 +196,7 @@ function buildPrintHtml(
       </div>`;
   }
 
-  const pagesHtml = pages.map((page, pageIdx) => {
+  const pagesHtml = pages.map((page) => {
     const { label, color } = rowSideLabel(page.rowSide);
     const badgeHtml = label
       ? `<span class="header-badge" style="background:${color}">${label}</span>`
@@ -222,7 +213,6 @@ function buildPrintHtml(
             <img class="header-logo" src="${logoSrc}" onerror="this.style.display='none'" />
             <div>
               <div class="header-title">${tournament.name}</div>
-              <div class="header-date">${dateStr}</div>
             </div>
           </div>
           <div class="header-right">
@@ -264,12 +254,12 @@ function buildPrintHtml(
 export default function ScoreForm() {
   const { hasRole } = useAuth();
 
-  const [tournaments, setTournaments]           = useState<Tournament[]>([]);
-  const [courts, setCourts]                     = useState<Court[]>([]);
-  const [matches, setMatches]                   = useState<MatchRow[]>([]);
+  const [tournaments, setTournaments]                   = useState<Tournament[]>([]);
+  const [courts, setCourts]                             = useState<Court[]>([]);
+  const [matches, setMatches]                           = useState<MatchRow[]>([]);
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>("");
-  const [selectedRound, setSelectedRound]       = useState<string>("1");
-  const [loading, setLoading]                   = useState(false);
+  const [selectedRound, setSelectedRound]               = useState<string>("1");
+  const [loading, setLoading]                           = useState(false);
 
   useEffect(() => { loadTournaments(); loadCourts(); }, []);
 
@@ -341,35 +331,33 @@ export default function ScoreForm() {
   const roundLabel       = `RONDE ${selectedRound}`;
   const canPrint         = selectedTournament && (selectedRound === "3" ? courts.length > 0 : matches.length > 0);
 
-  // ── Print: open nieuw venster met zelfstandige HTML ───────────────────────
   function handlePrint() {
     if (!selectedTournament) return;
 
     const logoSrc = `${window.location.origin}/PPP_logo.webp`;
-
     let pages: Parameters<typeof buildPrintHtml>[1];
 
     if (selectedRound === "3") {
       pages = sortedCourts.map((court) => ({
         courtName: court.name,
-        rowSide: court.row_side,
+        rowSide:   court.row_side,
         roundLabel: "RONDE 3",
-        matches: [], // leeg = blanco
+        matches:   [],
       }));
     } else {
       pages = sortedCourtNames.map((courtName) => {
         const courtMatches = [...matchesByCourt[courtName]].sort((a, b) => a.match_number - b.match_number);
         return {
           courtName,
-          rowSide: courtMatches[0]?.court_row_side ?? "",
+          rowSide:    courtMatches[0]?.court_row_side ?? "",
           roundLabel,
           matches: courtMatches.map((m, idx) => ({
             courtIndex: idx + 1,
-            dbNum: m.match_number,
-            p1: m.team1_player1,
-            p2: m.team1_player2,
-            p3: m.team2_player1,
-            p4: m.team2_player2,
+            dbNum:      m.match_number,
+            p1:         m.team1_player1,
+            p2:         m.team1_player2,
+            p3:         m.team2_player1,
+            p4:         m.team2_player2,
           })),
         };
       });
@@ -385,7 +373,6 @@ export default function ScoreForm() {
     win.document.close();
   }
 
-  // ── Access guard ──────────────────────────────────────────────────────────
   if (!hasRole("organisator")) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -402,7 +389,6 @@ export default function ScoreForm() {
     );
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div>
       <div className="space-y-4 mb-6">
