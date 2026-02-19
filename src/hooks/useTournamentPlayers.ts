@@ -14,6 +14,8 @@ export interface TournamentPlayer {
     name: string;
     email?: string;
     ranking_score?: number;
+    total_specials?: number;
+    total_tournaments?: number;
   };
 }
 
@@ -25,30 +27,40 @@ export const useTournamentPlayers = (tournamentId?: string) => {
     queryKey: ['tournament-players', tournamentId],
     queryFn: async () => {
       if (!tournamentId) return [];
-      
+
       const { data, error } = await supabase
         .from('tournament_players')
         .select(`
           *,
-          player:players(id, name, email, ranking_score)
+          player:players(id, name, email, ranking_score, total_specials, total_tournaments)
         `)
         .eq('tournament_id', tournamentId)
         .eq('active', true);
-      
+
       if (error) throw error;
-      
-      // Sort in frontend: first by group (left before right), then by ranking_score (highest first)
+
+      // Sorteer per groep op:
+      // 1. ranking_score DESC (hoger = beter)
+      // 2. total_specials DESC (meer specials = hoger bij gelijke score)
+      // 3. total_tournaments ASC (minder toernooien = hoger bij nog steeds gelijk)
       const sortedData = (data as TournamentPlayer[]).sort((a, b) => {
-        // First sort by group
         if (a.group !== b.group) {
           return a.group === 'left' ? -1 : 1;
         }
-        // Then by ranking_score (highest first)
-        const rankingA = a.player?.ranking_score || 0;
-        const rankingB = b.player?.ranking_score || 0;
-        return rankingB - rankingA;
+
+        const rankA = a.player?.ranking_score    ?? 0;
+        const rankB = b.player?.ranking_score    ?? 0;
+        if (rankB !== rankA) return rankB - rankA;
+
+        const specsA = a.player?.total_specials   ?? 0;
+        const specsB = b.player?.total_specials   ?? 0;
+        if (specsB !== specsA) return specsB - specsA;
+
+        const tournsA = a.player?.total_tournaments ?? 0;
+        const tournsB = b.player?.total_tournaments ?? 0;
+        return tournsA - tournsB; // minder toernooien = hoger
       });
-      
+
       return sortedData;
     },
     enabled: !!tournamentId,
@@ -66,10 +78,10 @@ export const useTournamentPlayers = (tournamentId?: string) => {
         }])
         .select(`
           *,
-          player:players(id, name, email, ranking_score)
+          player:players(id, name, email, ranking_score, total_specials, total_tournaments)
         `)
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -96,14 +108,14 @@ export const useTournamentPlayers = (tournamentId?: string) => {
         .from('tournament_players')
         .delete()
         .eq('id', tournamentPlayerId);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tournament-players', tournamentId] });
       toast({
         title: "Speler verwijderd",
-        description: "De speler is succesvol verwijderd uit het toernooi.",
+        description: "De speler is verwijderd uit het toernooi.",
       });
     },
     onError: (error) => {
@@ -122,12 +134,9 @@ export const useTournamentPlayers = (tournamentId?: string) => {
         .from('tournament_players')
         .update({ group })
         .eq('id', tournamentPlayerId)
-        .select(`
-          *,
-          player:players(id, name, email, ranking_score)
-        `)
+        .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -135,14 +144,14 @@ export const useTournamentPlayers = (tournamentId?: string) => {
       queryClient.invalidateQueries({ queryKey: ['tournament-players', tournamentId] });
       toast({
         title: "Groep bijgewerkt",
-        description: "De spelersgroep is succesvol bijgewerkt.",
+        description: "De speler is verplaatst naar de andere groep.",
       });
     },
     onError: (error) => {
       console.error('Error updating player group:', error);
       toast({
         title: "Fout",
-        description: "Er is een fout opgetreden bij het bijwerken van de groep.",
+        description: "Er is een fout opgetreden bij het wijzigen van de groep.",
         variant: "destructive",
       });
     },
@@ -156,7 +165,5 @@ export const useTournamentPlayers = (tournamentId?: string) => {
     removePlayer: removePlayer.mutate,
     updatePlayerGroup: updatePlayerGroup.mutate,
     isAddingPlayer: addPlayer.isPending,
-    isRemovingPlayer: removePlayer.isPending,
-    isUpdatingGroup: updatePlayerGroup.isPending,
   };
 };
