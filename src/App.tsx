@@ -15,6 +15,7 @@ import Players from "./pages/Players";
 import PlayerDetail from "./pages/PlayerDetail";
 import Tournaments from "./pages/Tournaments";
 import TournamentStandings from "./pages/TournamentStandings";
+import TournamentMatches from "./pages/TournamentMatches";
 import AssignPlayers from "./pages/AssignPlayers";
 import Matches from "./pages/Matches";
 import Schedule from "./pages/Schedule";
@@ -58,6 +59,7 @@ const App = () => {
                     <AssignPlayers />
                   </ProtectedRoute>
                 } />
+                <Route path="tournaments/:tournamentId/matches" element={<TournamentMatches />} />
                 <Route path="matches" element={<Matches />} />
                 <Route path="schedule" element={<Schedule />} />
                 <Route path="schedule/:tournamentId" element={<Schedule />} />
