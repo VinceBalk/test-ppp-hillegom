@@ -17,12 +17,20 @@ export default function PlayersPage() {
   const navigate = useNavigate();
   const { players, isLoading: playersLoading, error, createPlayer, updatePlayer } = usePlayers();
   const { data: rankings, isLoading: rankingsLoading } = usePlayerRankings();
-  const { hasRole, isSuperAdmin } = useAuth();
+  const { hasRole, isSuperAdmin, user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
 
-  const canEdit = hasRole('organisator') || isSuperAdmin();
+  // Nieuwe speler aanmaken: alleen organisator/superadmin
+  const canCreate = hasRole('organisator') || isSuperAdmin();
   const isLoading = playersLoading || rankingsLoading;
+
+  // Per speler: mag ik dit pennetje zien?
+  const canEditPlayer = (player: Player) => {
+    if (isSuperAdmin()) return true;
+    if (user?.id && player.user_id && user.id === player.user_id) return true;
+    return false;
+  };
 
   const handleCreatePlayer = async (playerData: Omit<Player, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => {
     createPlayer(playerData);
@@ -65,6 +73,9 @@ export default function PlayersPage() {
     return a.globalPosition - b.globalPosition;
   });
 
+  // Toon pennetje-kolom als er minimaal één speler bewerkbaar is
+  const showEditColumn = players.some(p => canEditPlayer(p));
+
   if (error) {
     return (
       <div className="space-y-6 p-4 max-w-7xl mx-auto">
@@ -92,8 +103,8 @@ export default function PlayersPage() {
           </h1>
           <p className="text-muted-foreground">Beheer en bekijk alle spelers</p>
         </div>
-        
-        {canEdit && (
+
+        {canCreate && (
           <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
             <DialogTrigger asChild>
               <Button className="gap-2">
@@ -107,10 +118,28 @@ export default function PlayersPage() {
                   {editingPlayer ? 'Speler bewerken' : 'Nieuwe speler toevoegen'}
                 </DialogTitle>
               </DialogHeader>
-              <PlayerForm 
+              <PlayerForm
                 player={editingPlayer || undefined}
-                onSubmit={editingPlayer ? handleUpdatePlayer : handleCreatePlayer} 
+                onSubmit={editingPlayer ? handleUpdatePlayer : handleCreatePlayer}
                 onCancel={() => handleDialogClose(false)}
+                isSuperAdmin={isSuperAdmin()}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Edit dialog voor niet-admins (eigen speler via pennetje) */}
+        {!canCreate && (
+          <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Speler bewerken</DialogTitle>
+              </DialogHeader>
+              <PlayerForm
+                player={editingPlayer || undefined}
+                onSubmit={handleUpdatePlayer}
+                onCancel={() => handleDialogClose(false)}
+                isSuperAdmin={isSuperAdmin()}
               />
             </DialogContent>
           </Dialog>
@@ -134,31 +163,31 @@ export default function PlayersPage() {
               <Skeleton className="h-12 w-full" />
             </div>
           ) : playersWithRankings.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">Nog geen spelers toegevoegd</p>
-            </div>
+            <p className="text-muted-foreground text-center py-8">Geen spelers gevonden.</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>#</TableHead>
                     <TableHead>Naam</TableHead>
                     <TableHead>Rij</TableHead>
                     <TableHead className="text-center">Toernooien</TableHead>
                     <TableHead className="text-center">Positie</TableHead>
-                    {canEdit && <TableHead className="w-20"></TableHead>}
+                    {showEditColumn && <TableHead></TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {playersWithRankings.map((player) => (
-                    <TableRow 
+                    <TableRow
                       key={player.id}
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => navigate(`/players/${player.id}`)}
                     >
-                      <TableCell className="font-semibold text-primary whitespace-nowrap">
-                        {player.name}
+                      <TableCell className="font-semibold text-muted-foreground">
+                        {player.globalPosition || '-'}
                       </TableCell>
+                      <TableCell className="font-medium">{player.name}</TableCell>
                       <TableCell>
                         {player.group_side === 'left' ? (
                           <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
@@ -178,15 +207,17 @@ export default function PlayersPage() {
                       <TableCell className="text-center font-semibold">
                         #{player.globalPosition || '-'}
                       </TableCell>
-                      {canEdit && (
+                      {showEditColumn && (
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => handleEditClick(e, player)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
+                          {canEditPlayer(player) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => handleEditClick(e, player)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
                         </TableCell>
                       )}
                     </TableRow>
