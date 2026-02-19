@@ -1,3 +1,4 @@
+// src/hooks/useScheduleGeneration.ts
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -24,13 +25,22 @@ export const useScheduleGeneration = () => {
         console.log('Using preview matches for generation');
         
         const matches = preview.matches.map(match => {
-          // Bepaal round_number op basis van match ID (-r1- of -r2-)
-          let matchRoundNumber = roundNumber;
-          if (match.id.includes('-r1-')) {
-            matchRoundNumber = 1;
+          // PRIMAIR: gebruik tournament_round (gezet door useSchedulePreview)
+          // FALLBACK: ID-detectie voor backwards compatibility
+          const tr = (match as any).tournament_round;
+          let matchRoundNumber: number;
+          
+          if (tr === 1 || tr === 2) {
+            matchRoundNumber = tr;
           } else if (match.id.includes('-r2-')) {
             matchRoundNumber = 2;
+          } else if (match.id.includes('-r1-')) {
+            matchRoundNumber = 1;
+          } else {
+            matchRoundNumber = roundNumber;
           }
+          
+          console.log(`Match ${match.id}: tournament_round=${tr}, resolved round=${matchRoundNumber}`);
           
           return {
             tournament_id: tournamentId,
@@ -49,9 +59,19 @@ export const useScheduleGeneration = () => {
           };
         });
 
-        console.log('Prepared matches for database insert:', matches);
-        console.log('R1 matches:', matches.filter(m => m.round_number === 1).length);
-        console.log('R2 matches:', matches.filter(m => m.round_number === 2).length);
+        const r1Count = matches.filter(m => m.round_number === 1).length;
+        const r2Count = matches.filter(m => m.round_number === 2).length;
+        console.log('Prepared matches for database insert:', matches.length);
+        console.log('R1 matches:', r1Count);
+        console.log('R2 matches:', r2Count);
+
+        if (r1Count !== 12 || r2Count !== 12) {
+          console.error(`WRONG SPLIT: R1=${r1Count}, R2=${r2Count} (expected 12+12)`);
+          // Log alle match IDs en hun tournament_round voor debugging
+          preview.matches.forEach(m => {
+            console.log(`  ID: ${m.id}, tournament_round: ${(m as any).tournament_round}`);
+          });
+        }
 
         // Sla wedstrijden op in database
         const { data: createdMatches, error: matchesError } = await supabase
@@ -74,7 +94,7 @@ export const useScheduleGeneration = () => {
         }
 
         console.log('=== MATCHES CREATED SUCCESSFULLY ===');
-        console.log('Created matches:', createdMatches);
+        console.log('Created matches:', createdMatches?.length);
 
         // Update toernooi status - markeer BEIDE rondes als gegenereerd
         const { error: tournamentError } = await supabase
@@ -116,7 +136,7 @@ export const useScheduleGeneration = () => {
     },
     onSuccess: (data) => {
       console.log('=== SCHEDULE GENERATION SUCCESS ===');
-      console.log('Generated matches count:', data.length);
+      console.log('Generated matches count:', data?.length);
       
       queryClient.invalidateQueries({ queryKey: ['matches'] });
       queryClient.invalidateQueries({ queryKey: ['tournaments'] });
@@ -124,7 +144,7 @@ export const useScheduleGeneration = () => {
       
       toast({
         title: "Schema goedgekeurd en opgeslagen",
-        description: `${data.length} wedstrijden zijn succesvol aangemaakt (R1 + R2).`,
+        description: `${data?.length} wedstrijden zijn succesvol aangemaakt (R1 + R2).`,
       });
     },
     onError: (error) => {
