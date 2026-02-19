@@ -11,6 +11,7 @@ import SavedMatchEditor from "./SavedMatchEditor";
 import MatchScoreInput from "./MatchScoreInput";
 import QuickScoreInput from "./QuickScoreInput";
 import SpecialsManager from "./SpecialsManager";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MatchCardProps {
   match: Match;
@@ -25,10 +26,13 @@ interface MatchCardProps {
 
 export default function MatchCard({ match, matchNumberInCourtRound, tournament, onRefetch }: MatchCardProps) {
   const navigate = useNavigate();
+  const { hasRole, isSuperAdmin } = useAuth();
   const [showSimulator, setShowSimulator] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [showScoreInput, setShowScoreInput] = useState(false);
   const [showSpecials, setShowSpecials] = useState(false);
+
+  const canManage = hasRole('organisator') || isSuperAdmin();
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -70,15 +74,12 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament, 
   };
 
   const { team1, team2 } = getPlayerTeams(match);
-  
-  // matchNumberInCourtRound krijgt voorrang (voor display als "Wedstrijd 1, 2, 3")
-  // match.match_number is fallback (globale nummering)
+
   const displayMatchNumber = matchNumberInCourtRound || match.match_number;
 
-  // Use passed tournament or create from match data
   const effectiveTournament = tournament || {
     id: match.tournament_id,
-    status: (match.tournament?.status === "in_progress" ? "active" : 
+    status: (match.tournament?.status === "in_progress" ? "active" :
              match.tournament?.status === "completed" ? "completed" :
              "not_started") as "not_started" | "active" | "completed",
     is_simulation: match.tournament?.is_simulation || false,
@@ -88,7 +89,6 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament, 
   const isSimulation = effectiveTournament.is_simulation;
   const round = match.round_number;
 
-  // Helper function to get specials count for a player
   const getPlayerSpecialsCount = (playerId?: string) => {
     if (!playerId || !match.match_specials) return 0;
     return match.match_specials
@@ -100,7 +100,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament, 
     return <MatchSimulator match={match} onClose={() => setShowSimulator(false)} />;
   }
 
-  if (showEditor) {
+  if (showEditor && canManage) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -114,7 +114,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament, 
     );
   }
 
-  if (showScoreInput) {
+  if (showScoreInput && canManage) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-2">
@@ -133,7 +133,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament, 
     );
   }
 
-  if (showSpecials) {
+  if (showSpecials && canManage) {
     return (
       <SpecialsManager
         match={match}
@@ -167,7 +167,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament, 
 
         <CardContent className="pb-4 pt-0">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-            {/* Team 1 - right aligned */}
+            {/* Team 1 */}
             <div className="text-right space-y-2">
               <p className="text-xs font-semibold text-blue-600">Team 1</p>
               {match.team1_player1 && (
@@ -196,14 +196,14 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament, 
               )}
             </div>
 
-            {/* Score central */}
+            {/* Score */}
             <div className="text-center px-3">
               <p className="text-2xl font-bold tabular-nums whitespace-nowrap">
                 {match.team1_score ?? 0} - {match.team2_score ?? 0}
               </p>
             </div>
 
-            {/* Team 2 - left aligned */}
+            {/* Team 2 */}
             <div className="text-left space-y-2">
               <p className="text-xs font-semibold text-red-600">Team 2</p>
               {match.team2_player1 && (
@@ -233,21 +233,16 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament, 
             </div>
           </div>
 
-          {/* Compact buttons row */}
           <div className="flex items-center justify-between mt-4 pt-4 border-t">
             <div className="text-xs text-muted-foreground">
               {match.tournament?.name || "Onbekend toernooi"}
             </div>
             <div className="flex gap-1">
-              {/* Specials button - altijd beschikbaar tijdens actief toernooi */}
-              {toernooiStatus === "active" && (
+              {canManage && toernooiStatus === "active" && (
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowSpecials(true);
-                  }}
+                  onClick={(e) => { e.stopPropagation(); setShowSpecials(true); }}
                   className="h-8 px-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
                   title="Specials beheren"
                 >
@@ -257,27 +252,23 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament, 
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/scores/${match.id}`);
-                }}
+                onClick={(e) => { e.stopPropagation(); navigate(`/scores/${match.id}`); }}
                 className="h-8 w-8 p-0"
                 title="Score bekijken"
               >
                 <Eye className="h-4 w-4" />
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowEditor(true);
-                }}
-                className="h-8 w-8 p-0"
-                title="Wedstrijd bewerken"
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
+              {canManage && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={(e) => { e.stopPropagation(); setShowEditor(true); }}
+                  className="h-8 w-8 p-0"
+                  title="Wedstrijd bewerken"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
@@ -285,7 +276,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament, 
     );
   }
 
-  // Not completed matches - same visual structure as completed but with buttons
+  // Not completed matches
   const team1Player1Specials = getPlayerSpecialsCount(match.team1_player1_id);
   const team1Player2Specials = getPlayerSpecialsCount(match.team1_player2_id);
   const team2Player1Specials = getPlayerSpecialsCount(match.team2_player1_id);
@@ -308,7 +299,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament, 
 
       <CardContent className="pb-4 pt-0">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-          {/* Team 1 - right aligned */}
+          {/* Team 1 */}
           <div className="text-right space-y-2">
             <p className="text-xs font-semibold text-blue-600">Team 1</p>
             {match.team1_player1 && (
@@ -337,18 +328,15 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament, 
             )}
           </div>
 
-          {/* Center - status badge or action buttons */}
+          {/* Center */}
           <div className="text-center px-3 flex flex-col items-center gap-1">
             {getStatusBadge(match.status)}
-            {toernooiStatus === "active" && (
+            {canManage && toernooiStatus === "active" && (
               <div className="flex gap-1 mt-1">
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowScoreInput(true);
-                  }}
+                  onClick={(e) => { e.stopPropagation(); setShowScoreInput(true); }}
                   className="text-green-600 border-green-600 hover:bg-green-50 h-7 text-xs px-2"
                 >
                   <CheckSquare className="h-3 w-3 mr-1" />
@@ -357,10 +345,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament, 
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowSpecials(true);
-                  }}
+                  onClick={(e) => { e.stopPropagation(); setShowSpecials(true); }}
                   className="text-purple-600 border-purple-600 hover:bg-purple-50 h-7 text-xs px-2"
                 >
                   <Star className="h-3 w-3 mr-1" />
@@ -372,10 +357,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament, 
               <Button
                 size="sm"
                 variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowSimulator(true);
-                }}
+                onClick={(e) => { e.stopPropagation(); setShowSimulator(true); }}
                 className="text-blue-600 border-blue-600 hover:bg-blue-50 h-7 text-xs px-2 mt-1"
               >
                 <Play className="h-3 w-3 mr-1" />
@@ -384,7 +366,7 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament, 
             )}
           </div>
 
-          {/* Team 2 - left aligned */}
+          {/* Team 2 */}
           <div className="text-left space-y-2">
             <p className="text-xs font-semibold text-red-600">Team 2</p>
             {match.team2_player1 && (
@@ -414,22 +396,21 @@ export default function MatchCard({ match, matchNumberInCourtRound, tournament, 
           </div>
         </div>
 
-        {/* Bottom info row */}
+        {/* Bottom row */}
         <div className="flex items-center justify-between mt-4 pt-4 border-t">
           <div className="text-xs text-muted-foreground">
             {match.tournament?.name || "Onbekend toernooi"}
           </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowEditor(true);
-            }}
-            className="h-8 w-8 p-0"
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
+          {canManage && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={(e) => { e.stopPropagation(); setShowEditor(true); }}
+              className="h-8 w-8 p-0"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          )}
         </div>
 
         {match.notes && (
