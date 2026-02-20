@@ -41,8 +41,8 @@ interface MatchRow {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function rowSideLabel(side: string): { label: string; color: string } {
-  if (side === "left")  return { label: "Rijtje Links",  color: "#15803d" };
-  if (side === "right") return { label: "Rijtje Rechts", color: "#1d4ed8" };
+  if (side === "left")  return { label: "Linker Rijtje", color: "#15803d" };
+  if (side === "right") return { label: "Rechter Rijtje", color: "#1d4ed8" };
   return { label: "", color: "#6b7280" };
 }
 
@@ -107,10 +107,11 @@ function buildPrintHtml(
     .header-left { display: flex; align-items: center; min-width: 60px; }
     .header-logo { height: 40px; width: auto; }
     .header-center { flex: 1; text-align: center; }
-    .header-title { font-size: 16px; font-weight: 800; color: #111; line-height: 1.2; }
-    .header-meta { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; }
-    .header-round { font-size: 12px; font-weight: 700; color: #111; }
-    .header-badge { font-size: 10px; font-weight: 700; color: #fff; border-radius: 4px; padding: 2px 8px; letter-spacing: .03em; }
+    .header-center-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .header-title { font-size: 16px; font-weight: 900; color: #111; line-height: 1; }
+    .header-round { font-size: 14px; font-weight: 900; color: #111; line-height: 1; }
+    .header-badge { font-size: 12px; font-weight: 900; color: #fff; border-radius: 4px; padding: 3px 10px; letter-spacing: .03em; line-height: 1; }
+    .header-sep { font-size: 14px; font-weight: 900; color: #ccc; }
     .header-right { text-align: right; min-width: 160px; }
     .header-court { font-size: 20px; font-weight: 900; color: #f28b00; line-height: 1; }
 
@@ -200,6 +201,7 @@ function buildPrintHtml(
     const badgeHtml = label
       ? `<span class="header-badge" style="background:${color}">${label}</span>`
       : "";
+    const sepHtml = label ? `<span class="header-sep">·</span>` : "";
 
     const matchesHtml = page.matches.length === 0
       ? [0, 1, 2].map((i) => renderMatch(null, i, true)).join("")
@@ -212,9 +214,11 @@ function buildPrintHtml(
             <img class="header-logo" src="${logoSrc}" onerror="this.style.display='none'" />
           </div>
           <div class="header-center">
-            <div class="header-title">${tournament.name}</div>
-            <div class="header-meta">
+            <div class="header-center-row">
+              <span class="header-title">${tournament.name}</span>
+              <span class="header-sep">·</span>
               <span class="header-round">${page.roundLabel}</span>
+              ${sepHtml}
               ${badgeHtml}
             </div>
           </div>
