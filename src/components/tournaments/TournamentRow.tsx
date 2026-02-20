@@ -2,6 +2,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Edit, MoreHorizontal, Trash2, Users, Calendar, TrendingUp, PlayCircle, CheckCircle, Swords } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -118,53 +119,56 @@ export function TournamentRow({
         </TableCell>
         <TableCell onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center gap-1">
-            {/* Stand — zichtbaar voor iedereen */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onViewStandings(tournament.id)}
-              title="Stand bekijken"
-            >
-              <TrendingUp className="h-4 w-4" />
-            </Button>
 
-            {/* Wedstrijden — zichtbaar voor iedereen */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onViewMatches(tournament.id)}
-              title="Wedstrijden bekijken"
-            >
-              <Swords className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={() => onViewStandings(tournament.id)}>
+                  <TrendingUp className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Stand</TooltipContent>
+            </Tooltip>
 
-            {/* Beheer-acties — alleen organisator/beheerder */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={() => onViewMatches(tournament.id)}>
+                  <Swords className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Wedstrijden</TooltipContent>
+            </Tooltip>
+
             {canManage && (
               <>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onAssignPlayers(tournament.id)}
-                  title="Spelers toewijzen"
-                >
-                  <Users className="h-4 w-4" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={() => onAssignPlayers(tournament.id)}>
+                      <Users className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Spelers toewijzen</TooltipContent>
+                </Tooltip>
 
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleCreateSchedule}
-                  title="Schema beheren"
-                >
-                  <Calendar className="h-4 w-4" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={handleCreateSchedule}>
+                      <Calendar className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Schema beheren</TooltipContent>
+                </Tooltip>
 
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>Meer opties</TooltipContent>
+                  </Tooltip>
                   <DropdownMenuContent align="end">
                     {(tournament.status === 'completed' || tournament.status === 'in_progress') && (
                       <>
