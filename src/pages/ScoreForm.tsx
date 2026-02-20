@@ -38,8 +38,6 @@ interface MatchRow {
   team2_player2: string;
 }
 
-const SPECIALS_COLUMN = [{ id: "specials", name: "Specials" }];
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function rowSideLabel(side: string): { label: string; color: string } {
@@ -106,14 +104,15 @@ function buildPrintHtml(
       padding-bottom: 8px;
       margin-bottom: 12px;
     }
-    .header-left { display: flex; align-items: center; gap: 10px; }
+    .header-left { display: flex; align-items: center; min-width: 60px; }
     .header-logo { height: 40px; width: auto; }
-    .header-title { font-size: 14px; font-weight: 800; color: #111; line-height: 1.2; }
-    .header-right { text-align: right; }
-    .header-court { font-size: 20px; font-weight: 900; color: #f28b00; line-height: 1; }
-    .header-meta { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 4px; }
+    .header-center { flex: 1; text-align: center; }
+    .header-title { font-size: 16px; font-weight: 800; color: #111; line-height: 1.2; }
+    .header-meta { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; }
     .header-round { font-size: 12px; font-weight: 700; color: #111; }
     .header-badge { font-size: 10px; font-weight: 700; color: #fff; border-radius: 4px; padding: 2px 8px; letter-spacing: .03em; }
+    .header-right { text-align: right; min-width: 160px; }
+    .header-court { font-size: 20px; font-weight: 900; color: #f28b00; line-height: 1; }
 
     /* Match block */
     .match { border: 1px solid #d1d5db; border-radius: 5px; overflow: hidden; margin-bottom: 10px; page-break-inside: avoid; break-inside: avoid; }
@@ -211,16 +210,16 @@ function buildPrintHtml(
         <div class="header">
           <div class="header-left">
             <img class="header-logo" src="${logoSrc}" onerror="this.style.display='none'" />
-            <div>
-              <div class="header-title">${tournament.name}</div>
-            </div>
           </div>
-          <div class="header-right">
-            <div class="header-court">${page.courtName}</div>
+          <div class="header-center">
+            <div class="header-title">${tournament.name}</div>
             <div class="header-meta">
               <span class="header-round">${page.roundLabel}</span>
               ${badgeHtml}
             </div>
+          </div>
+          <div class="header-right">
+            <div class="header-court">${page.courtName}</div>
           </div>
         </div>
         ${matchesHtml}
