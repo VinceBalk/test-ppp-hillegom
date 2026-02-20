@@ -101,71 +101,67 @@ export function TournamentRow({
         onClick={handleRowClick}
       >
         <TableCell>
-          <div>
-            <div className="font-medium">{tournament.name}</div>
-            {tournament.description && (
-              <div className="text-sm text-muted-foreground mt-1">
-                {tournament.description}
-              </div>
-            )}
-          </div>
+          <div className="font-medium">{tournament.name}</div>
+          {tournament.description && (
+            <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+              {tournament.description}
+            </div>
+          )}
         </TableCell>
-        <TableCell>
-          <div className="text-sm">
-            {format(new Date(tournament.start_date), 'd MMM yyyy', { locale: nl })} -
-            {format(new Date(tournament.end_date), 'd MMM yyyy', { locale: nl })}
-          </div>
+        <TableCell className="text-sm whitespace-nowrap">
+          {format(new Date(tournament.start_date), 'd MMM yy', { locale: nl })}
         </TableCell>
-        <TableCell>{tournament.max_players}</TableCell>
-        <TableCell>€{tournament.entry_fee?.toFixed(2) || '0.00'}</TableCell>
+        <TableCell className="text-center text-sm">{tournament.max_players}</TableCell>
+        <TableCell className="text-sm">€{tournament.entry_fee?.toFixed(0) || '0'}</TableCell>
         <TableCell>
           <TournamentStatusBadge status={tournament.status || 'draft'} />
         </TableCell>
         <TableCell onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            {/* Stand — zichtbaar voor iedereen */}
             <Button
-              variant="outline"
-              size="sm"
+              variant="ghost"
+              size="icon"
               onClick={() => onViewStandings(tournament.id)}
-              title="Bekijk stand"
+              title="Stand bekijken"
             >
-              <TrendingUp className="h-4 w-4 mr-1" />
-              Stand
+              <TrendingUp className="h-4 w-4" />
             </Button>
 
+            {/* Wedstrijden — zichtbaar voor iedereen */}
             <Button
-              variant="outline"
-              size="sm"
+              variant="ghost"
+              size="icon"
               onClick={() => onViewMatches(tournament.id)}
-              title="Bekijk wedstrijden"
+              title="Wedstrijden bekijken"
             >
-              <Swords className="h-4 w-4 mr-1" />
-              Wedstrijden
+              <Swords className="h-4 w-4" />
             </Button>
 
+            {/* Beheer-acties — alleen organisator/beheerder */}
             {canManage && (
               <>
                 <Button
-                  variant="outline"
-                  size="sm"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => onAssignPlayers(tournament.id)}
+                  title="Spelers toewijzen"
                 >
-                  <Users className="h-4 w-4 mr-1" />
-                  Spelers
+                  <Users className="h-4 w-4" />
                 </Button>
 
                 <Button
-                  variant="outline"
-                  size="sm"
+                  variant="ghost"
+                  size="icon"
                   onClick={handleCreateSchedule}
+                  title="Schema beheren"
                 >
-                  <Calendar className="h-4 w-4 mr-1" />
-                  Schema
+                  <Calendar className="h-4 w-4" />
                 </Button>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="icon">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
