@@ -7,7 +7,6 @@ import { useDashboardData } from '@/hooks/useDashboardData';
 import { usePlayerRankings } from '@/hooks/usePlayerRankings';
 import { usePlayers } from '@/hooks/usePlayers';
 import { useChefSpecialRanking } from '@/hooks/useChefSpecialRanking';
-import { CurrentTournament } from '@/components/dashboard/CurrentTournament';
 
 export default function Dashboard() {
   const navigate = useNavigate();
