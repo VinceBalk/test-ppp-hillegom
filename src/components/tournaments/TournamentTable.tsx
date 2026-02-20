@@ -49,23 +49,23 @@ export function TournamentTable({
         </div>
       </CardHeader>
       <CardContent className="p-0 md:p-6">
-        <div className="hidden md:block overflow-x-auto">
+        <div className="hidden md:block">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[120px]">Naam</TableHead>
-                <TableHead className="min-w-[140px]">Datums</TableHead>
-                <TableHead className="min-w-[100px]">Max Spelers</TableHead>
-                <TableHead className="min-w-[110px]">Inschrijfgeld</TableHead>
-                <TableHead className="min-w-[90px]">Status</TableHead>
-                <TableHead className="min-w-[140px]">Acties</TableHead>
+                <TableHead>Naam</TableHead>
+                <TableHead className="w-[100px]">Datum</TableHead>
+                <TableHead className="w-[60px] text-center">Max</TableHead>
+                <TableHead className="w-[60px]">€</TableHead>
+                <TableHead className="w-[90px]">Status</TableHead>
+                <TableHead className="w-[160px]">Acties</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredTournaments.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    {searchTerm ? 'Geen toernooien gevonden die voldoen aan de zoekterm.' : 'Nog geen toernooien toegevoegd.'}
+                    {searchTerm ? 'Geen toernooien gevonden.' : 'Nog geen toernooien toegevoegd.'}
                   </TableCell>
                 </TableRow>
               ) : (
