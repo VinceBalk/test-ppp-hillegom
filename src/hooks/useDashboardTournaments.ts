@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -11,6 +10,8 @@ interface Tournament {
   current_round?: number;
   total_rounds?: number;
   player_count?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export function useDashboardTournaments() {
@@ -22,7 +23,7 @@ export function useDashboardTournaments() {
     try {
       console.log('Dashboard: Fetching tournaments...');
       
-      // Fetch current tournament
+      // Huidig toernooi (open of bezig)
       const { data: current, error: currentError } = await supabase
         .from('tournaments')
         .select(`
@@ -33,24 +34,19 @@ export function useDashboardTournaments() {
         .order('start_date', { ascending: true })
         .limit(1);
 
-      console.log('Dashboard: Current tournament query result:', { current, currentError });
-
       if (currentError) {
         console.error('Dashboard: Error fetching current tournament:', currentError);
       } else if (current && current.length > 0) {
         const t = current[0];
-        const tournament = {
+        setCurrentTournament({
           ...t,
           player_count: t.tournament_players?.length || 0
-        };
-        console.log('Dashboard: Setting current tournament:', tournament);
-        setCurrentTournament(tournament);
+        });
       } else {
-        console.log('Dashboard: No current tournament found');
         setCurrentTournament(null);
       }
 
-      // Fetch recent tournaments
+      // Recente voltooide toernooien — sorteer op updated_at zodat net-afgeronde bovenaan staat
       const { data: recent, error: recentError } = await supabase
         .from('tournaments')
         .select(`
@@ -58,20 +54,16 @@ export function useDashboardTournaments() {
           tournament_players!inner(id)
         `)
         .eq('status', 'completed')
-        .order('end_date', { ascending: false })
+        .order('updated_at', { ascending: false })
         .limit(3);
-
-      console.log('Dashboard: Recent tournaments query result:', { recent, recentError });
 
       if (recentError) {
         console.error('Dashboard: Error fetching recent tournaments:', recentError);
       } else if (recent) {
-        const tournaments = recent.map(t => ({
+        setRecentTournaments(recent.map(t => ({
           ...t,
           player_count: t.tournament_players?.length || 0
-        }));
-        console.log('Dashboard: Setting recent tournaments:', tournaments);
-        setRecentTournaments(tournaments);
+        })));
       }
     } catch (error) {
       console.error('Dashboard: Error in fetchTournaments:', error);
