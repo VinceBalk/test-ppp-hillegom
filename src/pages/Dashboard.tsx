@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +8,8 @@ import { useDashboardData } from '@/hooks/useDashboardData';
 import { usePlayerRankings } from '@/hooks/usePlayerRankings';
 import { usePlayers } from '@/hooks/usePlayers';
 import { useChefSpecialRanking } from '@/hooks/useChefSpecialRanking';
+import { CurrentTournament } from '@/components/dashboard/CurrentTournament';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -23,12 +26,121 @@ export default function Dashboard() {
   const lastTournament = recentTournaments[0];
   const { data: chefRankings, isLoading: chefLoading } = useChefSpecialRanking(lastTournament?.id);
 
+  // Winnaar van het laatste toernooi ophalen uit tournament standings (positie 1)
+  const [lastTournamentWinner, setLastTournamentWinner] = useState<{ player_id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    if (!lastTournament?.id) {
+      setLastTournamentWinner(null);
+      return;
+    }
+    
+    const fetchWinner = async () => {
+      // Haal de #1 positie op uit player_tournament_stats voor dit toernooi
+      // We kijken naar de speler met de meeste R3 games won (positie 1 = baan 1 top)
+      // Gebruik de standings logica: hoogste R3 score op de top-baan
+      const { data, error } = await supabase
+        .from('player_tournament_stats')
+        .select(`
+          player_id,
+          games_won,
+          round_number,
+          players:player_id(id, name)
+        `)
+        .eq('tournament_id', lastTournament.id)
+        .eq('round_number', 3)
+        .order('games_won', { ascending: false })
+        .limit(8);
+
+      if (error || !data || data.length === 0) {
+        // Fallback: overall ranking #1
+        if (rankings && rankings.length > 0) {
+          setLastTournamentWinner({ player_id: rankings[0].player_id, name: rankings[0].name });
+        }
+        return;
+      }
+
+      // Winnaar is de speler op positie 1 (Links-Top baan 1 of vergelijkbaar)
+      // Haal de wedstrijden op voor R3 om te weten welke spelers in de top baan speelden
+      const { data: r3Matches, error: r3Error } = await supabase
+        .from('matches')
+        .select(`
+          team1_player1_id,
+          team1_player2_id,
+          team2_player1_id,
+          team2_player2_id,
+          score_team1,
+          score_team2,
+          court:courts(name, menu_order, row_side)
+        `)
+        .eq('tournament_id', lastTournament.id)
+        .eq('round_number', 3)
+        .order('court_id', { ascending: true });
+
+      if (r3Error || !r3Matches || r3Matches.length === 0) {
+        // Fallback naar hoogste R3 games won
+        const topStat = data[0] as any;
+        setLastTournamentWinner({
+          player_id: topStat.player_id,
+          name: topStat.players?.name || 'Onbekend'
+        });
+        return;
+      }
+
+      // Vind de top baan (laagste menu_order aan de linker kant = baan 1 links)
+      const leftCourts = (r3Matches as any[])
+        .map(m => m.court)
+        .filter(c => c && c.row_side === 'left')
+        .sort((a, b) => (a.menu_order || 0) - (b.menu_order || 0));
+
+      const topCourtName = leftCourts[0]?.name;
+
+      // Spelers die op de top baan speelden
+      const topCourtMatches = (r3Matches as any[]).filter(m => m.court?.name === topCourtName);
+      
+      if (topCourtMatches.length === 0) {
+        const topStat = data[0] as any;
+        setLastTournamentWinner({
+          player_id: topStat.player_id,
+          name: topStat.players?.name || 'Onbekend'
+        });
+        return;
+      }
+
+      const topCourtPlayerIds = new Set<string>();
+      topCourtMatches.forEach((m: any) => {
+        if (m.team1_player1_id) topCourtPlayerIds.add(m.team1_player1_id);
+        if (m.team1_player2_id) topCourtPlayerIds.add(m.team1_player2_id);
+        if (m.team2_player1_id) topCourtPlayerIds.add(m.team2_player1_id);
+        if (m.team2_player2_id) topCourtPlayerIds.add(m.team2_player2_id);
+      });
+
+      // Vind de winnaar: speler op top baan met hoogste R3 games won
+      const topCourtStats = (data as any[]).filter(s => topCourtPlayerIds.has(s.player_id));
+      
+      if (topCourtStats.length > 0) {
+        const winner = topCourtStats[0];
+        setLastTournamentWinner({
+          player_id: winner.player_id,
+          name: winner.players?.name || 'Onbekend'
+        });
+      } else {
+        const topStat = data[0] as any;
+        setLastTournamentWinner({
+          player_id: topStat.player_id,
+          name: topStat.players?.name || 'Onbekend'
+        });
+      }
+    };
+
+    fetchWinner();
+  }, [lastTournament?.id, rankings]);
+
   const loading = dashboardLoading || rankingsLoading || playersLoading || chefLoading;
 
   const leftTop3 = rankings?.filter(r => r.row_side === 'left').slice(0, 3) || [];
   const rightTop3 = rankings?.filter(r => r.row_side === 'right').slice(0, 3) || [];
 
-  const lastTournamentWinner = rankings?.[0];
   const chefSpecial = chefRankings?.find(r => r.title === 'Chef Special');
   const sousChef = chefRankings?.find(r => r.title === 'Sous Chef');
 
@@ -113,7 +225,7 @@ export default function Dashboard() {
                   <>
                     <div className="text-lg font-bold">{lastTournament.name}</div>
                     <p className="text-sm text-muted-foreground">
-                      {new Date(lastTournament.created_at).toLocaleDateString('nl-NL', { 
+                      {new Date(lastTournament.start_date).toLocaleDateString('nl-NL', { 
                         day: 'numeric', 
                         month: 'long'
                       })}
@@ -134,11 +246,9 @@ export default function Dashboard() {
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-medium text-green-700 mb-0.5">Winnaar</div>
                 {lastTournamentWinner ? (
-                  <div className="text-base font-bold text-green-900 truncate">
-                    {lastTournamentWinner.name}
-                  </div>
+                  <div className="text-base font-bold text-green-900 truncate">{lastTournamentWinner.name}</div>
                 ) : (
-                  <div className="text-sm text-muted-foreground">N/A</div>
+                  <div className="text-sm text-muted-foreground">Nog niet beschikbaar</div>
                 )}
               </div>
             </div>
@@ -153,9 +263,7 @@ export default function Dashboard() {
                 <div className="text-xs font-medium text-orange-700 mb-0.5">Chef Special</div>
                 {chefSpecial ? (
                   <>
-                    <div className="text-base font-bold text-orange-900 truncate">
-                      {chefSpecial.player_name}
-                    </div>
+                    <div className="text-base font-bold text-orange-900 truncate">{chefSpecial.player_name}</div>
                     <div className="text-sm text-orange-700">{chefSpecial.total_specials} specials</div>
                   </>
                 ) : (
@@ -174,9 +282,7 @@ export default function Dashboard() {
                 <div className="text-xs font-medium text-amber-700 mb-0.5">Sous Chef</div>
                 {sousChef ? (
                   <>
-                    <div className="text-base font-bold text-amber-900 truncate">
-                      {sousChef.player_name}
-                    </div>
+                    <div className="text-base font-bold text-amber-900 truncate">{sousChef.player_name}</div>
                     <div className="text-sm text-amber-700">{sousChef.total_specials} specials</div>
                   </>
                 ) : (
@@ -259,22 +365,20 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {leftTop3.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Geen rankings beschikbaar</p>
+              <p className="text-sm text-muted-foreground text-center py-4">Geen data beschikbaar</p>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {leftTop3.map((player, index) => (
-                  <div
+                  <div 
                     key={player.player_id}
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
                     onClick={() => navigate(`/players/${player.player_id}`)}
-                    className="flex items-center gap-4 p-4 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors border"
                   >
-                    <span className="text-3xl">{renderMedal(index)}</span>
+                    <span className="text-xl w-8 text-center">{renderMedal(index)}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-lg truncate">{player.name}</p>
-                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                        <span>Ø Positie: {player.avg_position}</span>
-                        <span>•</span>
-                        <span>{player.tournaments_played} toernooien</span>
+                      <div className="font-medium truncate">{player.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Ø Positie: {player.avg_position} · {player.tournaments_played} toernooien
                       </div>
                     </div>
                     <div className="text-right">
@@ -310,22 +414,20 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {rightTop3.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Geen rankings beschikbaar</p>
+              <p className="text-sm text-muted-foreground text-center py-4">Geen data beschikbaar</p>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {rightTop3.map((player, index) => (
-                  <div
+                  <div 
                     key={player.player_id}
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
                     onClick={() => navigate(`/players/${player.player_id}`)}
-                    className="flex items-center gap-4 p-4 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors border"
                   >
-                    <span className="text-3xl">{renderMedal(index)}</span>
+                    <span className="text-xl w-8 text-center">{renderMedal(index)}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-lg truncate">{player.name}</p>
-                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                        <span>Ø Positie: {player.avg_position}</span>
-                        <span>•</span>
-                        <span>{player.tournaments_played} toernooien</span>
+                      <div className="font-medium truncate">{player.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Ø Positie: {player.avg_position} · {player.tournaments_played} toernooien
                       </div>
                     </div>
                     <div className="text-right">
@@ -340,20 +442,19 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Trends - Per Rij */}
+      {/* Trends */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Links Trends */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
-                Links
-              </Badge>
+              <Badge variant="outline" className="text-green-700 border-green-300">Links</Badge>
               Trends
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             {(() => {
-              const leftPlayers = players.filter(p => p.group_side === 'left' && p.rank_change);
+              const leftPlayers = players.filter(p => p.row_side === 'left' && p.rank_change !== undefined);
               const leftRisers = leftPlayers.filter(p => (p.rank_change || 0) > 0).sort((a, b) => (b.rank_change || 0) - (a.rank_change || 0));
               const leftFallers = leftPlayers.filter(p => (p.rank_change || 0) < 0).sort((a, b) => (a.rank_change || 0) - (b.rank_change || 0));
               
@@ -365,7 +466,7 @@ export default function Dashboard() {
 
               return (
                 <>
-                  <div className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-background rounded-lg p-4">
+                  <div className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-background rounded-lg p-4 mb-3">
                     <div className="text-sm font-medium text-green-700 mb-3 flex items-center gap-2">
                       <TrendingUp className="h-4 w-4" />
                       Grootste Stijger{topRisers.length > 1 ? 's' : ''}
@@ -381,9 +482,7 @@ export default function Dashboard() {
                             <p className="font-semibold text-base">{player.name}</p>
                             <div className="flex items-center gap-2">
                               <TrendingUp className="h-5 w-5 text-green-600" />
-                              <span className="text-xl font-bold text-green-600">
-                                +{player.rank_change}
-                              </span>
+                              <span className="text-xl font-bold text-green-600">+{player.rank_change}</span>
                             </div>
                           </div>
                         ))}
@@ -409,9 +508,7 @@ export default function Dashboard() {
                             <p className="font-semibold text-base">{player.name}</p>
                             <div className="flex items-center gap-2">
                               <TrendingDown className="h-5 w-5 text-red-600" />
-                              <span className="text-xl font-bold text-red-600">
-                                {player.rank_change}
-                              </span>
+                              <span className="text-xl font-bold text-red-600">{player.rank_change}</span>
                             </div>
                           </div>
                         ))}
@@ -426,18 +523,17 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
+        {/* Rechts Trends */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
-                Rechts
-              </Badge>
+              <Badge variant="outline" className="text-blue-700 border-blue-300">Rechts</Badge>
               Trends
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             {(() => {
-              const rightPlayers = players.filter(p => p.group_side === 'right' && p.rank_change);
+              const rightPlayers = players.filter(p => p.row_side === 'right' && p.rank_change !== undefined);
               const rightRisers = rightPlayers.filter(p => (p.rank_change || 0) > 0).sort((a, b) => (b.rank_change || 0) - (a.rank_change || 0));
               const rightFallers = rightPlayers.filter(p => (p.rank_change || 0) < 0).sort((a, b) => (a.rank_change || 0) - (b.rank_change || 0));
               
@@ -449,7 +545,7 @@ export default function Dashboard() {
 
               return (
                 <>
-                  <div className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-background rounded-lg p-4">
+                  <div className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-background rounded-lg p-4 mb-3">
                     <div className="text-sm font-medium text-green-700 mb-3 flex items-center gap-2">
                       <TrendingUp className="h-4 w-4" />
                       Grootste Stijger{topRisers.length > 1 ? 's' : ''}
@@ -465,9 +561,7 @@ export default function Dashboard() {
                             <p className="font-semibold text-base">{player.name}</p>
                             <div className="flex items-center gap-2">
                               <TrendingUp className="h-5 w-5 text-green-600" />
-                              <span className="text-xl font-bold text-green-600">
-                                +{player.rank_change}
-                              </span>
+                              <span className="text-xl font-bold text-green-600">+{player.rank_change}</span>
                             </div>
                           </div>
                         ))}
@@ -493,9 +587,7 @@ export default function Dashboard() {
                             <p className="font-semibold text-base">{player.name}</p>
                             <div className="flex items-center gap-2">
                               <TrendingDown className="h-5 w-5 text-red-600" />
-                              <span className="text-xl font-bold text-red-600">
-                                {player.rank_change}
-                              </span>
+                              <span className="text-xl font-bold text-red-600">{player.rank_change}</span>
                             </div>
                           </div>
                         ))}
